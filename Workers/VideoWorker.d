@@ -1,0 +1,127 @@
+module KhanAcademyViewer.Workers.VideoWorker;
+
+import std.stdio;
+
+import glib.Date;
+
+import gtk.DrawingArea;
+import gtk.Button;
+import gtk.Image;
+import gtk.Scale;
+
+import gdk.X11;
+
+import gobject.Value;
+
+import gstreamer.gstreamer;
+import gstreamer.Element;
+import gstreamer.ElementFactory;
+import gstreamer.Bus;
+
+import gstinterfaces.VideoOverlay;
+
+class VideoWorker
+{
+	Element _videoSink;
+	Element _source;
+	VideoOverlay _overlay;
+	bool _isPlaying;
+
+	this(ref DrawingArea videoArea, ref Button btnPlay, ref Image imgPlay, ref Scale sclPosition, string fileName)
+	{
+		//Very first step is to init gstreamer, need some fake args then just call .init to get it going
+		string[] args;
+		GStreamer.init(args);
+
+		_videoSink = ElementFactory.make("xvimagesink", "videosink");
+
+		//Link the video sink to the drawingArea
+		_overlay = new VideoOverlay(_videoSink);
+		_overlay.setWindowHandle(X11.windowGetXid(videoArea.getWindow()));
+
+		//Create a playbin element and point it at the selected video
+		_source = ElementFactory.make("playbin", "playBin");
+		_source.setProperty("uri", fileName);
+
+		//Work around to .setProperty not accepting Element type directly
+		Value val = new Value();
+		val.init(GType.OBJECT);
+		val.setObject(_videoSink.getElementStruct());
+		_source.setProperty("video-sink", val);
+
+		//TODO
+		//Create two threads, one to update the scale position every second, the other to change the btnPlay image back to play (i.e. stopped) when reaching EOF
+
+		//Get first frame displayed and video ready to go
+		_source.setState(GstState.PAUSED);
+
+		Bus test = _source.getBus();
+
+		//Message test2 = test.popFiltered(GstMessageType.STATE_CHANGED);
+		//THIS WORKS - CLEAN UP CODE!
+		test.timedPopFiltered(GST_CLOCK_TIME_NONE, GstMessageType.ASYNC_DONE);
+		writeln("State changed");
+		//TODO call back code will go here to join back onto UI thread
+
+		_isPlaying = false;
+	}
+
+	~this()
+	{
+		//Stop and get rid of video and all resources
+		_source.setState(GstState.NULL);
+		_source.destroy();
+		_videoSink.destroy();
+	}
+
+	public void Play()
+	{
+		_source.setState(GstState.PLAYING);
+		_isPlaying = true;
+	}
+
+	public void Pause()
+	{
+		_source.setState(GstState.PAUSED);
+		_isPlaying = false;
+	}
+
+	public bool getIsPlaying()
+	{
+		return _isPlaying;
+	}
+
+	public void ChangeOverlay(ref DrawingArea area)
+	{
+		//Switch the video overlay to the provided drawing area
+		_overlay.setWindowHandle(X11.windowGetXid(area.getWindow()));
+	}
+
+	public double GetDuration()
+	{
+		//TODO need to build in delay, or wait until ready before querying duration
+		//Bus test = _source.getBus();
+		//GstStateChangeReturn state;
+		//_source.continueState(state);
+
+
+		//while (state != GstStateChangeReturn.SUCCESS)
+		//{
+			//_source.continueState(state);
+			//writeln("state ", state);
+
+
+		//while (_source.getState() != GstState.PAUSED) { writeln("waiting for pause..."); }
+		//Return in seconds as that's way more managable
+		long duration = _source.queryDuration();
+
+		return duration / 1000000000;
+	}
+
+	public void SeekTo(double seconds)
+	{
+		//TODO test this...
+		long nanoSeconds = cast(long)seconds * 1000000000;
+		_source.seek(nanoSeconds);
+	}
+}
