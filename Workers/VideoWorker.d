@@ -70,18 +70,18 @@ class VideoWorker
 		val.setObject(_videoSink.getElementStruct());
 		_source.setProperty("video-sink", val);
 
+		//Get the gstreamer bus so can read async messages
+		Bus videoBus = _source.getBus();
+
 		//TODO
 		//Create two threads, one to update the scale position every second, the other to change the btnPlay image back to play (i.e. stopped) when reaching EOF
 
 		//Get first frame displayed and video ready to go
 		_source.setState(GstState.PAUSED);
 
-		Bus test = _source.getBus();
+		//Wait here until video state changes to paused, this is necessary as length of video cannot be retrieved before video is ready
+		videoBus.timedPopFiltered(GST_CLOCK_TIME_NONE, GstMessageType.ASYNC_DONE);
 
-		//Message test2 = test.popFiltered(GstMessageType.STATE_CHANGED);
-		//THIS WORKS - CLEAN UP CODE!
-		test.timedPopFiltered(GST_CLOCK_TIME_NONE, GstMessageType.ASYNC_DONE);
-		writeln("State changed");
 		//TODO call back code will go here to join back onto UI thread
 
 		_isPlaying = false;
@@ -120,19 +120,6 @@ class VideoWorker
 
 	public double GetDuration()
 	{
-		//TODO need to build in delay, or wait until ready before querying duration
-		//Bus test = _source.getBus();
-		//GstStateChangeReturn state;
-		//_source.continueState(state);
-
-
-		//while (state != GstStateChangeReturn.SUCCESS)
-		//{
-			//_source.continueState(state);
-			//writeln("state ", state);
-
-
-		//while (_source.getState() != GstState.PAUSED) { writeln("waiting for pause..."); }
 		//Return in seconds as that's way more managable
 		long duration = _source.queryDuration();
 
@@ -141,7 +128,6 @@ class VideoWorker
 
 	public void SeekTo(double seconds)
 	{
-		//TODO test this...
 		long nanoSeconds = cast(long)seconds * 1000000000;
 		_source.seek(nanoSeconds);
 	}

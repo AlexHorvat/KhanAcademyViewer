@@ -43,6 +43,7 @@ import gtk.Button;
 import gtk.Image;
 import gtk.Scale;
 import gtk.Range;
+import gtk.ButtonBox;
 
 import gdk.Event;
 
@@ -74,6 +75,7 @@ class Viewer
 	private Image _imgPlay;
 	private Image _imgPause;
 	private Scale _sclPosition;
+	private ButtonBox _bboxBreadCrumbs;
 	private double _maxRange;
 
 	this()
@@ -107,7 +109,7 @@ class Viewer
 			writeln("Could not load window, is the window name correct? Should be wdwViewer");
 			exit(0);
 		}
-			
+		
 		_wdwViewer.setTitle("Khan Academy Viewer");
 		_wdwViewer.addOnDestroy(&wdwViewer_Destroy);
 
@@ -127,13 +129,13 @@ class Viewer
 		_lblVideoDescription.setLineWrap(true);
 
 		_drawVideo = cast(DrawingArea)windowBuilder.getObject("drawVideo");
-		_drawVideo.addOnButtonRelease(&btnPlay_ButtonRelease);
+		_drawVideo.addOnButtonRelease(&drawVideo_ButtonRelease);
 
 		_btnPlay = cast(Button)windowBuilder.getObject("btnPlay");
-		_btnPlay.addOnButtonRelease(&btnPlay_ButtonRelease);
+		_btnPlay.addOnClicked(&btnPlay_Clicked);
 
 		_btnFullscreen = cast(Button)windowBuilder.getObject("btnFullscreen");
-		_btnFullscreen.addOnButtonRelease(&btnFullscreen_ButtonRelease);
+		_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
 
 		_imgPlay = cast(Image)windowBuilder.getObject("imgPlay");
 
@@ -142,8 +144,10 @@ class Viewer
 		_sclPosition = cast(Scale)windowBuilder.getObject("sclPosition");
 		_sclPosition.addOnChangeValue(&sclPosition_ChangeValue);
 
+		_bboxBreadCrumbs = cast(ButtonBox)windowBuilder.getObject("bboxBreadCrumbs");
+
 		_miExit = cast(MenuItem)windowBuilder.getObject("miExit");
-		_miExit.addOnActivate(&miItem_Activate);
+		_miExit.addOnButtonRelease(&miExit_ButtonRelease);
 
 		_wdwViewer.showAll();
 	}
@@ -153,14 +157,15 @@ class Viewer
 		exit(0);
 	}
 
-	private void miItem_Activate(MenuItem sender)
+	private bool miExit_ButtonRelease(Event e, Widget sender)
 	{
 		exit(0);
+		return true;
 	}
 
 	private ListStore CreateModel(bool isParentTree)
 	{
-		Library workingLibrary; // = _completeLibrary;
+		Library workingLibrary;
 		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
 		TreeIter tree = new TreeIter();
 
@@ -172,28 +177,6 @@ class Viewer
 		{
 			workingLibrary = _childLibrary;
 		}
-
-//		if (_breadCrumbs.length != 0)
-//		{
-//			writeln("Model has breadcrumbs");
-//			int treeDepth;
-//
-//			if (isParentTree)
-//			{
-//				treeDepth = to!int(_breadCrumbs.length) - 1;
-//				writeln("Parent tree depth is ", treeDepth);
-//			}
-//			else
-//			{
-//				treeDepth = to!int(_breadCrumbs.length);
-//				writeln("Child treedepth is ", treeDepth);
-//			}
-//
-//			for(int depth = 0; depth < treeDepth; depth++)
-//			{
-//				workingLibrary = workingLibrary.children[_breadCrumbs[depth].RowIndex];
-//			}
-//		}
 
 		for(int index = 0; index < to!int(workingLibrary.children.length); index++)
 		{
@@ -254,6 +237,8 @@ class Viewer
 			writeln("Set child model");
 			_childLibrary = _parentLibrary.children[rowIndex];
 			_tvChild.setModel(CreateModel(false));
+
+			LoadBreadCrumbs();
 		}
 
 		//Stop any more signals being called
@@ -294,6 +279,8 @@ class Viewer
 
 				_tvParent.setModel(CreateModel(true));
 				_tvChild.setModel(CreateModel(false));
+
+				LoadBreadCrumbs();
 			}
 			else
 			{
@@ -331,7 +318,18 @@ class Viewer
 		return true;
 	}
 
-	private bool btnPlay_ButtonRelease(Event e, Widget sender)
+	private void btnPlay_Clicked(Button sender)
+	{
+		PlayPause();
+	}
+
+	private bool drawVideo_ButtonRelease(Event e, Widget sender)
+	{
+		PlayPause();
+		return true;
+	}
+
+	private void PlayPause()
 	{
 		//Check that a video is loaded
 		if (_videoWorker !is null)
@@ -347,18 +345,14 @@ class Viewer
 				_btnPlay.setImage(_imgPause);
 			}
 		}
-
-		return true;
 	}
 
-	private bool btnFullscreen_ButtonRelease(Event e, Widget sender)
+	private void btnFullscreen_Clicked(Button sender)
 	{
 		if (_videoWorker !is null)
 		{
 			Fullscreen screen = new Fullscreen(_videoWorker, _btnPlay, _imgPlay, _imgPause, _drawVideo);
 		}
-
-		return true;
 	}
 
 	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range range)
@@ -375,5 +369,51 @@ class Viewer
 		}
 
 		return false;
+	}
+
+	private void LoadBreadCrumbs()
+	{
+		//Clear existing breadcrumb buttons
+		_bboxBreadCrumbs.removeAll();
+
+		//Create new breadcrumb buttons
+		for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
+		{
+			Button breadButton = new Button(_breadCrumbs[breadCrumbIndex].Title, false);
+
+			breadButton.setName(breadCrumbIndex.text);
+			breadButton.setVisible(true);
+			breadButton.addOnClicked(&breadButton_Clicked);
+
+			_bboxBreadCrumbs.add(breadButton);
+		}
+	}
+
+	private void breadButton_Clicked(Button sender)
+	{
+		//Cut _breadCrumbs down to breadCrumbIndex length, then set the parent and child to the last two breadcrumb items
+		int breadCrumbNewLength = to!(int)(sender.getName()) + 1;
+		_breadCrumbs.length = breadCrumbNewLength;
+
+		//Set the parent and child treeview model's to the new 'end of breadcrumb' items
+		_parentLibrary = _completeLibrary;
+
+		for (int breadCrumbCounter = 0; breadCrumbCounter < _breadCrumbs.length - 1; breadCrumbCounter++)
+		{
+			_parentLibrary = _parentLibrary.children[_breadCrumbs[breadCrumbCounter].RowIndex];
+		}
+
+		_childLibrary = _parentLibrary.children[_breadCrumbs[_breadCrumbs.length - 1].RowIndex];
+		
+		_tvParent.setModel(CreateModel(true));
+		_tvChild.setModel(CreateModel(false));
+
+		//Select the row of the parent item from parent bread crumb row index
+		TreePath path = new TreePath(_breadCrumbs[_breadCrumbs.length - 1].RowIndex);
+		TreeSelection selection = _tvParent.getSelection();
+		selection.selectPath(path);
+
+		//Refresh bread crumbs
+		LoadBreadCrumbs();
 	}
 }
