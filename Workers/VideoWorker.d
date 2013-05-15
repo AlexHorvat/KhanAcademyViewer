@@ -21,7 +21,7 @@
 
 module KhanAcademyViewer.Workers.VideoWorker;
 
-import std.stdio;
+//import std.stdio;
 
 import glib.Date;
 
@@ -41,14 +41,14 @@ import gstreamer.Bus;
 
 import gstinterfaces.VideoOverlay;
 
-class VideoWorker
+protected final class VideoWorker
 {
 	Element _videoSink;
 	Element _source;
 	VideoOverlay _overlay;
 	bool _isPlaying;
 
-	this(ref DrawingArea videoArea, ref Button btnPlay, ref Image imgPlay, ref Scale sclPosition, string fileName)
+	this(DrawingArea videoArea, Button btnPlay, Image imgPlay, Scale sclPosition, string fileName)
 	{
 		//Very first step is to init gstreamer, need some fake args then just call .init to get it going
 		string[] args;
@@ -107,7 +107,7 @@ class VideoWorker
 		_isPlaying = false;
 	}
 
-	public bool getIsPlaying()
+	public bool IsPlaying()
 	{
 		return _isPlaying;
 	}

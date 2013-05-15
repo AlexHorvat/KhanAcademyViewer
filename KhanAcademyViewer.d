@@ -30,7 +30,7 @@ import gstreamer.gstreamer;
 
 import KhanAcademyViewer.Windows.Viewer;
 
-void main(string args[]) {
+public void main(string args[]) {
 	//Test for gtk and gstreamer
 	try
 	{

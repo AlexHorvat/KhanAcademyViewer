@@ -33,7 +33,7 @@ import gdk.Keysyms;
 
 import KhanAcademyViewer.Workers.VideoWorker;
 
-class Fullscreen
+public final class Fullscreen
 {
 	private string _gladeFile = "./Windows/Fullscreen.glade";
 	private Window _wdwFullscreen;
@@ -44,7 +44,7 @@ class Fullscreen
 	private Image _imgPlay;
 	private Image _imgPause;
 
-	this(ref VideoWorker videoWorker, ref Button btnPlay, ref Image imgPlay, ref Image imgPause, ref DrawingArea originalDrawingArea)
+	this(VideoWorker videoWorker, Button btnPlay, Image imgPlay, Image imgPause, DrawingArea originalDrawingArea)
 	{
 		_videoWorker = videoWorker;
 		_btnPlay = btnPlay;
@@ -94,7 +94,7 @@ class Fullscreen
 	private bool wdwFullscreen_ButtonRelease(Event e, Widget sender)
 	{
 		//Need to edit the image of the play button here to make sure it's always got the correct icon
-		if (_videoWorker.getIsPlaying())
+		if (_videoWorker.IsPlaying())
 		{
 			_videoWorker.Pause();
 			_btnPlay.setImage(_imgPlay);

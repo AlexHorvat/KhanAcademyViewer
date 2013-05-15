@@ -27,7 +27,6 @@ import std.conv;
 
 import gtk.Builder;
 import gtk.Widget;
-import gtk.Main;
 import gtk.Window;
 import gtk.MenuItem;
 import gtk.TreeView;
@@ -53,7 +52,7 @@ import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Workers.VideoWorker;
 import KhanAcademyViewer.Windows.Fullscreen;
 
-class Viewer
+protected final class Viewer
 {
 	private string _gladeFile = "./Windows/Viewer.glade";
 	private Library _completeLibrary;
@@ -82,7 +81,9 @@ class Viewer
 	{
 		//TODO loading spinner or something
 		writeln("Loading library");
+
 		_completeLibrary = LibraryWorker.LoadLibrary();
+
 		//Set initial library reference
 		_parentLibrary = _completeLibrary;
 		writeln("Library loaded");
@@ -190,7 +191,6 @@ class Viewer
 
 	private void CreateTreeViewColumns(ref TreeView treeView)
 	{
-		writeln("Creating columns");
 		CellRendererText renderer = new CellRendererText();
 		TreeViewColumn indexColumn = new TreeViewColumn("Index", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
@@ -203,21 +203,16 @@ class Viewer
 
 	private bool tvParent_ButtonRelease(Event e, Widget sender)
 	{
-		writeln("Parent button press");
-
 		TreeIter selectedItem = _tvParent.getSelectedIter();
 
 		if (selectedItem !is null)
 		{
-			writeln("Row selected");
 			int rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
-			writeln(rowIndex, title);
 
-			//Store breadcrumb
+			//If there are no breadcrumbs yet create a new breadcrumb
 			if (_breadCrumbs.length == 0)
 			{
-				writeln("New breadcrumb");
 				BreadCrumb crumb = new BreadCrumb();
 
 				crumb.RowIndex = rowIndex;
@@ -226,15 +221,15 @@ class Viewer
 				_breadCrumbs.length = 1;
 				_breadCrumbs[0] = crumb;
 			}
+			//But usually there will be some breadcrumbs, as this is a parent item there will already be a breadcrumb
+			//entry for it, so overwrite that entry
 			else
 			{
-				writeln("Editing old breadcrumb");
 				_breadCrumbs[_breadCrumbs.length - 1].RowIndex = rowIndex;
 				_breadCrumbs[_breadCrumbs.length - 1].Title = title;
 			}
 
 			//Parent library doesn't change, just set child library then reload child treeview
-			writeln("Set child model");
 			_childLibrary = _parentLibrary.children[rowIndex];
 			_tvChild.setModel(CreateModel(false));
 
@@ -247,13 +242,10 @@ class Viewer
 
 	private bool tvChild_ButtonRelease(Event e, Widget sender)
 	{
-		writeln("Child button press");
-
 		TreeIter selectedItem = _tvChild.getSelectedIter();
 		
 		if (selectedItem !is null)
 		{
-			writeln("Row selected");
 			int rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
 			writeln(rowIndex, title);
@@ -262,8 +254,6 @@ class Viewer
 			//Otherwise this is the end of the tree - play the video
 			if (_childLibrary.children[rowIndex].children !is null)
 			{
-				writeln("Child has children!");
-
 				BreadCrumb crumb = new BreadCrumb();
 				
 				crumb.RowIndex = rowIndex;
@@ -334,7 +324,7 @@ class Viewer
 		//Check that a video is loaded
 		if (_videoWorker !is null)
 		{
-			if (_videoWorker.getIsPlaying())
+			if (_videoWorker.IsPlaying())
 			{
 				_videoWorker.Pause();
 				_btnPlay.setImage(_imgPlay);
@@ -381,7 +371,7 @@ class Viewer
 		{
 			Button breadButton = new Button(_breadCrumbs[breadCrumbIndex].Title, false);
 
-			breadButton.setName(breadCrumbIndex.text);
+			breadButton.setName(to!(string)(breadCrumbIndex + 1));
 			breadButton.setVisible(true);
 			breadButton.addOnClicked(&breadButton_Clicked);
 
@@ -392,10 +382,10 @@ class Viewer
 	private void breadButton_Clicked(Button sender)
 	{
 		//Cut _breadCrumbs down to breadCrumbIndex length, then set the parent and child to the last two breadcrumb items
-		int breadCrumbNewLength = to!(int)(sender.getName()) + 1;
+		int breadCrumbNewLength = to!(int)(sender.getName());
 		_breadCrumbs.length = breadCrumbNewLength;
 
-		//Set the parent and child treeview model's to the new 'end of breadcrumb' items
+		//Set parent library to 2nd to last breadcrumb item
 		_parentLibrary = _completeLibrary;
 
 		for (int breadCrumbCounter = 0; breadCrumbCounter < _breadCrumbs.length - 1; breadCrumbCounter++)
@@ -403,17 +393,25 @@ class Viewer
 			_parentLibrary = _parentLibrary.children[_breadCrumbs[breadCrumbCounter].RowIndex];
 		}
 
-		_childLibrary = _parentLibrary.children[_breadCrumbs[_breadCrumbs.length - 1].RowIndex];
-		
 		_tvParent.setModel(CreateModel(true));
+
+		//Set child library to last breadcrumb item
+		int childRowIndex = _breadCrumbs[_breadCrumbs.length - 1].RowIndex;
+
+		_childLibrary = _parentLibrary.children[childRowIndex];
 		_tvChild.setModel(CreateModel(false));
 
-		//Select the row of the parent item from parent bread crumb row index
-		TreePath path = new TreePath(_breadCrumbs[_breadCrumbs.length - 1].RowIndex);
+		//Pre-set the selected item in parent treeview
+		TreePath path = new TreePath(childRowIndex);
 		TreeSelection selection = _tvParent.getSelection();
 		selection.selectPath(path);
 
 		//Refresh bread crumbs
 		LoadBreadCrumbs();
+	}
+
+	private void ShowSpinner()
+	{
+
 	}
 }

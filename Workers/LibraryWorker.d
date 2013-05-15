@@ -34,7 +34,7 @@ import msgpack;
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.DownloadUrl;
 
-class LibraryWorker
+protected final class LibraryWorker
 {
 	private static immutable string _topicTreeUrl = "http://www.khanacademy.org/api/v1/topictree";
 	private static immutable string _eTagFilePath = "~/.config/KhanAcademyViewer/ETag";
@@ -45,14 +45,14 @@ class LibraryWorker
 
 	public static Library LoadLibrary()
 	{
-		//if (NeedToRefreshLibrary())
-		//{
-			//RefreshLibrary();
-		//}
-		//else
-		//{
+		if (NeedToRefreshLibrary())
+		{
+			RefreshLibrary();
+		}
+		else
+		{
 			LoadLibraryFromDisk();
-		//}
+		}
 
 		return _completeLibrary;
 	}
@@ -68,19 +68,7 @@ class LibraryWorker
 
 			string newETag = connection.responseHeaders["etag"];
 
-			//writeln("Old etag is ", _etag);
-			//writeln("New etag is ", newETag);
-
-			if (newETag == _etag)
-			{
-				//writeln("Etags match");
-				return false;
-			}
-			else
-			{
-				//writeln("Etags don't match");
-				return true;
-			}
+			return newETag != _etag;
 		}
 		else
 		{
@@ -99,7 +87,6 @@ class LibraryWorker
 		}
 		else
 		{
-			//writeln("Couldn't load etag");
 			return false;
 		}
 	}
@@ -119,41 +106,31 @@ class LibraryWorker
 		//Figure out how to implement HTTP.onProgress to show download progress
 
 		//Download whole library in json format
-		//writeln("Downloading library...");
-
-		HTTP connection = HTTP();// HTTP(_topicTreeUrl);
+		HTTP connection = HTTP();
 
 		_jsonValues = cast(string)get(_topicTreeUrl, connection);
 		_etag = connection.responseHeaders["etag"];
 		connection.destroy();
-
-		//writeln("Etag and library downloaded");
 	}
 	
 	private static void SaveETag()
-	{
-		//writeln("Saving ETag");
-		
+	{	
 		string eTagFileName = expandTilde(_eTagFilePath);
 		string filePath = dirName(eTagFileName);
 
+		//Create directory if it doesn't exist
 		if (!fileUtils.exists(filePath))
 		{
-			//writeln("Directory doesn't exist");
 			fileUtils.mkdirRecurse(filePath);
-			//writeln("Directory created");
 		}
 
+		//Write the file - overwrite if already exists
 		fileUtils.write(eTagFileName, _etag);
 	}
 
 	private static void ConvertJsonToLibrary()
 	{
-		//writeln("Converting json to library");
-
 		_completeLibrary = BuildLibary(parseJSON(_jsonValues).object);
-
-		//writeln("Library built");
 	}
 
 	private static Library BuildLibary(JSONValue[string] json)
@@ -175,8 +152,6 @@ class LibraryWorker
 				{
 					library.author_names[authorCounter] = jsonAuthorNames[authorCounter].str;
 				}
-				
-				//writeln("Author name 1 ", library.author_names[0]);
 			}
 		}
 
@@ -184,14 +159,11 @@ class LibraryWorker
 		{
 			//Have to cut off the trailing 'Z' from date as D library doesn't like it
 			library.date_added = DateTime.fromISOExtString(chomp(json["date_added"].str, "Z"));
-			//writeln("Date ", library.date_added);
 		}
-
 
 		if ("description" in json)
 		{
 			library.description = json["description"].str;
-			//writeln("Description ", library.description);
 		}
 
 		if ("download_urls" in json)
@@ -203,34 +175,28 @@ class LibraryWorker
 			if ("mp4" in urls)
 			{
 				downloadUrl.mp4 = urls["mp4"].str;
-				//writeln("MP4 ", downloadUrl.mp4);
 			}
 
 			if ("png" in urls)
 			{
 				downloadUrl.png = urls["png"].str;
-				//writeln("PNG ", downloadUrl.png);
 			}
 
 			if ("m3u8" in urls)
 			{
 				downloadUrl.m3u8 = urls["m3u8"].str;
-				//writeln("M3U8 ", downloadUrl.m3u8);
 			}
 
 			library.download_urls = downloadUrl;
-			//writeln("Download urls added");
 		}
 
 		if ("duration" in json)
 		{
 			library.duration = json["duration"].integer;
-			//writeln("Duration ", library.duration);
 		}
 
 		//Every entry has a title, no need to null check
 		library.title = json["title"].str;
-		//writeln("Title ", library.title);
 
 		//If the node still has children recurse again
 		if ("children" in json)
@@ -264,8 +230,6 @@ class LibraryWorker
 		ubyte[] serialised = pack(_completeLibrary);
 
 		fileUtils.write(libraryFileName, serialised);
-
-		//writeln("Library saved");
 	}
 
 	private static void LoadLibraryFromDisk()
@@ -274,17 +238,12 @@ class LibraryWorker
 
 		if (fileUtils.exists(libraryFileName))
 		{
-			//writeln("Loading library from disk");
-
 			ubyte[] serialised = cast(ubyte[])fileUtils.read(libraryFileName);
 
 			unpack(serialised, _completeLibrary);
-
-			//writeln("Library restored");
 		}
 		else
 		{
-			//writeln("Library not on disk, reloading");
 			RefreshLibrary();
 		}
 	}
