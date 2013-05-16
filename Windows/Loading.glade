@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkWindow" id="wdwLoading">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Loading...</property>
+    <property name="modal">True</property>
+    <property name="window_position">center</property>
+    <property name="default_width">280</property>
+    <property name="default_height">130</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="type_hint">dialog</property>
+    <property name="skip_taskbar_hint">True</property>
+    <property name="skip_pager_hint">True</property>
+    <property name="deletable">False</property>
+    <property name="has_resize_grip">False</property>
+    <property name="mnemonics_visible">False</property>
+    <child>
+      <object class="GtkFixed" id="fxdLoading">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <child>
+          <object class="GtkLabel" id="lblStatus">
+            <property name="height_request">30</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="halign">start</property>
+            <property name="hexpand">True</property>
+            <property name="label" translatable="yes">Checking for library updates</property>
+            <property name="track_visited_links">False</property>
+          </object>
+          <packing>
+            <property name="x">25</property>
+            <property name="y">30</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="lblDataDownloaded">
+            <property name="height_request">30</property>
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="halign">start</property>
+            <property name="hexpand">True</property>
+            <property name="label" translatable="yes">0 KB</property>
+            <property name="track_visited_links">False</property>
+          </object>
+          <packing>
+            <property name="x">25</property>
+            <property name="y">75</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

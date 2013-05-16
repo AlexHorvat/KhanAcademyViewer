@@ -24,6 +24,10 @@ module KhanAcademyViewer.Windows.Viewer;
 import std.stdio;
 import std.c.process;
 import std.conv;
+import std.concurrency;
+
+import core.time;
+import core.thread;
 
 import gtk.Builder;
 import gtk.Widget;
@@ -43,18 +47,22 @@ import gtk.Image;
 import gtk.Scale;
 import gtk.Range;
 import gtk.ButtonBox;
+import gtk.Main;
 
 import gdk.Event;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.BreadCrumb;
 import KhanAcademyViewer.Workers.LibraryWorker;
+import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Workers.VideoWorker;
 import KhanAcademyViewer.Windows.Fullscreen;
+import KhanAcademyViewer.Windows.Loading;
 
 protected final class Viewer
 {
-	private string _gladeFile = "./Windows/Viewer.glade";
+	private const string _gladeFile = "./Windows/Viewer.glade";
+	
 	private Library _completeLibrary;
 	private Library _parentLibrary;
 	private Library _childLibrary;
@@ -75,26 +83,47 @@ protected final class Viewer
 	private Image _imgPause;
 	private Scale _sclPosition;
 	private ButtonBox _bboxBreadCrumbs;
+	private Loading _loadingWindow;
 	private double _maxRange;
 
 	this()
 	{
-		//TODO loading spinner or something
-		writeln("Loading library");
-
-		_completeLibrary = LibraryWorker.LoadLibrary();
-
-		//Set initial library reference
-		_parentLibrary = _completeLibrary;
-		writeln("Library loaded");
-
 		SetupWindow();
+		SetupLoader();
+		LoadLibraryFromStorage();
+		LoadInitialTreeViewState();
+		KillLoadingWindow();
+	}
+
+	private ListStore CreateModel(bool isParentTree)
+	{
+		Library workingLibrary;
+		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
+		TreeIter tree = new TreeIter();
+		
+		if (isParentTree)
+		{
+			workingLibrary = _parentLibrary;
+		}
+		else
+		{
+			workingLibrary = _childLibrary;
+		}
+		
+		for(int index = 0; index < workingLibrary.children.length; index++)
+		{
+			listStore.append(tree);
+			listStore.setValue(tree, 0, index);
+			listStore.setValue(tree, 1, workingLibrary.children[index].title);
+		}
+		
+		return listStore;
 	}
 
 	private void SetupWindow()
 	{
 		Builder windowBuilder = new Builder();
-		
+
 		if (!windowBuilder.addFromFile(_gladeFile))
 		{
 			writeln("Could not load viewer glade file (./Windows/Viewer.glade), does it exist?");
@@ -103,24 +132,13 @@ protected final class Viewer
 
 		//Load all controls from glade file, link to class level variables
 		_wdwViewer = cast(Window)windowBuilder.getObject("wdwViewer");
-
-		//Quit if can't load base gtk window for whatever reason
-		if (_wdwViewer is null)
-		{
-			writeln("Could not load window, is the window name correct? Should be wdwViewer");
-			exit(0);
-		}
-		
 		_wdwViewer.setTitle("Khan Academy Viewer");
 		_wdwViewer.addOnDestroy(&wdwViewer_Destroy);
 
 		_tvParent = cast(TreeView)windowBuilder.getObject("tvParent");
-		CreateTreeViewColumns(_tvParent);
-		_tvParent.setModel(CreateModel(true));
 		_tvParent.addOnButtonRelease(&tvParent_ButtonRelease);
 
 		_tvChild = cast(TreeView)windowBuilder.getObject("tvChild");
-		CreateTreeViewColumns(_tvChild);
 		_tvChild.addOnButtonRelease(&tvChild_ButtonRelease);
 
 		_lblVideoTitle = cast(Label)windowBuilder.getObject("lblVideoTitle");
@@ -151,44 +169,109 @@ protected final class Viewer
 		_miExit.addOnButtonRelease(&miExit_ButtonRelease);
 
 		_wdwViewer.showAll();
+		RefreshUI();
 	}
 
-	private void wdwViewer_Destroy(Widget sender)
+	private void SetupLoader()
 	{
-		exit(0);
+		bool onwards, needToDownLoadLibrary;
+
+		//Show the loading window and make sure it's loaded before starting the download
+		_loadingWindow = new Loading();
+		RefreshUI();
+
+		//Async check if need to download library (async because sometimes it's really slow)
+		onwards = false;
+		spawn(&DownloadWorker.NeedToDownloadLibrary, thisTid);
+
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(500),
+				(bool refreshNeeded)
+				{
+					needToDownLoadLibrary = refreshNeeded;
+					onwards = true;
+				});
+
+			RefreshUI();
+		}
+
+		//If library needs to downloaded do another async call to DownloadLibrary
+		//keep _loadingWindow updated with progress
+		if (needToDownLoadLibrary)
+		{
+			onwards = false;
+
+			_loadingWindow.UpdateStatus("Downloading library");
+
+			spawn(&DownloadWorker.DownloadLibrary, thisTid);
+
+			while (!onwards)
+			{
+				receiveTimeout(
+					dur!"msecs"(500),
+					(ulong amountDownloaded)
+					{
+						//Update the loading window with amount downloaded
+						_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
+					},
+					(Tid deathSignal)
+					{
+						//Been sent the TID of death, exit the loading loop
+						onwards = true;
+					});
+				
+				RefreshUI();
+			}
+		}
 	}
 
-	private bool miExit_ButtonRelease(Event e, Widget sender)
+	private void LoadLibraryFromStorage()
 	{
-		exit(0);
-		return true;
+		//Maybe make this async in the future
+		//Seems to be difficult to pass the loaded library around async
+		//If passed in a message it locks the sending thread
+		//And if passed as a shared variable it is always null in this thread
+		//even after being set on the loading thread
+
+		_loadingWindow.UpdateStatus("Processing library");
+
+		//The library takes a few seconds to write to disc after being downloaded
+		//loop and wait until it shows up, otherwise cannot load library and program
+		//crashes
+		while(!LibraryWorker.LibraryFileExists())
+		{
+			RefreshUI();
+			Thread.sleep(dur!"msecs"(500));
+		}
+
+		_completeLibrary = LibraryWorker.LoadLibrary();
 	}
 
-	private ListStore CreateModel(bool isParentTree)
+	private void LoadInitialTreeViewState()
 	{
-		Library workingLibrary;
-		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
-		TreeIter tree = new TreeIter();
+		CreateTreeViewColumns(_tvParent);
+		CreateTreeViewColumns(_tvChild);
 
-		if (isParentTree)
-		{
-			workingLibrary = _parentLibrary;
-		}
-		else
-		{
-			workingLibrary = _childLibrary;
-		}
-
-		for(int index = 0; index < to!int(workingLibrary.children.length); index++)
-		{
-			listStore.append(tree);
-			listStore.setValue(tree, 0, index);
-			listStore.setValue(tree, 1, workingLibrary.children[index].title);
-		}
-		
-		return listStore;
+		_parentLibrary = cast(Library)_completeLibrary;
+		_tvParent.setModel(CreateModel(true));
 	}
 
+	private void KillLoadingWindow()
+	{
+		_loadingWindow.destroy();
+	}
+
+	private void RefreshUI()
+	{
+		//Run any gtk events pending to refresh the UI
+		while (Main.eventsPending)
+		{
+			Main.iteration();
+		}
+	}
+	
 	private void CreateTreeViewColumns(ref TreeView treeView)
 	{
 		CellRendererText renderer = new CellRendererText();
@@ -199,6 +282,42 @@ protected final class Viewer
 
 		treeView.appendColumn(indexColumn);
 		treeView.appendColumn(titleColumn);
+	}
+
+	private void PlayPause()
+	{
+		//Check that a video is loaded
+		if (_videoWorker !is null)
+		{
+			if (_videoWorker.IsPlaying())
+			{
+				_videoWorker.Pause();
+				_btnPlay.setImage(_imgPlay);
+			}
+			else
+			{
+				_videoWorker.Play();
+				_btnPlay.setImage(_imgPause);
+			}
+		}
+	}
+
+	private void LoadBreadCrumbs()
+	{
+		//Clear existing breadcrumb buttons
+		_bboxBreadCrumbs.removeAll();
+		
+		//Create new breadcrumb buttons
+		for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
+		{
+			Button breadButton = new Button(_breadCrumbs[breadCrumbIndex].Title, false);
+			
+			breadButton.setName(to!(string)(breadCrumbIndex + 1));
+			breadButton.setVisible(true);
+			breadButton.addOnClicked(&breadButton_Clicked);
+			
+			_bboxBreadCrumbs.add(breadButton);
+		}
 	}
 
 	private bool tvParent_ButtonRelease(Event e, Widget sender)
@@ -308,41 +427,10 @@ protected final class Viewer
 		return true;
 	}
 
-	private void btnPlay_Clicked(Button sender)
-	{
-		PlayPause();
-	}
-
 	private bool drawVideo_ButtonRelease(Event e, Widget sender)
 	{
 		PlayPause();
 		return true;
-	}
-
-	private void PlayPause()
-	{
-		//Check that a video is loaded
-		if (_videoWorker !is null)
-		{
-			if (_videoWorker.IsPlaying())
-			{
-				_videoWorker.Pause();
-				_btnPlay.setImage(_imgPlay);
-			}
-			else
-			{
-				_videoWorker.Play();
-				_btnPlay.setImage(_imgPause);
-			}
-		}
-	}
-
-	private void btnFullscreen_Clicked(Button sender)
-	{
-		if (_videoWorker !is null)
-		{
-			Fullscreen screen = new Fullscreen(_videoWorker, _btnPlay, _imgPlay, _imgPause, _drawVideo);
-		}
 	}
 
 	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range range)
@@ -353,29 +441,30 @@ protected final class Viewer
 			{
 				position = _maxRange;
 			}
-
+			
 			writeln("Seeking to ", position);
 			_videoWorker.SeekTo(position);
 		}
-
+		
 		return false;
 	}
 
-	private void LoadBreadCrumbs()
+	private bool miExit_ButtonRelease(Event e, Widget sender)
 	{
-		//Clear existing breadcrumb buttons
-		_bboxBreadCrumbs.removeAll();
+		exit(0);
+		return true;
+	}
 
-		//Create new breadcrumb buttons
-		for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
+	private void btnPlay_Clicked(Button sender)
+	{
+		PlayPause();
+	}
+
+	private void btnFullscreen_Clicked(Button sender)
+	{
+		if (_videoWorker !is null)
 		{
-			Button breadButton = new Button(_breadCrumbs[breadCrumbIndex].Title, false);
-
-			breadButton.setName(to!(string)(breadCrumbIndex + 1));
-			breadButton.setVisible(true);
-			breadButton.addOnClicked(&breadButton_Clicked);
-
-			_bboxBreadCrumbs.add(breadButton);
+			Fullscreen screen = new Fullscreen(_videoWorker, _btnPlay, _imgPlay, _imgPause, _drawVideo);
 		}
 	}
 
@@ -386,7 +475,7 @@ protected final class Viewer
 		_breadCrumbs.length = breadCrumbNewLength;
 
 		//Set parent library to 2nd to last breadcrumb item
-		_parentLibrary = _completeLibrary;
+		_parentLibrary = cast(Library)_completeLibrary;
 
 		for (int breadCrumbCounter = 0; breadCrumbCounter < _breadCrumbs.length - 1; breadCrumbCounter++)
 		{
@@ -410,8 +499,8 @@ protected final class Viewer
 		LoadBreadCrumbs();
 	}
 
-	private void ShowSpinner()
+	private void wdwViewer_Destroy(Widget sender)
 	{
-
+		exit(0);
 	}
 }

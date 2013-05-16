@@ -33,9 +33,10 @@ import gdk.Keysyms;
 
 import KhanAcademyViewer.Workers.VideoWorker;
 
-public final class Fullscreen
+protected final class Fullscreen
 {
 	private string _gladeFile = "./Windows/Fullscreen.glade";
+
 	private Window _wdwFullscreen;
 	private DrawingArea _drawVideo;
 	private DrawingArea _originalDrawingArea;

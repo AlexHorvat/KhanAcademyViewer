@@ -58,7 +58,9 @@ public void main(string args[]) {
 
 	//Has gtk and gstreamer, should be able to run
 	Main.init(args[]);
-	new	Viewer();
+
+	new Viewer();
+
 	Main.run();
 
 	//Not normally needed according to documentation, but clean up just in case something goes wrong

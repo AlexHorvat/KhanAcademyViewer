@@ -50,6 +50,9 @@
     <Compile Include="Include\msgpack.d" />
     <Compile Include="Workers\VideoWorker.d" />
     <Compile Include="Windows\Fullscreen.d" />
+    <Compile Include="Windows\Loading.d" />
+    <Compile Include="Workers\DownloadWorker.d" />
+    <Compile Include="Include\Config.d" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Windows\" />
@@ -62,6 +65,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Windows\Fullscreen.glade">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Windows\Loading.glade">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
