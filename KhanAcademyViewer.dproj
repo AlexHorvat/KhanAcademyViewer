@@ -53,6 +53,7 @@
     <Compile Include="Windows\Loading.d" />
     <Compile Include="Workers\DownloadWorker.d" />
     <Compile Include="Include\Config.d" />
+    <Compile Include="Windows\About.d" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Windows\" />
@@ -68,6 +69,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Windows\Loading.glade">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Windows\About.glade">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

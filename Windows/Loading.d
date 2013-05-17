@@ -31,7 +31,7 @@ import gtk.Label;
 
 protected final class Loading
 {
-	private string _gladeFile = "./Windows/Loading.glade";
+	private const string _gladeFile = "./Windows/Loading.glade";
 	
 	private Window _wdwLoading;
 	private Label _lblStatus;
@@ -44,6 +44,7 @@ protected final class Loading
 
 	~this()
 	{
+		_wdwLoading.hide();
 		_wdwLoading.destroy();
 	}
 

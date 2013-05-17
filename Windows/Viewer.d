@@ -58,6 +58,7 @@ import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Workers.VideoWorker;
 import KhanAcademyViewer.Windows.Fullscreen;
 import KhanAcademyViewer.Windows.Loading;
+import KhanAcademyViewer.Windows.About;
 
 protected final class Viewer
 {
@@ -72,6 +73,7 @@ protected final class Viewer
 	private Window _wdwViewer;
 	private TreeView _tvParent;
 	private TreeView _tvChild;
+	private MenuItem _miAbout;
 	private MenuItem _miExit;
 	private Label _lblVideoTitle;
 	private Label _lblVideoDescription;
@@ -164,6 +166,9 @@ protected final class Viewer
 		_sclPosition.addOnChangeValue(&sclPosition_ChangeValue);
 
 		_bboxBreadCrumbs = cast(ButtonBox)windowBuilder.getObject("bboxBreadCrumbs");
+
+		_miAbout = cast(MenuItem)windowBuilder.getObject("miAbout");
+		_miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
 
 		_miExit = cast(MenuItem)windowBuilder.getObject("miExit");
 		_miExit.addOnButtonRelease(&miExit_ButtonRelease);
@@ -367,7 +372,6 @@ protected final class Viewer
 		{
 			int rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
-			writeln(rowIndex, title);
 
 			//If this child has children then make this a parent and it's child the new child
 			//Otherwise this is the end of the tree - play the video
@@ -447,6 +451,13 @@ protected final class Viewer
 		}
 		
 		return false;
+	}
+
+	private bool miAbout_ButtonRelease(Event e, Widget sender)
+	{
+		About about = new About();
+
+		return true;
 	}
 
 	private bool miExit_ButtonRelease(Event e, Widget sender)

@@ -57,7 +57,6 @@ public static class DownloadWorker
 		else
 		{
 			parentThread.send(true);
-			//return true;
 		}
 	}
 

@@ -35,7 +35,7 @@ import KhanAcademyViewer.Workers.VideoWorker;
 
 protected final class Fullscreen
 {
-	private string _gladeFile = "./Windows/Fullscreen.glade";
+	private const string _gladeFile = "./Windows/Fullscreen.glade";
 
 	private Window _wdwFullscreen;
 	private DrawingArea _drawVideo;
@@ -61,6 +61,7 @@ protected final class Fullscreen
 		{
 			//Switch the video back to the main window drawing area and get rid of the fullscreen window
 			_videoWorker.ChangeOverlay(_originalDrawingArea);
+			_wdwFullscreen.hide();
 			_wdwFullscreen.destroy();
 		}
 	}
