@@ -65,13 +65,12 @@ import KhanAcademyViewer.Windows.About;
 protected final class Viewer
 {
 	private const string _gladeFile = "./Windows/Viewer.glade";
-	private const int _breadCrumbTitleSize = 18;
-	private const int _breadCrumbButtonWidth = 142;
 	
 	private Library _completeLibrary;
 	private Library _parentLibrary;
 	private Library _childLibrary;
 	private BreadCrumb[] _breadCrumbs;
+	private int _breadCrumbAvailableWidth;
 
 	//UI controls
 	private Window _wdwViewer;
@@ -149,6 +148,9 @@ protected final class Viewer
 
 		_tvChild = cast(TreeView)windowBuilder.getObject("tvChild");
 		_tvChild.addOnButtonRelease(&tvChild_ButtonRelease);
+
+		_breadCrumbAvailableWidth = _tvParent.getParent().getWidth() + _tvChild.getParent().getWidth();
+		writeln("bread crumb width ", _breadCrumbAvailableWidth);
 
 		_lblVideoTitle = cast(Label)windowBuilder.getObject("lblVideoTitle");
 		_lblVideoTitle.setLineWrap(true);
@@ -306,24 +308,27 @@ protected final class Viewer
 		//Clear existing breadcrumb buttons
 		_bboxBreadCrumbs.removeAll();
 
+		//Get the size available for each bread crumb button, and the maximum length allowed for the title
+		int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length;
+		int titleLength = breadCrumbWidth / 8;
+
 		//Create new breadcrumb buttons
 		for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
 		{
 			string title = _breadCrumbs[breadCrumbIndex].Title;
 
-			if (title.length > _breadCrumbTitleSize)
+			if (title.length > titleLength)
 			{
-				title.length = _breadCrumbTitleSize - 3;
+				title.length = titleLength - 3;
 				title ~= "...";
 			}
 
-			//Button breadButton = new Button(_breadCrumbs[breadCrumbIndex].Title, false);
 			Button breadButton = new Button(title, false);
 			
 			breadButton.setName(to!(string)(breadCrumbIndex + 1));
 			breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].Title);
 			breadButton.setAlignment(0.0, 0.5);
-			breadButton.setSizeRequest(_breadCrumbButtonWidth, -1);
+			breadButton.setSizeRequest(breadCrumbWidth, -1);
 			breadButton.setVisible(true);
 			breadButton.addOnClicked(&breadButton_Clicked);
 			
