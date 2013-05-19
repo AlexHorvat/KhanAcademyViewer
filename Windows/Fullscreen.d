@@ -45,12 +45,12 @@ protected final class Fullscreen
 	private Image _imgPlay;
 	private Image _imgPause;
 
-	this(VideoWorker videoWorker, Button btnPlay, Image imgPlay, Image imgPause, DrawingArea originalDrawingArea)
+	this(VideoWorker videoWorker, Button btnPlay, DrawingArea originalDrawingArea)
 	{
 		_videoWorker = videoWorker;
 		_btnPlay = btnPlay;
-		_imgPlay = imgPlay;
-		_imgPause = imgPause;
+		//_imgPlay = imgPlay;
+		//_imgPause = imgPause;
 		_originalDrawingArea = originalDrawingArea;
 		SetupWindow();
 	}
@@ -83,6 +83,10 @@ protected final class Fullscreen
 		_wdwFullscreen.addOnButtonRelease(&wdwFullscreen_ButtonRelease);
 		_wdwFullscreen.fullscreen();
 		_wdwFullscreen.showAll();
+
+		_imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
+
+		_imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.BUTTON);
 
 		//Move the video onto the fullscreen drawing area
 		_videoWorker.ChangeOverlay(_drawVideo);

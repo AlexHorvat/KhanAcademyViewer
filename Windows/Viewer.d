@@ -45,10 +45,12 @@ import gtk.DrawingArea;
 import gtk.Button;
 import gtk.Image;
 import gtk.Scale;
-import gtk.Range;
 import gtk.ButtonBox;
 import gtk.Main;
+import gtk.Fixed;
+import gtk.EventBox;
 
+import gdk.RGBA;
 import gdk.Event;
 
 import KhanAcademyViewer.DataStructures.Library;
@@ -77,16 +79,17 @@ protected final class Viewer
 	private MenuItem _miExit;
 	private Label _lblVideoTitle;
 	private Label _lblVideoDescription;
+	private EventBox _eventVideo;
+	private Fixed _fixedVideo;
 	private DrawingArea _drawVideo;
+	private Label _lblCurrentTime;
+	private Label _lblTotalTime;
 	private VideoWorker _videoWorker;
 	private Button _btnPlay;
 	private Button _btnFullscreen;
-	private Image _imgPlay;
-	private Image _imgPause;
 	private Scale _sclPosition;
 	private ButtonBox _bboxBreadCrumbs;
 	private Loading _loadingWindow;
-	private double _maxRange;
 
 	this()
 	{
@@ -125,6 +128,8 @@ protected final class Viewer
 	private void SetupWindow()
 	{
 		Builder windowBuilder = new Builder();
+		RGBA rgbaBlack = new RGBA(0,0,0);
+		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
 
 		if (!windowBuilder.addFromFile(_gladeFile))
 		{
@@ -149,21 +154,26 @@ protected final class Viewer
 		_lblVideoDescription = cast(Label)windowBuilder.getObject("lblVideoDescription");
 		_lblVideoDescription.setLineWrap(true);
 
+		_eventVideo = cast(EventBox)windowBuilder.getObject("eventVideo");
+		_eventVideo.overrideBackgroundColor(GtkStateFlags.NORMAL, rgbaBlack);
+
+		_fixedVideo = cast(Fixed)windowBuilder.getObject("fixedVideo");
+		_fixedVideo.addOnSizeAllocate(&fixedVideo_SizeAllocate);
+
 		_drawVideo = cast(DrawingArea)windowBuilder.getObject("drawVideo");
-		_drawVideo.addOnButtonRelease(&drawVideo_ButtonRelease);
 
 		_btnPlay = cast(Button)windowBuilder.getObject("btnPlay");
-		_btnPlay.addOnClicked(&btnPlay_Clicked);
+		_btnPlay.setImage(imgPlay);
+		_btnPlay.setSensitive(false);
 
 		_btnFullscreen = cast(Button)windowBuilder.getObject("btnFullscreen");
 		_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
 
-		_imgPlay = cast(Image)windowBuilder.getObject("imgPlay");
-
-		_imgPause = cast(Image)windowBuilder.getObject("imgPause");
-
 		_sclPosition = cast(Scale)windowBuilder.getObject("sclPosition");
-		_sclPosition.addOnChangeValue(&sclPosition_ChangeValue);
+
+		_lblCurrentTime = cast(Label)windowBuilder.getObject("lblCurrentTime");
+
+		_lblTotalTime = cast(Label)windowBuilder.getObject("lblTotalTime");
 
 		_bboxBreadCrumbs = cast(ButtonBox)windowBuilder.getObject("bboxBreadCrumbs");
 
@@ -289,24 +299,6 @@ protected final class Viewer
 		treeView.appendColumn(titleColumn);
 	}
 
-	private void PlayPause()
-	{
-		//Check that a video is loaded
-		if (_videoWorker !is null)
-		{
-			if (_videoWorker.IsPlaying())
-			{
-				_videoWorker.Pause();
-				_btnPlay.setImage(_imgPlay);
-			}
-			else
-			{
-				_videoWorker.Play();
-				_btnPlay.setImage(_imgPause);
-			}
-		}
-	}
-
 	private void LoadBreadCrumbs()
 	{
 		//Clear existing breadcrumb buttons
@@ -410,47 +402,12 @@ protected final class Viewer
 					_videoWorker.destroy();
 				}
 
-				/*
-				 * TODO
-				 * Put loading videoworker on it's own thread so that the ui isn't tied up while waiting for connection to video
-				 * First step is to disable all video controls and show a loading spinner
-				 * Next call the loading thread
-				 * When the load completes do a callback to this class to re-enable the controls and hide the spinner
-				 * Thread object will need to be a class level variable
-				 */
-
-				_videoWorker = new VideoWorker(_drawVideo, _btnPlay, _imgPlay, _sclPosition, currentVideo.download_urls.mp4);
-				double vidLength = _videoWorker.GetDuration();
-				writeln("Video length ", vidLength);
-				_sclPosition.setRange(0, vidLength);
-				_maxRange = vidLength;
+				_videoWorker = new VideoWorker(currentVideo.download_urls.mp4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
 			}
 		}
 
 		//Stop any more signals being called
 		return true;
-	}
-
-	private bool drawVideo_ButtonRelease(Event e, Widget sender)
-	{
-		PlayPause();
-		return true;
-	}
-
-	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range range)
-	{
-		if (scrollType == GtkScrollType.JUMP)
-		{
-			if (position > _maxRange)
-			{
-				position = _maxRange;
-			}
-			
-			writeln("Seeking to ", position);
-			_videoWorker.SeekTo(position);
-		}
-		
-		return false;
 	}
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
@@ -466,16 +423,11 @@ protected final class Viewer
 		return true;
 	}
 
-	private void btnPlay_Clicked(Button sender)
-	{
-		PlayPause();
-	}
-
 	private void btnFullscreen_Clicked(Button sender)
 	{
 		if (_videoWorker !is null)
 		{
-			Fullscreen screen = new Fullscreen(_videoWorker, _btnPlay, _imgPlay, _imgPause, _drawVideo);
+			Fullscreen screen = new Fullscreen(_videoWorker, _btnPlay, _drawVideo);
 		}
 	}
 
@@ -508,6 +460,13 @@ protected final class Viewer
 
 		//Refresh bread crumbs
 		LoadBreadCrumbs();
+	}
+
+	private void fixedVideo_SizeAllocate(GdkRectangle* newSize, Widget sender)
+	{
+		//Need to keep drawVideo the same size as it's parent - the fixed widget
+		//this has to be done manually
+		_drawVideo.setSizeRequest(newSize.width, newSize.height);
 	}
 
 	private void wdwViewer_Destroy(Widget sender)
