@@ -65,6 +65,8 @@ import KhanAcademyViewer.Windows.About;
 protected final class Viewer
 {
 	private const string _gladeFile = "./Windows/Viewer.glade";
+	private const int _breadCrumbTitleSize = 18;
+	private const int _breadCrumbButtonWidth = 142;
 	
 	private Library _completeLibrary;
 	private Library _parentLibrary;
@@ -303,13 +305,25 @@ protected final class Viewer
 	{
 		//Clear existing breadcrumb buttons
 		_bboxBreadCrumbs.removeAll();
-		
+
 		//Create new breadcrumb buttons
 		for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
 		{
-			Button breadButton = new Button(_breadCrumbs[breadCrumbIndex].Title, false);
+			string title = _breadCrumbs[breadCrumbIndex].Title;
+
+			if (title.length > _breadCrumbTitleSize)
+			{
+				title.length = _breadCrumbTitleSize - 3;
+				title ~= "...";
+			}
+
+			//Button breadButton = new Button(_breadCrumbs[breadCrumbIndex].Title, false);
+			Button breadButton = new Button(title, false);
 			
 			breadButton.setName(to!(string)(breadCrumbIndex + 1));
+			breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].Title);
+			breadButton.setAlignment(0.0, 0.5);
+			breadButton.setSizeRequest(_breadCrumbButtonWidth, -1);
 			breadButton.setVisible(true);
 			breadButton.addOnClicked(&breadButton_Clicked);
 			
