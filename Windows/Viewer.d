@@ -150,7 +150,6 @@ protected final class Viewer
 		_tvChild.addOnButtonRelease(&tvChild_ButtonRelease);
 
 		_breadCrumbAvailableWidth = _tvParent.getParent().getWidth() + _tvChild.getParent().getWidth();
-		writeln("bread crumb width ", _breadCrumbAvailableWidth);
 
 		_lblVideoTitle = cast(Label)windowBuilder.getObject("lblVideoTitle");
 		_lblVideoTitle.setLineWrap(true);

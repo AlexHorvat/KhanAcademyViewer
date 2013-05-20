@@ -53,8 +53,6 @@ import gstinterfaces.VideoOverlay;
 
 /* TODO
  * Clean up code, there's lot's of redundent stuff in here
- * Find out why crashing on clicking play for after first video
- * Make sure gstreamer disposed of correctly etc
  * Resizing the video still doesn't work all that well
  */
 
@@ -95,6 +93,15 @@ protected final class VideoWorker
 
 	~this()
 	{
+		//Don't leave icon as pause icon
+		_btnPlay.setImage(_imgPlay);
+
+		//Remove listeners, otherwise old listeners are retained between
+		//video loads causing a crash
+		_drawVideo.onButtonReleaseListeners.destroy();
+		_btnPlay.onClickedListeners.destroy();
+		_sclPosition.onChangeValueListeners.destroy();
+
 		//Stop and get rid of video and all resources
 		_source.setState(GstState.NULL);
 		_source.destroy();
@@ -120,8 +127,7 @@ protected final class VideoWorker
 		_spinLoading.overrideColor(GtkStateFlags.NORMAL, rgbaWhite);
 		_spinLoading.overrideBackgroundColor(GtkStateFlags.NORMAL, rgbaBlack);
 
-		//Setup then hide drawVideo
-		_drawVideo.addOnButtonRelease(&drawVideo_ButtonRelease);
+		//Hide drawVideo
 		_drawVideo.setVisible(false);
 		
 		//Place and show the spinner
@@ -139,6 +145,8 @@ protected final class VideoWorker
 
 		//Setup controls
 		GStreamer.init(args);
+
+		_drawVideo.addOnButtonRelease(&drawVideo_ButtonRelease);
 
 		_btnPlay.addOnClicked(&btnPlay_Clicked);
 		_btnPlay.setSensitive(true);
@@ -199,22 +207,19 @@ protected final class VideoWorker
 
 	public void Play()
 	{
-		//TODO there's still a bug in here when playing a 2nd or later video - will just crash on play
-
 		if (_source.setState(GstState.PLAYING) == GstStateChangeReturn.FAILURE)
 		{
-			writeln("Play failed");
 			return;
 		}
-
-		_btnPlay.setImage(_imgPause);
-		_isPlaying = true;
 
 		Bus bus = _source.getBus();
 		Message message;
 		long position;
 		double positionInSeconds;
 		string currentTime;
+
+		_btnPlay.setImage(_imgPause);
+		_isPlaying = true;
 
 		while(_isPlaying)
 		{
@@ -227,14 +232,12 @@ protected final class VideoWorker
 				switch (message.type)
 				{
 					case GstMessageType.EOS:
-						writeln("Stream ended");
 						Pause();
 						//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
 						SeekTo(0);
 						break;
 
 					case GstMessageType.ERROR:
-						writeln("Error, errorr, erorror");
 						this.destroy();
 						break;
 
