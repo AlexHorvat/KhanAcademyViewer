@@ -23,6 +23,17 @@ module KhanAcademyViewer.DataStructures.BreadCrumb;
 
 public final class BreadCrumb
 {
-	int RowIndex;
-	string Title;
+	private int _rowIndex;
+	public @property
+	{
+		int RowIndex() { return _rowIndex; }
+		void RowIndex(int rowIndex) { _rowIndex = rowIndex; }
+	}
+
+	private string _title;
+	public @property
+	{
+		string Title() { return _title; }
+		void Title(string title) { _title = title; }
+	}
 }

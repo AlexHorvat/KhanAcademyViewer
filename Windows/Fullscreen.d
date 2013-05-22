@@ -70,11 +70,7 @@ protected final class Fullscreen
 	{
 		Builder windowBuilder = new Builder();
 		
-		if (!windowBuilder.addFromFile(_gladeFile))
-		{
-			//Could not load viewer glade file (./Windows/Fullscreen.glade), does it exist?
-			return;
-		}
+		windowBuilder.addFromFile(_gladeFile);
 
 		_drawVideo = cast(DrawingArea)windowBuilder.getObject("drawVideo");
 

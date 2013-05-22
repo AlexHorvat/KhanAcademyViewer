@@ -93,8 +93,9 @@ protected final class VideoWorker
 
 	~this()
 	{
-		//Don't leave icon as pause icon
+		//Don't leave icon as pause icon and move scale pointer back to 0
 		_btnPlay.setImage(_imgPlay);
+		_sclPosition.setValue(0);
 
 		//Remove listeners, otherwise old listeners are retained between
 		//video loads causing a crash

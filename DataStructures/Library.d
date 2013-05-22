@@ -27,12 +27,64 @@ import std.datetime;
 
 public final class Library
 {
-	string title;
-	Library[] children;
-	string description;
-	long duration;
-	int views;
-	string[] author_names;
-	DateTime date_added;
-	DownloadUrl download_urls;
+	//TODO which of these fields am I going to use?
+
+	private string _title;
+	public @property {
+		string Title() { return _title; }
+		void Title(string new_Title) { _title = new_Title; }
+	}
+
+	private Library[] _children;
+	public @property {
+		Library[] Children() { return _children; }
+		void Children(Library[] new_Children) { _children = new_Children; }
+	}
+
+	public @property {
+		long ChildrenLength() { return _children.length; }
+		void ChildrenLength(long new_Length) { _children.length = new_Length; }
+	}
+
+	private string _description;
+	public @property {
+		string Description() { return _description; }
+		void Description(string new_Description) { _description = new_Description; }
+	}
+
+	//TODO probably don't need this as calculating it when loading video
+	private long _duration;
+	public @property {
+		long Duration() { return _duration; }
+		void Duration(long new_Duration) { _duration = new_Duration; }
+	}
+
+	private int _views;
+	public @property {
+		int Views() { return _views; }
+		void Views(int new_Views) { _views = new_Views; }
+	}
+
+	private string[] _authorNames;
+	public @property {
+		string[] AuthorNames() { return _authorNames; }
+		void AuthorNames(string[] new_AuthorNames) { _authorNames = new_AuthorNames; }
+	}
+
+	public @property {
+		long AuthorNamesLength() { return _authorNames.length; }
+		void AuthorNamesLength(long new_Length) { _authorNames.length = new_Length; }
+	}
+
+	private DateTime _dateAdded;
+	public @property {
+		DateTime DateAdded() { return _dateAdded; }
+		void DateAdded(DateTime new_DateAdded) { _dateAdded = new_DateAdded; }
+	}
+
+	private DownloadUrl _downloadUrls;
+	public @property {
+		DownloadUrl DownloadUrls() { return _downloadUrls; }
+		void DownloadUrls(DownloadUrl new_DownloadUrls) { _downloadUrls = new_DownloadUrls; }
+	}
 }

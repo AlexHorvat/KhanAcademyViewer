@@ -21,7 +21,8 @@
 
 module KhanAcademyViewer.Windows.Viewer;
 
-import std.stdio;
+alias std.stdio.writeln output;
+
 import std.c.process;
 import std.conv;
 import std.concurrency;
@@ -55,9 +56,12 @@ import gdk.Event;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.BreadCrumb;
+import KhanAcademyViewer.DataStructures.Settings;
+import KhanAcademyViewer.Include.Enums;
 import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Workers.VideoWorker;
+import KhanAcademyViewer.Workers.SettingsWorker;
 import KhanAcademyViewer.Windows.Fullscreen;
 import KhanAcademyViewer.Windows.Loading;
 import KhanAcademyViewer.Windows.About;
@@ -71,6 +75,7 @@ protected final class Viewer
 	private Library _childLibrary;
 	private BreadCrumb[] _breadCrumbs;
 	private int _breadCrumbAvailableWidth;
+	private Settings _settings;
 
 	//UI controls
 	private Window _wdwViewer;
@@ -97,8 +102,16 @@ protected final class Viewer
 		SetupWindow();
 		SetupLoader();
 		LoadLibraryFromStorage();
+		LoadSettings();
+		//TODO change tree view base on whether settings is flow or tree
+		//have two different methods - load flow and load tree
 		LoadInitialTreeViewState();
 		KillLoadingWindow();
+	}
+
+	private void LoadSettings()
+	{
+		_settings = SettingsWorker.LoadSettings();
 	}
 
 	private ListStore CreateModel(bool isParentTree)
@@ -116,11 +129,11 @@ protected final class Viewer
 			workingLibrary = _childLibrary;
 		}
 		
-		for(int index = 0; index < workingLibrary.children.length; index++)
+		for(int index = 0; index < workingLibrary.Children.length; index++)
 		{
 			listStore.append(tree);
 			listStore.setValue(tree, 0, index);
-			listStore.setValue(tree, 1, workingLibrary.children[index].title);
+			listStore.setValue(tree, 1, workingLibrary.Children[index].Title);
 		}
 		
 		return listStore;
@@ -132,11 +145,7 @@ protected final class Viewer
 		RGBA rgbaBlack = new RGBA(0,0,0);
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
 
-		if (!windowBuilder.addFromFile(_gladeFile))
-		{
-			writeln("Could not load viewer glade file (./Windows/Viewer.glade), does it exist?");
-			exit(0);
-		}
+		windowBuilder.addFromFile(_gladeFile);
 
 		//Load all controls from glade file, link to class level variables
 		_wdwViewer = cast(Window)windowBuilder.getObject("wdwViewer");
@@ -308,7 +317,7 @@ protected final class Viewer
 		_bboxBreadCrumbs.removeAll();
 
 		//Get the size available for each bread crumb button, and the maximum length allowed for the title
-		int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length;
+		int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
 		int titleLength = breadCrumbWidth / 8;
 
 		//Create new breadcrumb buttons
@@ -364,7 +373,7 @@ protected final class Viewer
 			}
 
 			//Parent library doesn't change, just set child library then reload child treeview
-			_childLibrary = _parentLibrary.children[rowIndex];
+			_childLibrary = _parentLibrary.Children[rowIndex];
 			_tvChild.setModel(CreateModel(false));
 
 			LoadBreadCrumbs();
@@ -385,7 +394,7 @@ protected final class Viewer
 
 			//If this child has children then make this a parent and it's child the new child
 			//Otherwise this is the end of the tree - play the video
-			if (_childLibrary.children[rowIndex].children !is null)
+			if (_childLibrary.Children[rowIndex].Children !is null)
 			{
 				BreadCrumb crumb = new BreadCrumb();
 				
@@ -398,7 +407,7 @@ protected final class Viewer
 				//Update parent and child libraries - this will move the current child library over to the parent position
 				//and set the new child to be the child's chlid library
 				_parentLibrary = _childLibrary;
-				_childLibrary = _parentLibrary.children[rowIndex];
+				_childLibrary = _parentLibrary.Children[rowIndex];
 
 				_tvParent.setModel(CreateModel(true));
 				_tvChild.setModel(CreateModel(false));
@@ -407,12 +416,12 @@ protected final class Viewer
 			}
 			else
 			{
-				Library currentVideo = _childLibrary.children[rowIndex];
+				Library currentVideo = _childLibrary.Children[rowIndex];
 
-				writeln("Video to play ", currentVideo.download_urls.mp4);
+				debug output("Video to play ", currentVideo.DownloadUrls.MP4);
 
-				_lblVideoTitle.setText(currentVideo.title);
-				_lblVideoDescription.setText(currentVideo.description);
+				_lblVideoTitle.setText(currentVideo.Title);
+				_lblVideoDescription.setText(currentVideo.Description);
 
 				//If a video is already playing, dispose of it
 				if (_videoWorker !is null)
@@ -420,7 +429,7 @@ protected final class Viewer
 					_videoWorker.destroy();
 				}
 
-				_videoWorker = new VideoWorker(currentVideo.download_urls.mp4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
+				_videoWorker = new VideoWorker(currentVideo.DownloadUrls.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
 			}
 		}
 
@@ -460,7 +469,7 @@ protected final class Viewer
 
 		for (int breadCrumbCounter = 0; breadCrumbCounter < _breadCrumbs.length - 1; breadCrumbCounter++)
 		{
-			_parentLibrary = _parentLibrary.children[_breadCrumbs[breadCrumbCounter].RowIndex];
+			_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
 		}
 
 		_tvParent.setModel(CreateModel(true));
@@ -468,7 +477,7 @@ protected final class Viewer
 		//Set child library to last breadcrumb item
 		int childRowIndex = _breadCrumbs[_breadCrumbs.length - 1].RowIndex;
 
-		_childLibrary = _parentLibrary.children[childRowIndex];
+		_childLibrary = _parentLibrary.Children[childRowIndex];
 		_tvChild.setModel(CreateModel(false));
 
 		//Pre-set the selected item in parent treeview

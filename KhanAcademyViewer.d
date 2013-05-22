@@ -21,7 +21,7 @@
 
 module KhanAcademyViewer.Main;
 
-import std.stdio;
+alias std.stdio.writeln output;
 
 import gtk.Main;
 import gtk.Version;
@@ -38,21 +38,23 @@ public void main(string args[]) {
 		uint minorVersion = Version.getMinorVersion;
 		uint microVersion = Version.getMicroVersion;
 
-		writefln("GTK version %s.%s.%s", majorVersion, minorVersion, microVersion);
+		debug output("GTK version ", majorVersion, ".", minorVersion, ".", microVersion);
 	}
 	catch
 	{
-		writeln("Cannot load GTK, ending...");
+		output("Cannot load GTK, ending...");
 		return;
 	}
 
 	try
 	{
-		writefln("GStreamer version %s", GStreamer.versionString);
+		string gstreamerVersion = GStreamer.versionString;
+
+		debug output("GStreamer version ", gstreamerVersion);
 	}
 	catch
 	{
-		writeln("Cannot load GStreamer, ending...");
+		output("Cannot load GStreamer, ending...");
 		return;
 	}
 

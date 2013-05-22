@@ -1,6 +1,6 @@
 /**
  * 
- * Config.d
+ * Settings.d
  * 
  * Author:
  * Alex Horvat <alex.horvat9@gmail.com>
@@ -20,10 +20,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+module KhanAcademyViewer.DataStructures.Settings;
 
-module KhanAcademyViewer.Include.Config;
+import KhanAcademyViewer.Include.Enums;
 
-protected static immutable string G_TopicTreeUrl = "http://www.khanacademy.org/api/v1/topictree";
-protected static immutable string G_ETagFilePath = "~/.config/KhanAcademyViewer/ETag";
-protected static immutable string G_LibraryFilePath = "~/.config/KhanAcademyViewer/Library";
-protected static immutable string G_SettingsFilePath = "~/.config/KhanAcademyViewer/Settings";
+public final class Settings
+{
+	private ViewMode _viewMode;
+	public @property {
+		ViewMode ViewModeSetting() { return _viewMode; }
+		void ViewModeSetting(ViewMode new_ViewMode) { _viewMode = new_ViewMode; }
+	}
+}

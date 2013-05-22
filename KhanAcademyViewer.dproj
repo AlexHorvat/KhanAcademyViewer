@@ -54,6 +54,9 @@
     <Compile Include="Workers\DownloadWorker.d" />
     <Compile Include="Include\Config.d" />
     <Compile Include="Windows\About.d" />
+    <Compile Include="DataStructures\Settings.d" />
+    <Compile Include="Include\Enums.d" />
+    <Compile Include="Workers\SettingsWorker.d" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Windows\" />

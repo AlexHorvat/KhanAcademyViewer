@@ -41,11 +41,7 @@ protected final class About
 	{
 		Builder windowBuilder = new Builder();
 		
-		if (!windowBuilder.addFromFile(_gladeFile))
-		{
-			//Could not load viewer glade file (./Windows/About.glade), does it exist?
-			return;
-		}
+		windowBuilder.addFromFile(_gladeFile);
 
 		_wdwAbout = cast(AboutDialog)windowBuilder.getObject("wdwAbout");
 		_wdwAbout.addOnResponse(&wdwAbout_Response);

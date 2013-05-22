@@ -40,8 +40,6 @@ public static class LibraryWorker
 
 	public static Library LoadLibrary()
 	{
-		//File and directory structure was created in DownloadWorker, so unless something very weird is
-		//going on the file will exist here
 		Library completeLibrary;
 		string libraryFileName = expandTilde(G_LibraryFilePath);
 		ubyte[] serialised = cast(ubyte[])read(libraryFileName);

@@ -66,11 +66,7 @@ protected final class Loading
 	{
 		Builder windowBuilder = new Builder();
 				
-		if (!windowBuilder.addFromFile(_gladeFile))
-		{
-			//Could not load viewer glade file (./Windows/Loading.glade), does it exist?
-			return;
-		}
+		windowBuilder.addFromFile(_gladeFile);
 
 		_wdwLoading = cast(Window)windowBuilder.getObject("wdwLoading");
 

@@ -37,6 +37,8 @@ import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.DownloadUrl;
 import KhanAcademyViewer.Include.Config;
 
+debug alias std.stdio.writeln output;
+
 public static class DownloadWorker
 {
 	public static void NeedToDownloadLibrary(Tid parentThread)
@@ -143,78 +145,92 @@ public static class DownloadWorker
 			if (jsonAuthorNames.length != 0)
 			{
 				//There are author_names, loop thru and add them to library
-				library.author_names.length = jsonAuthorNames.length;
+				debug output("setting authors length to ", jsonAuthorNames.length);
+				library.AuthorNamesLength = jsonAuthorNames.length;
 				
 				foreach(authorCounter; 0 .. jsonAuthorNames.length)
 				{
-					library.author_names[authorCounter] = jsonAuthorNames[authorCounter].str;
+					library.AuthorNames[authorCounter] = jsonAuthorNames[authorCounter].str;
 				}
 			}
 		}
 		
 		if ("date_added" in json)
 		{
+			debug output("adding date ", DateTime.fromISOExtString(chomp(json["date_added"].str, "Z")));
 			//Have to cut off the trailing 'Z' from date as D library doesn't like it
-			library.date_added = DateTime.fromISOExtString(chomp(json["date_added"].str, "Z"));
+			library.DateAdded = DateTime.fromISOExtString(chomp(json["date_added"].str, "Z"));
 		}
 		
 		if ("description" in json)
 		{
-			library.description = json["description"].str;
+			debug output("adding description ", json["description"].str);
+			library.Description = json["description"].str;
 		}
 		
-		if ("download_urls" in json)
+		if ("download_urls" in json && json["download_urls"].type !is JSON_TYPE.NULL)
 		{
+			debug output("adding download urls");
+
 			JSONValue[string] urls = json["download_urls"].object;
-			
 			DownloadUrl downloadUrl = new DownloadUrl;
-			
+
 			if ("mp4" in urls)
 			{
-				downloadUrl.mp4 = urls["mp4"].str;
+				debug output("adding mp4 ", urls["mp4"].str);
+				downloadUrl.MP4 = urls["mp4"].str;
 			}
 			
 			if ("png" in urls)
 			{
-				downloadUrl.png = urls["png"].str;
+				debug output("adding png ", urls["png"].str);
+				downloadUrl.PNG = urls["png"].str;
 			}
 			
 			if ("m3u8" in urls)
 			{
-				downloadUrl.m3u8 = urls["m3u8"].str;
+				debug output("adding m3u8 ", urls["m3u8"].str);
+				downloadUrl.M3U8 = urls["m3u8"].str;
 			}
-			
-			library.download_urls = downloadUrl;
+
+			debug output("storing new download url");
+			library.DownloadUrls = downloadUrl;
 		}
 		
 		if ("duration" in json)
 		{
-			library.duration = json["duration"].integer;
+			debug output("adding duration ", json["duration"].integer);
+			library.Duration = json["duration"].integer;
 		}
 		
 		//Every entry has a title, no need to null check
-		library.title = json["title"].str;
+		debug output("adding title ", json["title"].str);
+		library.Title = json["title"].str;
 		
 		//If the node still has children recurse again
 		if ("children" in json)
 		{
+			debug output("adding children");
 			//Get the json child values
 			JSONValue[] jsonChildren = json["children"].array;
 			
 			//Set the array of Library objects length to the same length as the jsonChildren
-			library.children.length = jsonChildren.length;
+			debug output("Setting child length to ", jsonChildren.length);
+			library.ChildrenLength = jsonChildren.length;
 			
 			//Recurse and build a new library for each child
 			foreach(childCounter; 0 .. jsonChildren.length)
 			{
-				library.children[childCounter] = ConvertJsonToLibrary(jsonChildren[childCounter].object);
+				debug output("child recursing");
+				library.Children[childCounter] = ConvertJsonToLibrary(jsonChildren[childCounter].object);
 			}
 		}
-		
+
+		debug output("Library returning");
 		return library;
 	}
 
-	private static void SaveLibrary(Library CompleteLibrary)
+	private static void SaveLibrary(Library completeLibrary)
 	{
 		//No need to check for save directory existance here as it was checked and created if needed in SaveETag()
 		
@@ -222,8 +238,8 @@ public static class DownloadWorker
 		//Storing the raw json string takes 13.3mb and takes ~2s to load
 		//The msgpack file takes 2.2mb and a fraction of a second to load
 		string libraryFileName = expandTilde(G_LibraryFilePath);
-		ubyte[] serialised = pack(CompleteLibrary);
-		
+		ubyte[] serialised = pack(completeLibrary);
+
 		write(libraryFileName, serialised);
 	}
 }

@@ -23,7 +23,22 @@ module KhanAcademyViewer.DataStructures.DownloadUrl;
 
 public final class DownloadUrl
 {
-	string mp4;
-	string png;
-	string m3u8;
+	private string _mp4;
+	public @property {
+		string MP4() { return _mp4; }
+		void MP4(string new_mp4) { _mp4 = new_mp4; }
+	}
+
+	//TODO am I going to use the png for anything?
+	private string _png;
+	public @property {
+		string PNG() { return _png; }
+		void PNG(string new_png) { _png = new_png; }
+	}
+
+	private string _m3u8;
+	public @property {
+		string M3U8() { return _m3u8; }
+		void M3U8(string new_m3u8) { _m3u8 = new_m3u8; }
+	}
 }
