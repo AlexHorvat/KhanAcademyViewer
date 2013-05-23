@@ -31,4 +31,10 @@ public final class Settings
 		ViewMode ViewModeSetting() { return _viewMode; }
 		void ViewModeSetting(ViewMode new_ViewMode) { _viewMode = new_ViewMode; }
 	}
+
+	private bool _isOnline;
+	public @property {
+		bool IsOnline() { return _isOnline; }
+		void IsOnline(bool new_IsOnline) { _isOnline = new_IsOnline; }
+	}
 }

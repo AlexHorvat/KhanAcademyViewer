@@ -21,8 +21,9 @@
 
 module KhanAcademyViewer.Workers.VideoWorker;
 
-import std.stdio;
-alias std.string str;
+alias std.stdio.writeln output;
+
+import std.string;
 
 import glib.Date;
 
@@ -186,7 +187,7 @@ protected final class VideoWorker
 		_sclPosition.setRange(0, _maxRange);
 
 		//Write the total time to lblTotalTime
-		totalTime = str.format("%s:%02s", cast(int)(_maxRange / 60) % 60, cast(int)_maxRange % 60);
+		totalTime = format("%s:%02s", cast(int)(_maxRange / 60) % 60, cast(int)_maxRange % 60);
 		_lblTotalTime.setText(totalTime);
 		_lblCurrentTime.setText("0:00");
 	}
@@ -254,7 +255,7 @@ protected final class VideoWorker
 					positionInSeconds = position / 1000000000;
 
 					//Format the position into m:ss format (don't think there are any videos even near an hour long, so don't worry about hours for now)
-					currentTime = str.format("%s:%02s", cast(int)(positionInSeconds / 60) % 60, cast(int)positionInSeconds % 60);
+					currentTime = format("%s:%02s", cast(int)(positionInSeconds / 60) % 60, cast(int)positionInSeconds % 60);
 
 					//Move the position indicator
 					_sclPosition.setValue(positionInSeconds);
@@ -309,12 +310,12 @@ protected final class VideoWorker
 				position = _maxRange;
 			}
 			
-			writeln("Seeking to ", position);
+			debug output("Seeking to ", position);
 			SeekTo(position);
 
 			long time;
 			_source.queryPosition(GstFormat.TIME, time);
-			writeln("new time ", time);
+			debug output("new time ", time);
 		}
 		
 		return false;

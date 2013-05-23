@@ -50,6 +50,7 @@ import gtk.ButtonBox;
 import gtk.Main;
 import gtk.Fixed;
 import gtk.EventBox;
+import gtk.RadioMenuItem;
 
 import gdk.RGBA;
 import gdk.Event;
@@ -96,6 +97,8 @@ protected final class Viewer
 	private Scale _sclPosition;
 	private ButtonBox _bboxBreadCrumbs;
 	private Loading _loadingWindow;
+	private RadioMenuItem _imiFlow;
+	private RadioMenuItem _imiTree;
 
 	this()
 	{
@@ -103,15 +106,15 @@ protected final class Viewer
 		SetupLoader();
 		LoadLibraryFromStorage();
 		LoadSettings();
-		//TODO change tree view base on whether settings is flow or tree
-		//have two different methods - load flow and load tree
-		LoadInitialTreeViewState();
+		LoadNavigation();
 		KillLoadingWindow();
 	}
 
 	private void LoadSettings()
 	{
 		_settings = SettingsWorker.LoadSettings();
+
+		debug output("View mode setting ", _settings.ViewModeSetting);
 	}
 
 	private ListStore CreateModel(bool isParentTree)
@@ -153,12 +156,8 @@ protected final class Viewer
 		_wdwViewer.addOnDestroy(&wdwViewer_Destroy);
 
 		_tvParent = cast(TreeView)windowBuilder.getObject("tvParent");
-		_tvParent.addOnButtonRelease(&tvParent_ButtonRelease);
 
 		_tvChild = cast(TreeView)windowBuilder.getObject("tvChild");
-		_tvChild.addOnButtonRelease(&tvChild_ButtonRelease);
-
-		_breadCrumbAvailableWidth = _tvParent.getParent().getWidth() + _tvChild.getParent().getWidth();
 
 		_lblVideoTitle = cast(Label)windowBuilder.getObject("lblVideoTitle");
 		_lblVideoTitle.setLineWrap(true);
@@ -189,6 +188,14 @@ protected final class Viewer
 
 		_bboxBreadCrumbs = cast(ButtonBox)windowBuilder.getObject("bboxBreadCrumbs");
 
+		_imiFlow = cast(RadioMenuItem)windowBuilder.getObject("imiFlow");
+		_imiFlow.addOnButtonRelease(&imiFlow_ButtonRelease);
+
+		_imiTree = cast(RadioMenuItem)windowBuilder.getObject("imiTree");
+		_imiTree.addOnButtonRelease(&imiTree_ButtonRelease);
+		//Link imiFlow and imiTree together so that they work like radio buttons
+		_imiTree.setGroup(_imiFlow.getGroup());
+
 		_miAbout = cast(MenuItem)windowBuilder.getObject("miAbout");
 		_miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
 
@@ -197,6 +204,30 @@ protected final class Viewer
 
 		_wdwViewer.showAll();
 		RefreshUI();
+	}
+
+	private bool imiFlow_ButtonRelease(Event e, Widget sender)
+	{
+		debug output("imiFlow clicked");
+
+		_settings.ViewModeSetting = ViewMode.Flow;
+		SettingsWorker.SaveSettings(_settings);
+
+		LoadNavigation();
+
+		return false;
+	}
+
+	private bool imiTree_ButtonRelease(Event e, Widget sender)
+	{
+		debug output("imiTree clicked");
+
+		_settings.ViewModeSetting = ViewMode.Tree;
+		SettingsWorker.SaveSettings(_settings);
+
+		LoadNavigation();
+
+		return false;
 	}
 
 	private void SetupLoader()
@@ -276,13 +307,65 @@ protected final class Viewer
 		_completeLibrary = LibraryWorker.LoadLibrary();
 	}
 
-	private void LoadInitialTreeViewState()
+	private void LoadNavigation()
 	{
+		switch (_settings.ViewModeSetting)
+		{
+			case ViewMode.Flow:
+				LoadFlowNavigation();
+				break;
+
+			case ViewMode.Tree:
+				LoadTreeNavigation();
+				break;
+
+			default:
+				return;
+		}
+	}
+
+	private void LoadFlowNavigation()
+	{
+		debug output("Using flow navigation");
+
+		_imiFlow.setActive(true);
+
+		//Clear any existing values
+		_tvParent.onButtonReleaseListeners.destroy();
+		_tvChild.onButtonReleaseListeners.destroy();
+		_breadCrumbs.destroy();
+		LoadBreadCrumbs();
+		_tvChild.setModel(null);
+
+		for (int columnCounter = _tvParent.getNColumns() - 1; columnCounter >= 0; columnCounter--)
+		{
+			_tvParent.removeColumn(_tvParent.getColumn(columnCounter));
+		}
+
+		for (int columnCounter = _tvChild.getNColumns() - 1; columnCounter >= 0; columnCounter--)
+		{
+			_tvChild.removeColumn(_tvChild.getColumn(columnCounter));
+		}
+
+		_tvParent.addOnButtonRelease(&tvParent_ButtonRelease);
+		_tvChild.addOnButtonRelease(&tvChild_ButtonRelease);
+
+		_breadCrumbAvailableWidth = _tvParent.getParent().getWidth() + _tvChild.getParent().getWidth();
+
 		CreateTreeViewColumns(_tvParent);
 		CreateTreeViewColumns(_tvChild);
-
+		
 		_parentLibrary = cast(Library)_completeLibrary;
 		_tvParent.setModel(CreateModel(true));
+	}
+
+	private void LoadTreeNavigation()
+	{
+		debug output("Using tree navigation");
+
+		_imiTree.setActive(true);
+
+		//TODO
 	}
 
 	private void KillLoadingWindow()
@@ -317,30 +400,33 @@ protected final class Viewer
 		_bboxBreadCrumbs.removeAll();
 
 		//Get the size available for each bread crumb button, and the maximum length allowed for the title
-		int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
-		int titleLength = breadCrumbWidth / 8;
-
-		//Create new breadcrumb buttons
-		for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
+		if (_breadCrumbs !is null)
 		{
-			string title = _breadCrumbs[breadCrumbIndex].Title;
+			int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
+			int titleLength = breadCrumbWidth / 8;
 
-			if (title.length > titleLength)
+			//Create new breadcrumb buttons
+			for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
 			{
-				title.length = titleLength - 3;
-				title ~= "...";
-			}
+				string title = _breadCrumbs[breadCrumbIndex].Title;
 
-			Button breadButton = new Button(title, false);
-			
-			breadButton.setName(to!(string)(breadCrumbIndex + 1));
-			breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].Title);
-			breadButton.setAlignment(0.0, 0.5);
-			breadButton.setSizeRequest(breadCrumbWidth, -1);
-			breadButton.setVisible(true);
-			breadButton.addOnClicked(&breadButton_Clicked);
-			
-			_bboxBreadCrumbs.add(breadButton);
+				if (title.length > titleLength)
+				{
+					title.length = titleLength - 3;
+					title ~= "...";
+				}
+
+				Button breadButton = new Button(title, false);
+				
+				breadButton.setName(to!(string)(breadCrumbIndex + 1));
+				breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].Title);
+				breadButton.setAlignment(0.0, 0.5);
+				breadButton.setSizeRequest(breadCrumbWidth, -1);
+				breadButton.setVisible(true);
+				breadButton.addOnClicked(&breadButton_Clicked);
+				
+				_bboxBreadCrumbs.add(breadButton);
+			}
 		}
 	}
 

@@ -22,6 +22,8 @@
  */
 module KhanAcademyViewer.Workers.SettingsWorker;
 
+alias std.stdio.writeln output;
+
 import std.file;
 import std.path;
 
@@ -51,6 +53,8 @@ public static class SettingsWorker
 		ubyte[] serialised = pack(settings);
 		
 		write(settingsFileName, serialised);
+
+		debug output("Settings saved");
 	}
 
 	private static bool SettingsFileExists()
@@ -68,7 +72,9 @@ public static class SettingsWorker
 		
 		//Convert the serialised library back into a Library object
 		unpack(serialised, settings);
-		
+
+		debug output("Settings loaded, returning them...");
+
 		return settings;
 	}
 
