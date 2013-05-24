@@ -26,6 +26,7 @@ alias std.stdio.writeln output;
 import std.c.process;
 import std.conv;
 import std.concurrency;
+import std.array;
 
 import core.time;
 import core.thread;
@@ -51,6 +52,8 @@ import gtk.Main;
 import gtk.Fixed;
 import gtk.EventBox;
 import gtk.RadioMenuItem;
+
+import gtk.TreeStore;
 
 import gdk.RGBA;
 import gdk.Event;
@@ -115,31 +118,6 @@ protected final class Viewer
 		_settings = SettingsWorker.LoadSettings();
 
 		debug output("View mode setting ", _settings.ViewModeSetting);
-	}
-
-	private ListStore CreateModel(bool isParentTree)
-	{
-		Library workingLibrary;
-		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
-		TreeIter tree = new TreeIter();
-		
-		if (isParentTree)
-		{
-			workingLibrary = _parentLibrary;
-		}
-		else
-		{
-			workingLibrary = _childLibrary;
-		}
-		
-		for(int index = 0; index < workingLibrary.Children.length; index++)
-		{
-			listStore.append(tree);
-			listStore.setValue(tree, 0, index);
-			listStore.setValue(tree, 1, workingLibrary.Children[index].Title);
-		}
-		
-		return listStore;
 	}
 
 	private void SetupWindow()
@@ -329,34 +307,43 @@ protected final class Viewer
 		debug output("Using flow navigation");
 
 		_imiFlow.setActive(true);
+		_tvChild.getParent().setVisible(true);
+		ClearNavigationControls();
 
+		//Set tvParent's width to match tvChild's width
+		_tvParent.getParent().setSizeRequest(_tvChild.getParent().getWidth(), -1);
+
+		//Setup flow mode
+		CreateFlowColumns(_tvParent);
+		CreateFlowColumns(_tvChild);
+
+		_parentLibrary = cast(Library)_completeLibrary;
+		_tvParent.setModel(CreateFlowModel(true));
+
+		_tvParent.addOnButtonRelease(&tvParent_Flow_ButtonRelease);
+		_tvChild.addOnButtonRelease(&tvChild_Flow_ButtonRelease);
+		
+		_breadCrumbAvailableWidth = _tvParent.getParent().getWidth() + _tvChild.getParent().getWidth();
+	}
+
+	private void ClearNavigationControls()
+	{
 		//Clear any existing values
 		_tvParent.onButtonReleaseListeners.destroy();
 		_tvChild.onButtonReleaseListeners.destroy();
 		_breadCrumbs.destroy();
 		LoadBreadCrumbs();
 		_tvChild.setModel(null);
-
+		
 		for (int columnCounter = _tvParent.getNColumns() - 1; columnCounter >= 0; columnCounter--)
 		{
 			_tvParent.removeColumn(_tvParent.getColumn(columnCounter));
 		}
-
+		
 		for (int columnCounter = _tvChild.getNColumns() - 1; columnCounter >= 0; columnCounter--)
 		{
 			_tvChild.removeColumn(_tvChild.getColumn(columnCounter));
 		}
-
-		_tvParent.addOnButtonRelease(&tvParent_ButtonRelease);
-		_tvChild.addOnButtonRelease(&tvChild_ButtonRelease);
-
-		_breadCrumbAvailableWidth = _tvParent.getParent().getWidth() + _tvChild.getParent().getWidth();
-
-		CreateTreeViewColumns(_tvParent);
-		CreateTreeViewColumns(_tvChild);
-		
-		_parentLibrary = cast(Library)_completeLibrary;
-		_tvParent.setModel(CreateModel(true));
 	}
 
 	private void LoadTreeNavigation()
@@ -364,8 +351,122 @@ protected final class Viewer
 		debug output("Using tree navigation");
 
 		_imiTree.setActive(true);
+		_tvChild.getParent().setVisible(false);
+		ClearNavigationControls();
+		CreateTreeColumns(_tvParent);
 
-		//TODO
+		//tvChild is the reference width, tvParent is always the same width, so it's safe to assume that
+		//both treeviews together are tvChild.width * 2
+		//So stretch tvParent to take up both spaces to give the tree room to grow
+		_tvParent.getParent().setSizeRequest(_tvChild.getParent().getWidth() * 2, -1);
+
+		_tvParent.setModel(CreateTreeModel());
+		_tvParent.addOnRowActivated(&tvParent_Tree_RowActivated);
+	}
+
+	private void CreateTreeColumns(TreeView treeView)
+	{
+		CellRendererText renderer = new CellRendererText();
+		TreeViewColumn indexColumn = new TreeViewColumn("HasVideo", renderer, "text", 0);
+		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
+
+		
+		indexColumn.setVisible(false);
+		
+		treeView.appendColumn(indexColumn);
+		treeView.appendColumn(titleColumn);
+	}
+
+	private TreeStore CreateTreeModel()
+	{
+		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING]);
+		Library workingLibrary = _completeLibrary;
+
+		RecurseTreeChildren(treeStore, _completeLibrary, null);
+
+		return treeStore;
+	}
+
+	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
+	{
+		foreach(Library childLibrary; library.Children)
+		{
+			TreeIter iter;
+
+			if (parentIter is null)
+			{
+				iter = treeStore.createIter();
+			}
+			else
+			{
+				iter = treeStore.append(parentIter);
+			}
+
+			treeStore.setValue(iter, 0, childLibrary.DownloadUrls !is null);
+			treeStore.setValue(iter, 1, childLibrary.Title);
+
+			RecurseTreeChildren(treeStore, childLibrary, iter);
+		}
+	}
+
+	private ListStore CreateFlowModel(bool isParentTree)
+	{
+		Library workingLibrary;
+		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
+		TreeIter tree = new TreeIter();
+		
+		if (isParentTree)
+		{
+			workingLibrary = _parentLibrary;
+		}
+		else
+		{
+			workingLibrary = _childLibrary;
+		}
+		
+		for(int index = 0; index < workingLibrary.Children.length; index++)
+		{
+			listStore.append(tree);
+			listStore.setValue(tree, 0, index);
+			listStore.setValue(tree, 1, workingLibrary.Children[index].Title);
+		}
+		
+		return listStore;
+	}
+
+	private void tvParent_Tree_RowActivated(TreePath treePath, TreeViewColumn column, TreeView treeView)
+	{
+		debug output("Something on tree selected");
+
+		TreeIter selectedItem = treeView.getSelectedIter();
+
+		if (selectedItem.getValueInt(0))
+		{
+			//Use TreePath to iterate over library to get the selected value, can then get video details from this
+			Library currentVideo = _completeLibrary;
+			string[] paths = split(treePath.toString(), ":");
+
+			foreach (string path; paths)
+			{
+				currentVideo = currentVideo.Children[to!long(path)];
+			}
+
+			_lblVideoTitle.setText(currentVideo.Title);
+			_lblVideoDescription.setText(currentVideo.Description);
+			
+			//If a video is already playing, dispose of it
+			if (_videoWorker !is null)
+			{
+				_videoWorker.destroy();
+			}
+
+			debug output("Playing video ", currentVideo.DownloadUrls.MP4);
+			_videoWorker = new VideoWorker(currentVideo.DownloadUrls.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
+		}
+		else
+		{
+			debug output("No value");
+		}
 	}
 
 	private void KillLoadingWindow()
@@ -382,7 +483,7 @@ protected final class Viewer
 		}
 	}
 	
-	private void CreateTreeViewColumns(ref TreeView treeView)
+	private void CreateFlowColumns(ref TreeView treeView)
 	{
 		CellRendererText renderer = new CellRendererText();
 		TreeViewColumn indexColumn = new TreeViewColumn("Index", renderer, "text", 0);
@@ -430,7 +531,7 @@ protected final class Viewer
 		}
 	}
 
-	private bool tvParent_ButtonRelease(Event e, Widget sender)
+	private bool tvParent_Flow_ButtonRelease(Event e, Widget sender)
 	{
 		TreeIter selectedItem = _tvParent.getSelectedIter();
 
@@ -460,7 +561,7 @@ protected final class Viewer
 
 			//Parent library doesn't change, just set child library then reload child treeview
 			_childLibrary = _parentLibrary.Children[rowIndex];
-			_tvChild.setModel(CreateModel(false));
+			_tvChild.setModel(CreateFlowModel(false));
 
 			LoadBreadCrumbs();
 		}
@@ -469,7 +570,7 @@ protected final class Viewer
 		return true;
 	}
 
-	private bool tvChild_ButtonRelease(Event e, Widget sender)
+	private bool tvChild_Flow_ButtonRelease(Event e, Widget sender)
 	{
 		TreeIter selectedItem = _tvChild.getSelectedIter();
 		
@@ -482,6 +583,8 @@ protected final class Viewer
 			//Otherwise this is the end of the tree - play the video
 			if (_childLibrary.Children[rowIndex].Children !is null)
 			{
+				debug output("Has children");
+
 				BreadCrumb crumb = new BreadCrumb();
 				
 				crumb.RowIndex = rowIndex;
@@ -495,16 +598,16 @@ protected final class Viewer
 				_parentLibrary = _childLibrary;
 				_childLibrary = _parentLibrary.Children[rowIndex];
 
-				_tvParent.setModel(CreateModel(true));
-				_tvChild.setModel(CreateModel(false));
+				_tvParent.setModel(CreateFlowModel(true));
+				_tvChild.setModel(CreateFlowModel(false));
 
 				LoadBreadCrumbs();
 			}
 			else
 			{
-				Library currentVideo = _childLibrary.Children[rowIndex];
+				debug output("No children");
 
-				debug output("Video to play ", currentVideo.DownloadUrls.MP4);
+				Library currentVideo = _childLibrary.Children[rowIndex];
 
 				_lblVideoTitle.setText(currentVideo.Title);
 				_lblVideoDescription.setText(currentVideo.Description);
@@ -515,7 +618,17 @@ protected final class Viewer
 					_videoWorker.destroy();
 				}
 
-				_videoWorker = new VideoWorker(currentVideo.DownloadUrls.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
+				//TODO why are the video urls sometimes missing?
+				if (currentVideo.DownloadUrls !is null)
+				{
+					debug output("Video to play ", currentVideo.DownloadUrls.MP4);
+
+					_videoWorker = new VideoWorker(currentVideo.DownloadUrls.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
+				}
+				else
+				{
+					debug output("Video missing!?");
+				}
 			}
 		}
 
@@ -558,13 +671,13 @@ protected final class Viewer
 			_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
 		}
 
-		_tvParent.setModel(CreateModel(true));
+		_tvParent.setModel(CreateFlowModel(true));
 
 		//Set child library to last breadcrumb item
 		int childRowIndex = _breadCrumbs[_breadCrumbs.length - 1].RowIndex;
 
 		_childLibrary = _parentLibrary.Children[childRowIndex];
-		_tvChild.setModel(CreateModel(false));
+		_tvChild.setModel(CreateFlowModel(false));
 
 		//Pre-set the selected item in parent treeview
 		TreePath path = new TreePath(childRowIndex);
