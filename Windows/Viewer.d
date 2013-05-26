@@ -52,7 +52,6 @@ import gtk.Main;
 import gtk.Fixed;
 import gtk.EventBox;
 import gtk.RadioMenuItem;
-
 import gtk.TreeStore;
 
 import gdk.RGBA;
@@ -370,7 +369,6 @@ protected final class Viewer
 		TreeViewColumn indexColumn = new TreeViewColumn("HasVideo", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
 
-		
 		indexColumn.setVisible(false);
 		
 		treeView.appendColumn(indexColumn);
@@ -402,7 +400,7 @@ protected final class Viewer
 				iter = treeStore.append(parentIter);
 			}
 
-			treeStore.setValue(iter, 0, childLibrary.DownloadUrls !is null);
+			treeStore.setValue(iter, 0, childLibrary.MP4 != "");
 			treeStore.setValue(iter, 1, childLibrary.Title);
 
 			RecurseTreeChildren(treeStore, childLibrary, iter);
@@ -423,11 +421,12 @@ protected final class Viewer
 		{
 			workingLibrary = _childLibrary;
 		}
-		
+
 		for(int index = 0; index < workingLibrary.Children.length; index++)
 		{
 			listStore.append(tree);
 			listStore.setValue(tree, 0, index);
+			output(workingLibrary.Children[index].Title);
 			listStore.setValue(tree, 1, workingLibrary.Children[index].Title);
 		}
 		
@@ -460,8 +459,8 @@ protected final class Viewer
 				_videoWorker.destroy();
 			}
 
-			debug output("Playing video ", currentVideo.DownloadUrls.MP4);
-			_videoWorker = new VideoWorker(currentVideo.DownloadUrls.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
+			debug output("Playing video ", currentVideo.MP4);
+			_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
 		}
 		else
 		{
@@ -583,8 +582,6 @@ protected final class Viewer
 			//Otherwise this is the end of the tree - play the video
 			if (_childLibrary.Children[rowIndex].Children !is null)
 			{
-				debug output("Has children");
-
 				BreadCrumb crumb = new BreadCrumb();
 				
 				crumb.RowIndex = rowIndex;
@@ -605,8 +602,6 @@ protected final class Viewer
 			}
 			else
 			{
-				debug output("No children");
-
 				Library currentVideo = _childLibrary.Children[rowIndex];
 
 				_lblVideoTitle.setText(currentVideo.Title);
@@ -618,17 +613,8 @@ protected final class Viewer
 					_videoWorker.destroy();
 				}
 
-				//TODO why are the video urls sometimes missing?
-				if (currentVideo.DownloadUrls !is null)
-				{
-					debug output("Video to play ", currentVideo.DownloadUrls.MP4);
-
-					_videoWorker = new VideoWorker(currentVideo.DownloadUrls.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
-				}
-				else
-				{
-					debug output("Video missing!?");
-				}
+				debug output("Video to play ", currentVideo.MP4);
+				_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
 			}
 		}
 

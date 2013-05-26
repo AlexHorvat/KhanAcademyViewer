@@ -45,7 +45,6 @@
     <Compile Include="Windows\Viewer.d" />
     <Compile Include="Workers\LibraryWorker.d" />
     <Compile Include="DataStructures\Library.d" />
-    <Compile Include="DataStructures\DownloadUrl.d" />
     <Compile Include="DataStructures\BreadCrumb.d" />
     <Compile Include="Include\msgpack.d" />
     <Compile Include="Workers\VideoWorker.d" />

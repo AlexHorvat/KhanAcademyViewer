@@ -34,7 +34,6 @@ import std.concurrency;
 import msgpack;
 
 import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.DataStructures.DownloadUrl;
 import KhanAcademyViewer.Include.Config;
 
 debug alias std.stdio.writeln output;
@@ -134,100 +133,92 @@ public static class DownloadWorker
 
 	private static Library ConvertJsonToLibrary(JSONValue[string] json)
 	{
-		Library library = new Library();
-		
-		//Check if there is an author_names object at all
-		if ("author_names" in json)
+		//If the node still has children load the current title and recurse again
+		if ("children" in json && json["children"].type !is JSON_TYPE.NULL)
 		{
-			JSONValue[] jsonAuthorNames = json["author_names"].array;
-			
-			//Now check if there are any entries in the author_names
-			if (jsonAuthorNames.length != 0)
+			debug output("Found a node library");
+			Library library = new Library();
+
+			//Every entry has a title, no need to null check
+			debug output("adding title ", json["title"].str);
+			library.Title = json["title"].str;
+
+			//Get all children of this library
+			foreach(JSONValue jsonChild; json["children"].array)
 			{
-				//There are author_names, loop thru and add them to library
-				debug output("setting authors length to ", jsonAuthorNames.length);
-				library.AuthorNamesLength = jsonAuthorNames.length;
-				
-				foreach(authorCounter; 0 .. jsonAuthorNames.length)
+				Library returnedLibrary = ConvertJsonToLibrary(jsonChild.object);
+
+				//returnedLibrary will be null if it is an exercise
+				//in that case don't add it to the main library
+				if (returnedLibrary !is null)
 				{
-					library.AuthorNames[authorCounter] = jsonAuthorNames[authorCounter].str;
+					library.AddChildLibrary(returnedLibrary);
 				}
 			}
-		}
-		
-		if ("date_added" in json)
-		{
-			debug output("adding date ", DateTime.fromISOExtString(chomp(json["date_added"].str, "Z")));
-			//Have to cut off the trailing 'Z' from date as D library doesn't like it
-			library.DateAdded = DateTime.fromISOExtString(chomp(json["date_added"].str, "Z"));
-		}
-		
-		if ("description" in json)
-		{
-			debug output("adding description ", json["description"].str);
-			library.Description = json["description"].str;
-		}
-		
-		if ("download_urls" in json && json["download_urls"].type !is JSON_TYPE.NULL)
-		{
-			debug output("adding download urls");
 
+			return library;
+		}
+		//If no children then check if there's download links, if there are then this is a video
+		else if ("download_urls" in json && json["download_urls"].type !is JSON_TYPE.NULL)
+		{
+			debug output("Found a video");
+
+			Library library = new Library();
+			
+			//Every entry has a title, no need to null check
+			debug output("adding title ", json["title"].str);
+			library.Title = json["title"].str;
+
+			if ("duration" in json)
+			{
+				library.Duration = json["duration"].integer;
+			}
+			
+			//Check if there is an author_names object at all
+			if ("author_names" in json)
+			{
+				JSONValue[] jsonAuthorNames = json["author_names"].array;
+				
+				//Now check if there are any entries in the author_names
+				if (jsonAuthorNames.length != 0)
+				{
+					//There are author_names, loop thru and add them to library
+					library.AuthorNamesLength = jsonAuthorNames.length;
+					
+					foreach(authorCounter; 0 .. jsonAuthorNames.length)
+					{
+						library.AuthorNames[authorCounter] = jsonAuthorNames[authorCounter].str;
+					}
+				}
+			}
+			
+			if ("date_added" in json)
+			{
+				//Have to cut off the trailing 'Z' from date as D library doesn't like it
+				library.DateAdded = DateTime.fromISOExtString(chomp(json["date_added"].str, "Z"));
+			}
+			
+			if ("description" in json)
+			{
+				library.Description = json["description"].str;
+			}
+
+			//Get the download urls
 			JSONValue[string] urls = json["download_urls"].object;
-			DownloadUrl downloadUrl = new DownloadUrl;
 
 			if ("mp4" in urls)
 			{
-				debug output("adding mp4 ", urls["mp4"].str);
-				downloadUrl.MP4 = urls["mp4"].str;
-			}
-			
-			if ("png" in urls)
-			{
-				debug output("adding png ", urls["png"].str);
-				downloadUrl.PNG = urls["png"].str;
-			}
-			
-			if ("m3u8" in urls)
-			{
-				debug output("adding m3u8 ", urls["m3u8"].str);
-				downloadUrl.M3U8 = urls["m3u8"].str;
+				library.MP4 = urls["mp4"].str;
 			}
 
-			debug output("storing new download url");
-			library.DownloadUrls = downloadUrl;
+			return library;
 		}
-		
-		if ("duration" in json)
+		//No children, but no video's as well, must be an exercice - don't load it
+		else
 		{
-			debug output("adding duration ", json["duration"].integer);
-			library.Duration = json["duration"].integer;
+			debug output("Found an exercise");
+			return null;
 		}
-		
-		//Every entry has a title, no need to null check
-		debug output("adding title ", json["title"].str);
-		library.Title = json["title"].str;
-		
-		//If the node still has children recurse again
-		if ("children" in json)
-		{
-			debug output("adding children");
-			//Get the json child values
-			JSONValue[] jsonChildren = json["children"].array;
-			
-			//Set the array of Library objects length to the same length as the jsonChildren
-			debug output("Setting child length to ", jsonChildren.length);
-			library.ChildrenLength = jsonChildren.length;
-			
-			//Recurse and build a new library for each child
-			foreach(childCounter; 0 .. jsonChildren.length)
-			{
-				debug output("child recursing");
-				library.Children[childCounter] = ConvertJsonToLibrary(jsonChildren[childCounter].object);
-			}
-		}
-
-		debug output("Library returning");
-		return library;
 	}
 
 	private static void SaveLibrary(Library completeLibrary)

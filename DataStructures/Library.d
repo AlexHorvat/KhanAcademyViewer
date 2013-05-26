@@ -21,8 +21,6 @@
 
 module KhanAcademyViewer.DataStructures.Library;
 
-import KhanAcademyViewer.DataStructures.DownloadUrl;
-
 import std.datetime;
 
 public final class Library
@@ -39,11 +37,6 @@ public final class Library
 	public @property {
 		Library[] Children() { return _children; }
 		void Children(Library[] new_Children) { _children = new_Children; }
-	}
-
-	public @property {
-		long ChildrenLength() { return _children.length; }
-		void ChildrenLength(long new_Length) { _children.length = new_Length; }
 	}
 
 	private string _description;
@@ -82,9 +75,15 @@ public final class Library
 		void DateAdded(DateTime new_DateAdded) { _dateAdded = new_DateAdded; }
 	}
 
-	private DownloadUrl _downloadUrls;
+	private string _mp4;
 	public @property {
-		DownloadUrl DownloadUrls() { return _downloadUrls; }
-		void DownloadUrls(DownloadUrl new_DownloadUrls) { _downloadUrls = new_DownloadUrls; }
+		string MP4() { return _mp4; }
+		void MP4(string new_MP4) { _mp4 = new_MP4; }
+	}
+
+	public void AddChildLibrary(Library new_ChildLibrary)
+	{
+		_children.length++;
+		_children[_children.length - 1] = new_ChildLibrary;
 	}
 }
