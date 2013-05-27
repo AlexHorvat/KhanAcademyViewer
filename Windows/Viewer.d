@@ -52,6 +52,7 @@ import gtk.Main;
 import gtk.Fixed;
 import gtk.EventBox;
 import gtk.RadioMenuItem;
+import gtk.ImageMenuItem;
 import gtk.TreeStore;
 
 import gdk.RGBA;
@@ -65,9 +66,10 @@ import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Workers.VideoWorker;
 import KhanAcademyViewer.Workers.SettingsWorker;
-import KhanAcademyViewer.Windows.Fullscreen;
+//import KhanAcademyViewer.Windows.Fullscreen;
 import KhanAcademyViewer.Windows.Loading;
 import KhanAcademyViewer.Windows.About;
+import KhanAcademyViewer.Include.Functions;
 
 protected final class Viewer
 {
@@ -101,26 +103,29 @@ protected final class Viewer
 	private Loading _loadingWindow;
 	private RadioMenuItem _imiFlow;
 	private RadioMenuItem _imiTree;
+	private ImageMenuItem _miOnline;
 
 	this()
 	{
+		debug output("this");
+		LoadSettings();
 		SetupWindow();
 		SetupLoader();
 		LoadLibraryFromStorage();
-		LoadSettings();
-		LoadNavigation();
+		SetOnlineOrOffline();
+		//LoadNavigation();
 		KillLoadingWindow();
 	}
 
 	private void LoadSettings()
 	{
+		debug output("LoadSettings");
 		_settings = SettingsWorker.LoadSettings();
-
-		debug output("View mode setting ", _settings.ViewModeSetting);
 	}
 
 	private void SetupWindow()
 	{
+		debug output("SetupWindow");
 		Builder windowBuilder = new Builder();
 		RGBA rgbaBlack = new RGBA(0,0,0);
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
@@ -152,10 +157,10 @@ protected final class Viewer
 
 		_btnPlay = cast(Button)windowBuilder.getObject("btnPlay");
 		_btnPlay.setImage(imgPlay);
-		_btnPlay.setSensitive(false);
+		//_btnPlay.setSensitive(false);
 
 		_btnFullscreen = cast(Button)windowBuilder.getObject("btnFullscreen");
-		_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
+		//_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
 
 		_sclPosition = cast(Scale)windowBuilder.getObject("sclPosition");
 
@@ -173,6 +178,9 @@ protected final class Viewer
 		//Link imiFlow and imiTree together so that they work like radio buttons
 		_imiTree.setGroup(_imiFlow.getGroup());
 
+		_miOnline = cast(ImageMenuItem)windowBuilder.getObject("miOnline");
+		_miOnline.addOnButtonRelease(&miOnline_ButtonRelease);
+
 		_miAbout = cast(MenuItem)windowBuilder.getObject("miAbout");
 		_miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
 
@@ -183,9 +191,57 @@ protected final class Viewer
 		RefreshUI();
 	}
 
+	private void SetOnlineOrOffline()
+	{
+		debug output("SetOnlineOrOffline");
+		_settings.IsOnline ? SetOnline() : SetOffline();
+	}
+
+	private bool miOnline_ButtonRelease(Event e, Widget sender)
+	{
+		debug output("miOnline_ButtonRelease");
+		_settings.IsOnline ? SetOffline() : SetOnline();
+		debug output("miOnline complete");
+		return false;
+	}
+
+	private void SetOnline()
+	{
+		debug output("SetOnline");
+		_settings.IsOnline = true;
+		SettingsWorker.SaveSettings(_settings);
+		//Enable full library
+		_completeLibrary = LibraryWorker.LoadLibrary();
+		LoadNavigation();
+
+		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
+		
+		_miOnline.setImage(imgOnline);
+		_miOnline.setTooltipText("Working Online");
+
+		debug output("Gone online");
+	}
+
+	private void SetOffline()
+	{
+		debug output("SetOffline");
+		_settings.IsOnline = false;
+		SettingsWorker.SaveSettings(_settings);
+		//Only show video's which are downloaded, need to change _completeLibrary to reflect this
+		_completeLibrary = LibraryWorker.LoadOfflineLibrary();
+		LoadNavigation();
+
+		Image imgOffline = new Image(StockID.DISCONNECT, GtkIconSize.BUTTON);
+		
+		_miOnline.setImage(imgOffline);
+		_miOnline.setTooltipText("Working Offline");
+
+		debug output("Gone offline");
+	}
+
 	private bool imiFlow_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("imiFlow clicked");
+		debug output("imiFlow_ButtonRelease");
 
 		_settings.ViewModeSetting = ViewMode.Flow;
 		SettingsWorker.SaveSettings(_settings);
@@ -197,7 +253,7 @@ protected final class Viewer
 
 	private bool imiTree_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("imiTree clicked");
+		debug output("imiTree_ButtonRelease");
 
 		_settings.ViewModeSetting = ViewMode.Tree;
 		SettingsWorker.SaveSettings(_settings);
@@ -286,6 +342,10 @@ protected final class Viewer
 
 	private void LoadNavigation()
 	{
+		debug output("LoadNavigation");
+
+		ClearNavigationControls();
+
 		switch (_settings.ViewModeSetting)
 		{
 			case ViewMode.Flow:
@@ -307,7 +367,7 @@ protected final class Viewer
 
 		_imiFlow.setActive(true);
 		_tvChild.getParent().setVisible(true);
-		ClearNavigationControls();
+		//ClearNavigationControls();
 
 		//Set tvParent's width to match tvChild's width
 		_tvParent.getParent().setSizeRequest(_tvChild.getParent().getWidth(), -1);
@@ -327,12 +387,21 @@ protected final class Viewer
 
 	private void ClearNavigationControls()
 	{
+		debug output("Clearing navigation settings");
 		//Clear any existing values
 		_tvParent.onButtonReleaseListeners.destroy();
+		_tvParent.onRowActivatedListeners.destroy();
 		_tvChild.onButtonReleaseListeners.destroy();
 		_breadCrumbs.destroy();
 		LoadBreadCrumbs();
 		_tvChild.setModel(null);
+
+		//Stop any playing video
+		if (_videoWorker !is null)
+		{
+			_videoWorker.destroy();
+			debug output("_videoWorker destroyed");
+		}
 		
 		for (int columnCounter = _tvParent.getNColumns() - 1; columnCounter >= 0; columnCounter--)
 		{
@@ -351,7 +420,7 @@ protected final class Viewer
 
 		_imiTree.setActive(true);
 		_tvChild.getParent().setVisible(false);
-		ClearNavigationControls();
+		//ClearNavigationControls();
 		CreateTreeColumns(_tvParent);
 
 		//tvChild is the reference width, tvParent is always the same width, so it's safe to assume that
@@ -365,6 +434,7 @@ protected final class Viewer
 
 	private void CreateTreeColumns(TreeView treeView)
 	{
+		debug output("CreateTreeColumns");
 		CellRendererText renderer = new CellRendererText();
 		TreeViewColumn indexColumn = new TreeViewColumn("HasVideo", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
@@ -377,6 +447,7 @@ protected final class Viewer
 
 	private TreeStore CreateTreeModel()
 	{
+		debug output("CreateTreeModel");
 		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING]);
 		Library workingLibrary = _completeLibrary;
 
@@ -387,16 +458,19 @@ protected final class Viewer
 
 	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
 	{
+		debug output("RecurseTreeChildren");
 		foreach(Library childLibrary; library.Children)
 		{
 			TreeIter iter;
 
 			if (parentIter is null)
 			{
+				debug output("parentIter is null");
 				iter = treeStore.createIter();
 			}
 			else
 			{
+				debug output("parentIter is NOT null");
 				iter = treeStore.append(parentIter);
 			}
 
@@ -409,6 +483,7 @@ protected final class Viewer
 
 	private ListStore CreateFlowModel(bool isParentTree)
 	{
+		debug output("CreateFlowModel");
 		Library workingLibrary;
 		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
 		TreeIter tree = new TreeIter();
@@ -426,7 +501,6 @@ protected final class Viewer
 		{
 			listStore.append(tree);
 			listStore.setValue(tree, 0, index);
-			output(workingLibrary.Children[index].Title);
 			listStore.setValue(tree, 1, workingLibrary.Children[index].Title);
 		}
 		
@@ -435,7 +509,7 @@ protected final class Viewer
 
 	private void tvParent_Tree_RowActivated(TreePath treePath, TreeViewColumn column, TreeView treeView)
 	{
-		debug output("Something on tree selected");
+		debug output("tvParent_Tree_RowActivated");
 
 		TreeIter selectedItem = treeView.getSelectedIter();
 
@@ -450,17 +524,7 @@ protected final class Viewer
 				currentVideo = currentVideo.Children[to!long(path)];
 			}
 
-			_lblVideoTitle.setText(currentVideo.Title);
-			_lblVideoDescription.setText(currentVideo.Description);
-			
-			//If a video is already playing, dispose of it
-			if (_videoWorker !is null)
-			{
-				_videoWorker.destroy();
-			}
-
-			debug output("Playing video ", currentVideo.MP4);
-			_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
+			LoadVideo(currentVideo);
 		}
 		else
 		{
@@ -470,20 +534,13 @@ protected final class Viewer
 
 	private void KillLoadingWindow()
 	{
+		debug output("KillLoadingWindow");
 		_loadingWindow.destroy();
-	}
-
-	private void RefreshUI()
-	{
-		//Run any gtk events pending to refresh the UI
-		while (Main.eventsPending)
-		{
-			Main.iteration();
-		}
 	}
 	
 	private void CreateFlowColumns(ref TreeView treeView)
 	{
+		debug output("CreateFlowColumns");
 		CellRendererText renderer = new CellRendererText();
 		TreeViewColumn indexColumn = new TreeViewColumn("Index", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
@@ -496,6 +553,7 @@ protected final class Viewer
 
 	private void LoadBreadCrumbs()
 	{
+		debug output("LoadBreadCrumbs");
 		//Clear existing breadcrumb buttons
 		_bboxBreadCrumbs.removeAll();
 
@@ -532,6 +590,7 @@ protected final class Viewer
 
 	private bool tvParent_Flow_ButtonRelease(Event e, Widget sender)
 	{
+		debug output("tvParent_Flow_ButtonRelease");
 		TreeIter selectedItem = _tvParent.getSelectedIter();
 
 		if (selectedItem !is null)
@@ -571,6 +630,7 @@ protected final class Viewer
 
 	private bool tvChild_Flow_ButtonRelease(Event e, Widget sender)
 	{
+		debug output("tvChild_Flow_ButtonRelease");
 		TreeIter selectedItem = _tvChild.getSelectedIter();
 		
 		if (selectedItem !is null)
@@ -602,24 +662,28 @@ protected final class Viewer
 			}
 			else
 			{
-				Library currentVideo = _childLibrary.Children[rowIndex];
-
-				_lblVideoTitle.setText(currentVideo.Title);
-				_lblVideoDescription.setText(currentVideo.Description);
-
-				//If a video is already playing, dispose of it
-				if (_videoWorker !is null)
-				{
-					_videoWorker.destroy();
-				}
-
-				debug output("Video to play ", currentVideo.MP4);
-				_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _sclPosition, _lblCurrentTime, _lblTotalTime);
+				LoadVideo(_childLibrary.Children[rowIndex]);
 			}
 		}
 
 		//Stop any more signals being called
 		return true;
+	}
+
+	private void LoadVideo(Library currentVideo)
+	{
+		debug output("LoadVideo");
+		_lblVideoTitle.setText(currentVideo.Title);
+		_lblVideoDescription.setText(currentVideo.Description);
+		
+		//If a video is already playing, dispose of it
+		if (_videoWorker !is null)
+		{
+			_videoWorker.destroy();
+		}
+		
+		debug output("Video to play ", currentVideo.MP4);
+		_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _btnFullscreen, _sclPosition, _lblCurrentTime, _lblTotalTime);
 	}
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
@@ -633,14 +697,6 @@ protected final class Viewer
 	{
 		exit(0);
 		return true;
-	}
-
-	private void btnFullscreen_Clicked(Button sender)
-	{
-		if (_videoWorker !is null)
-		{
-			Fullscreen screen = new Fullscreen(_videoWorker, _btnPlay, _drawVideo);
-		}
 	}
 
 	private void breadButton_Clicked(Button sender)

@@ -233,4 +233,48 @@ public static class DownloadWorker
 
 		write(libraryFileName, serialised);
 	}
+
+	public static bool VideoIsDownloaded(string localFileName)
+	{
+		debug output("Checking for file ", localFileName);
+
+		return exists(localFileName);
+	}
+
+	public static void DownloadVideo(string fileName, string localFileName, Tid parentThread)
+	{
+		debug output("Downloading file ", fileName, " to ", localFileName);
+		//Download whole library in json format
+		HTTP connection = HTTP();
+
+		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
+		{
+			//Send a progress update to the parent of this thread
+			parentThread.send(dlnow);
+			return 0;
+		};
+
+		//TODO this isn't saving the video corretly - it's corrupted, might need to save byte[] instead of char[]
+		char[] video = get(fileName, connection);
+		connection.destroy();
+		debug output("video downloaded, saving");
+		write(localFileName, video);
+
+		debug output("video saved");
+		//Send the kill signal back to the parent of this thread
+		//Can't just send bool as this seems to get interpreted as a ulong
+		//so sending back parentThread just to have something to send
+		parentThread.send(parentThread);
+	}
+
+	public static void DeleteVideo(string localFileName)
+	{
+		debug output("Deleting file ", localFileName);
+
+		//Double check file exists just in case it's been deleted manually
+		if (exists(localFileName))
+		{
+			remove(localFileName);
+		}
+	}
 }

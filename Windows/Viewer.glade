@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-connect</property>
+  </object>
   <object class="GtkWindow" id="wdwViewer">
     <property name="can_focus">False</property>
     <property name="window_position">center</property>
@@ -13,6 +18,17 @@
           <object class="GtkMenuBar" id="mbMain">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <child>
+              <object class="GtkImageMenuItem" id="miOnline">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Working Online</property>
+                <property name="use_underline">True</property>
+                <property name="image">image1</property>
+                <property name="use_stock">False</property>
+                <property name="always_show_image">True</property>
+              </object>
+            </child>
             <child>
               <object class="GtkMenuItem" id="miView">
                 <property name="visible">True</property>
@@ -186,7 +202,7 @@
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">0</property>
-                    <property name="width">5</property>
+                    <property name="width">4</property>
                     <property name="height">1</property>
                   </packing>
                 </child>
@@ -203,13 +219,14 @@
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">4</property>
-                    <property name="width">5</property>
+                    <property name="width">4</property>
                     <property name="height">1</property>
                   </packing>
                 </child>
                 <child>
                   <object class="GtkButton" id="btnPlay">
                     <property name="visible">True</property>
+                    <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
                     <property name="halign">start</property>
@@ -225,6 +242,7 @@
                 <child>
                   <object class="GtkScale" id="sclPosition">
                     <property name="visible">True</property>
+                    <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="hexpand">True</property>
                     <property name="restrict_to_fill_level">False</property>
@@ -241,30 +259,16 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="btnDownload">
-                    <property name="label" translatable="yes">Download</property>
+                  <object class="GtkButton" id="btnFullscreen">
+                    <property name="label" translatable="yes">Fullscreen</property>
                     <property name="visible">True</property>
+                    <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
                     <property name="halign">end</property>
                   </object>
                   <packing>
                     <property name="left_attach">3</property>
-                    <property name="top_attach">2</property>
-                    <property name="width">1</property>
-                    <property name="height">2</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkButton" id="btnFullscreen">
-                    <property name="label" translatable="yes">Fullscreen</property>
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="halign">end</property>
-                  </object>
-                  <packing>
-                    <property name="left_attach">4</property>
                     <property name="top_attach">2</property>
                     <property name="width">1</property>
                     <property name="height">2</property>
@@ -301,7 +305,7 @@
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">1</property>
-                    <property name="width">5</property>
+                    <property name="width">4</property>
                     <property name="height">1</property>
                   </packing>
                 </child>

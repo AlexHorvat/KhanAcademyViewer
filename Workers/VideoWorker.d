@@ -21,9 +21,10 @@
 
 module KhanAcademyViewer.Workers.VideoWorker;
 
-alias std.stdio.writeln output;
+debug alias std.stdio.writeln output;
 
 import std.string;
+import std.path;
 
 import glib.Date;
 
@@ -34,7 +35,7 @@ import gtk.Scale;
 import gtk.Range;
 import gtk.Widget;
 import gtk.Spinner;
-import gtk.Main;
+//import gtk.Main;
 import gtk.Fixed;
 import gtk.Label;
 
@@ -52,6 +53,11 @@ import gstreamer.Message;
 
 import gstinterfaces.VideoOverlay;
 
+import KhanAcademyViewer.Include.Config;
+import KhanAcademyViewer.Workers.DownloadWorker;
+import KhanAcademyViewer.Include.Functions;
+import KhanAcademyViewer.Windows.Fullscreen;
+
 /* TODO
  * Clean up code, there's lot's of redundent stuff in here
  * Resizing the video still doesn't work all that well
@@ -66,6 +72,7 @@ protected final class VideoWorker
 	Image _imgPause;
 	DrawingArea _drawVideo;
 	Button _btnPlay;
+	Button _btnFullscreen;
 	Scale _sclPosition;
 	Spinner _spinLoading;
 	Label _lblCurrentTime;
@@ -73,23 +80,35 @@ protected final class VideoWorker
 	Fixed _fixedVideo;
 	bool _isPlaying;
 	double _maxRange;
+	string _fileName;
+	string _localFileName;
 
-	this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
+	this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
 	{
 		//Set class level variables
 		_fixedVideo = fixedVideo;
 		_drawVideo = drawVideo;
 		_btnPlay = btnPlay;
+		_btnFullscreen = btnFullscreen;
 		_sclPosition = sclPosition;
 		_lblCurrentTime = lblCurrentTime;
 		_lblTotalTime = lblTotalTime;
 		_isPlaying = false;
 		_imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
 		_imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.BUTTON);
+		_fileName = fileName;
 
 		ShowSpinner();
-		SetupVideo(fileName);
+		SetupVideo(CheckIfVideoDownloaded());
 		HideSpinner();
+	}
+
+	private bool CheckIfVideoDownloaded()
+	{
+		_localFileName = expandTilde(G_DownloadFilePath) ~ _fileName[_fileName.lastIndexOf("/") .. $];
+		debug output("Local file name set to ", _localFileName);
+
+		return DownloadWorker.VideoIsDownloaded(_localFileName);
 	}
 
 	~this()
@@ -97,18 +116,29 @@ protected final class VideoWorker
 		//Don't leave icon as pause icon and move scale pointer back to 0
 		_btnPlay.setImage(_imgPlay);
 		_sclPosition.setValue(0);
+		_btnPlay.setSensitive(false);
+		_sclPosition.setSensitive(false);
+		_btnFullscreen.setSensitive(false);
 
 		//Remove listeners, otherwise old listeners are retained between
 		//video loads causing a crash
 		_drawVideo.onButtonReleaseListeners.destroy();
 		_btnPlay.onClickedListeners.destroy();
 		_sclPosition.onChangeValueListeners.destroy();
+		_btnFullscreen.onClickedListeners.destroy();
 
 		//Stop and get rid of video and all resources
 		_source.setState(GstState.NULL);
 		_source.destroy();
 		_videoSink.destroy();
 		_overlay.destroy();
+
+		RefreshUI();
+	}
+
+	private void btnFullscreen_Clicked(Button sender)
+	{
+		Fullscreen screen = new Fullscreen(this, _drawVideo);
 	}
 
 	private void ShowSpinner()
@@ -138,7 +168,7 @@ protected final class VideoWorker
 		_spinLoading.start();
 	}
 
-	private void SetupVideo(string fileName)
+	private void SetupVideo(bool isDownloaded)
 	{
 		GstState current;
 		GstState pending;
@@ -152,8 +182,12 @@ protected final class VideoWorker
 
 		_btnPlay.addOnClicked(&btnPlay_Clicked);
 		_btnPlay.setSensitive(true);
+
+		_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
+		_btnFullscreen.setSensitive(true);
 		
 		_sclPosition.addOnChangeValue(&sclPosition_ChangeValue);
+		_sclPosition.setSensitive(true);
 		
 		_videoSink = ElementFactory.make("xvimagesink", "videosink");
 		
@@ -163,7 +197,18 @@ protected final class VideoWorker
 		
 		//Create a playbin element and point it at the selected video
 		_source = ElementFactory.make("playbin", "playBin");
-		_source.setProperty("uri", fileName);
+
+		if (isDownloaded)
+		{
+			debug output("Loading downloaded video");
+			debug output("file://" ~ _localFileName);
+			_source.setProperty("uri", "file://" ~ _localFileName);
+		}
+		else
+		{
+			debug output("Loading remote video");
+			_source.setProperty("uri", _fileName);
+		}
 
 		//Work around to .setProperty not accepting Element type directly
 		Value val = new Value();
@@ -197,17 +242,8 @@ protected final class VideoWorker
 		_fixedVideo.remove(_spinLoading);
 		_drawVideo.setVisible(true);
 	}
-
-	private void RefreshUI()
-	{
-		//Run any gtk events pending to refresh the UI
-		while (Main.eventsPending)
-		{
-			Main.iteration();
-		}
-	}
-
-	public void Play()
+	
+	private void Play()
 	{
 		if (_source.setState(GstState.PLAYING) == GstStateChangeReturn.FAILURE)
 		{
@@ -269,25 +305,20 @@ protected final class VideoWorker
 		}
 	}
 
-	public void Pause()
+	private void Pause()
 	{
 		_source.setState(GstState.PAUSED);
 		_btnPlay.setImage(_imgPlay);
 		_isPlaying = false;
 	}
 
-	public bool IsPlaying()
-	{
-		return _isPlaying;
-	}
-	
 	public void ChangeOverlay(ref DrawingArea area)
 	{
 		//Switch the video overlay to the provided drawing area
 		_overlay.setWindowHandle(X11.windowGetXid(area.getWindow()));
 	}
 
-	public double GetDuration()
+	private double GetDuration()
 	{
 		//Return in seconds as that's way more managable
 		long duration = _source.queryDuration();
@@ -295,7 +326,7 @@ protected final class VideoWorker
 		return duration / 1000000000;
 	}
 
-	public void SeekTo(double seconds)
+	private void SeekTo(double seconds)
 	{
 		long nanoSeconds = cast(long)seconds * 1000000000;
 		_source.seek(nanoSeconds);
@@ -332,21 +363,15 @@ protected final class VideoWorker
 		PlayPause();
 	}
 
-	private void PlayPause()
+	public void PlayPause()
 	{
-		//Check that a video is loaded
-		//if (_videoWorker !is null)
-		//{
 		if (_isPlaying)
 		{
 			Pause();
-			//_btnPlay.setImage(_imgPlay);
 		}
 		else
 		{
 			Play();
-			//_btnPlay.setImage(_imgPause);
 		}
-		//}
 	}
 }

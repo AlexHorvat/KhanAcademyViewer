@@ -43,7 +43,7 @@ public static class SettingsWorker
 		}
 		else
 		{
-			return CreateDefaultSettings();
+			return new Settings;
 		}
 	}
 
@@ -74,15 +74,6 @@ public static class SettingsWorker
 		unpack(serialised, settings);
 
 		debug output("Settings loaded, returning them...");
-
-		return settings;
-	}
-
-	private static Settings CreateDefaultSettings()
-	{
-		Settings settings = new Settings;
-
-		settings.ViewModeSetting = ViewMode.Flow;
 
 		return settings;
 	}

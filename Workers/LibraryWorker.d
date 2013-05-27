@@ -49,4 +49,13 @@ public static class LibraryWorker
 
 		return completeLibrary;
 	}
+
+	public static Library LoadOfflineLibrary()
+	{
+		//TODO
+		//Load library - remove all items who's videos are not downloaded i.e. do an exists() on every MP4 filename
+		//Can remove whole branches if no child videos???
+
+		return new Library;
+	}
 }

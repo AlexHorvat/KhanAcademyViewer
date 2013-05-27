@@ -1,6 +1,6 @@
 /**
  * 
- * Settings.d
+ * Functions.d
  * 
  * Author:
  * Alex Horvat <alex.horvat9@gmail.com>
@@ -20,21 +20,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.DataStructures.Settings;
+module KhanAcademyViewer.Include.Functions;
 
-import KhanAcademyViewer.Include.Enums;
+import gtk.Main;
 
-public final class Settings
+public void RefreshUI()
 {
-	private ViewMode _viewMode = ViewMode.Flow;
-	public @property {
-		ViewMode ViewModeSetting() { return _viewMode; }
-		void ViewModeSetting(ViewMode new_ViewMode) { _viewMode = new_ViewMode; }
-	}
-
-	private bool _isOnline = true;
-	public @property {
-		bool IsOnline() { return _isOnline; }
-		void IsOnline(bool new_IsOnline) { _isOnline = new_IsOnline; }
+	//Run any gtk events pending to refresh the UI
+	while (Main.eventsPending)
+	{
+		Main.iteration();
 	}
 }
