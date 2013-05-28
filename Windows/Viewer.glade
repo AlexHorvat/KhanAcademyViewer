@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
-  <object class="GtkImage" id="image1">
+  <object class="GtkImage" id="imgConnected">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-connect</property>
@@ -24,7 +24,7 @@
                 <property name="can_focus">False</property>
                 <property name="tooltip_text" translatable="yes">Working Online</property>
                 <property name="use_underline">True</property>
-                <property name="image">image1</property>
+                <property name="image">imgConnected</property>
                 <property name="use_stock">False</property>
                 <property name="always_show_image">True</property>
               </object>
@@ -102,7 +102,7 @@
                 <child>
                   <object class="GtkScrolledWindow" id="scrollChild">
                     <property name="width_request">300</property>
-                    <property name="height_request">500</property>
+                    <property name="height_request">650</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="vexpand">True</property>
@@ -132,7 +132,7 @@
                 <child>
                   <object class="GtkScrolledWindow" id="scrollParent">
                     <property name="width_request">300</property>
-                    <property name="height_request">500</property>
+                    <property name="height_request">650</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="vexpand">True</property>
@@ -202,23 +202,6 @@
                   <packing>
                     <property name="left_attach">0</property>
                     <property name="top_attach">0</property>
-                    <property name="width">4</property>
-                    <property name="height">1</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="lblVideoDescription">
-                    <property name="height_request">60</property>
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="yalign">0.47999998927116394</property>
-                    <property name="selectable">True</property>
-                    <property name="max_width_chars">100</property>
-                    <property name="track_visited_links">False</property>
-                  </object>
-                  <packing>
-                    <property name="left_attach">0</property>
-                    <property name="top_attach">4</property>
                     <property name="width">4</property>
                     <property name="height">1</property>
                   </packing>
@@ -337,6 +320,36 @@
                     <property name="left_attach">2</property>
                     <property name="top_attach">3</property>
                     <property name="width">1</property>
+                    <property name="height">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkScrolledWindow" id="scrollDescription">
+                    <property name="height_request">150</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="shadow_type">in</property>
+                    <child>
+                      <object class="GtkViewport" id="viewportDescription">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <object class="GtkLabel" id="lblVideoDescription">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="yalign">0.47999998927116394</property>
+                            <property name="selectable">True</property>
+                            <property name="max_width_chars">100</property>
+                            <property name="track_visited_links">False</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">4</property>
+                    <property name="width">4</property>
                     <property name="height">1</property>
                   </packing>
                 </child>

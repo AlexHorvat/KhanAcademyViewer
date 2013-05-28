@@ -695,16 +695,27 @@ protected final class Viewer
 	private void LoadVideo(Library currentVideo)
 	{
 		debug output("LoadVideo");
-		_lblVideoTitle.setText(currentVideo.Title);
-		_lblVideoDescription.setText(currentVideo.Description);
-		
+		debug output("Video to play ", currentVideo.MP4);
 		//If a video is already playing, dispose of it
 		if (_videoWorker !is null)
 		{
 			_videoWorker.destroy();
 		}
-		
-		debug output("Video to play ", currentVideo.MP4);
+
+		//Get the authors
+		string authors;
+
+		foreach (string author; currentVideo.AuthorNames)
+		{
+			authors ~= author;
+			authors ~= ", ";
+		}
+
+		authors.length = authors.length - 2;
+
+		_lblVideoTitle.setText(currentVideo.Title);
+		//Add authors and date added to description
+		_lblVideoDescription.setText(currentVideo.Description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.DateAdded.date.toString());
 		_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _btnFullscreen, _sclPosition, _lblCurrentTime, _lblTotalTime);
 	}
 
