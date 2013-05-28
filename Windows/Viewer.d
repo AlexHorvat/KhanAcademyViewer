@@ -23,6 +23,9 @@ module KhanAcademyViewer.Windows.Viewer;
 
 alias std.stdio.writeln output;
 
+//TODO testing only
+import std.datetime;
+
 import std.c.process;
 import std.conv;
 import std.concurrency;
@@ -66,7 +69,6 @@ import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Workers.VideoWorker;
 import KhanAcademyViewer.Workers.SettingsWorker;
-//import KhanAcademyViewer.Windows.Fullscreen;
 import KhanAcademyViewer.Windows.Loading;
 import KhanAcademyViewer.Windows.About;
 import KhanAcademyViewer.Include.Functions;
@@ -113,7 +115,6 @@ protected final class Viewer
 		SetupLoader();
 		LoadLibraryFromStorage();
 		SetOnlineOrOffline();
-		//LoadNavigation();
 		KillLoadingWindow();
 	}
 
@@ -157,10 +158,8 @@ protected final class Viewer
 
 		_btnPlay = cast(Button)windowBuilder.getObject("btnPlay");
 		_btnPlay.setImage(imgPlay);
-		//_btnPlay.setSensitive(false);
 
 		_btnFullscreen = cast(Button)windowBuilder.getObject("btnFullscreen");
-		//_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
 
 		_sclPosition = cast(Scale)windowBuilder.getObject("sclPosition");
 
@@ -201,42 +200,38 @@ protected final class Viewer
 	{
 		debug output("miOnline_ButtonRelease");
 		_settings.IsOnline ? SetOffline() : SetOnline();
-		debug output("miOnline complete");
+
 		return false;
 	}
 
 	private void SetOnline()
 	{
 		debug output("SetOnline");
+		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
+
 		_settings.IsOnline = true;
 		SettingsWorker.SaveSettings(_settings);
 		//Enable full library
 		_completeLibrary = LibraryWorker.LoadLibrary();
 		LoadNavigation();
-
-		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
-		
+			
 		_miOnline.setImage(imgOnline);
 		_miOnline.setTooltipText("Working Online");
-
-		debug output("Gone online");
 	}
 
 	private void SetOffline()
 	{
 		debug output("SetOffline");
+		Image imgOffline = new Image(StockID.DISCONNECT, GtkIconSize.BUTTON);
+
 		_settings.IsOnline = false;
 		SettingsWorker.SaveSettings(_settings);
 		//Only show video's which are downloaded, need to change _completeLibrary to reflect this
 		_completeLibrary = LibraryWorker.LoadOfflineLibrary();
 		LoadNavigation();
 
-		Image imgOffline = new Image(StockID.DISCONNECT, GtkIconSize.BUTTON);
-		
 		_miOnline.setImage(imgOffline);
 		_miOnline.setTooltipText("Working Offline");
-
-		debug output("Gone offline");
 	}
 
 	private bool imiFlow_ButtonRelease(Event e, Widget sender)
@@ -367,7 +362,6 @@ protected final class Viewer
 
 		_imiFlow.setActive(true);
 		_tvChild.getParent().setVisible(true);
-		//ClearNavigationControls();
 
 		//Set tvParent's width to match tvChild's width
 		_tvParent.getParent().setSizeRequest(_tvChild.getParent().getWidth(), -1);
@@ -376,7 +370,7 @@ protected final class Viewer
 		CreateFlowColumns(_tvParent);
 		CreateFlowColumns(_tvChild);
 
-		_parentLibrary = cast(Library)_completeLibrary;
+		_parentLibrary = _completeLibrary;
 		_tvParent.setModel(CreateFlowModel(true));
 
 		_tvParent.addOnButtonRelease(&tvParent_Flow_ButtonRelease);
@@ -389,11 +383,17 @@ protected final class Viewer
 	{
 		debug output("Clearing navigation settings");
 		//Clear any existing values
-		_tvParent.onButtonReleaseListeners.destroy();
-		_tvParent.onRowActivatedListeners.destroy();
-		_tvChild.onButtonReleaseListeners.destroy();
-		_breadCrumbs.destroy();
+		//_tvParent.onButtonReleaseListeners.destroy();
+		_tvParent.onButtonReleaseListeners.length = 0;
+		//_tvParent.onRowActivatedListeners.destroy();
+		_tvParent.onRowActivatedListeners.length = 0;
+
+		//_tvChild.onButtonReleaseListeners.destroy();
+		_tvChild.onButtonReleaseListeners.length = 0;
+		//_breadCrumbs.destroy();
+		_breadCrumbs.length = 0;
 		LoadBreadCrumbs();
+		_tvParent.setModel(null);
 		_tvChild.setModel(null);
 
 		//Stop any playing video
@@ -407,7 +407,7 @@ protected final class Viewer
 		{
 			_tvParent.removeColumn(_tvParent.getColumn(columnCounter));
 		}
-		
+
 		for (int columnCounter = _tvChild.getNColumns() - 1; columnCounter >= 0; columnCounter--)
 		{
 			_tvChild.removeColumn(_tvChild.getColumn(columnCounter));
@@ -420,7 +420,6 @@ protected final class Viewer
 
 		_imiTree.setActive(true);
 		_tvChild.getParent().setVisible(false);
-		//ClearNavigationControls();
 		CreateTreeColumns(_tvParent);
 
 		//tvChild is the reference width, tvParent is always the same width, so it's safe to assume that
@@ -429,7 +428,8 @@ protected final class Viewer
 		_tvParent.getParent().setSizeRequest(_tvChild.getParent().getWidth() * 2, -1);
 
 		_tvParent.setModel(CreateTreeModel());
-		_tvParent.addOnRowActivated(&tvParent_Tree_RowActivated);
+		//_tvParent.addOnRowActivated(&tvParent_Tree_RowActivated);
+		_tvParent.addOnButtonRelease(&tvParent_Tree_ButtonRelease);
 	}
 
 	private void CreateTreeColumns(TreeView treeView)
@@ -440,7 +440,7 @@ protected final class Viewer
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
 
 		indexColumn.setVisible(false);
-		
+
 		treeView.appendColumn(indexColumn);
 		treeView.appendColumn(titleColumn);
 	}
@@ -448,6 +448,11 @@ protected final class Viewer
 	private TreeStore CreateTreeModel()
 	{
 		debug output("CreateTreeModel");
+		if (_completeLibrary is null)
+		{
+			return null;
+		}
+
 		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING]);
 		Library workingLibrary = _completeLibrary;
 
@@ -459,18 +464,17 @@ protected final class Viewer
 	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
 	{
 		debug output("RecurseTreeChildren");
+
 		foreach(Library childLibrary; library.Children)
 		{
 			TreeIter iter;
 
 			if (parentIter is null)
 			{
-				debug output("parentIter is null");
 				iter = treeStore.createIter();
 			}
 			else
 			{
-				debug output("parentIter is NOT null");
 				iter = treeStore.append(parentIter);
 			}
 
@@ -497,6 +501,11 @@ protected final class Viewer
 			workingLibrary = _childLibrary;
 		}
 
+		if (workingLibrary is null)
+		{
+			return null;
+		}
+
 		for(int index = 0; index < workingLibrary.Children.length; index++)
 		{
 			listStore.append(tree);
@@ -507,29 +516,42 @@ protected final class Viewer
 		return listStore;
 	}
 
-	private void tvParent_Tree_RowActivated(TreePath treePath, TreeViewColumn column, TreeView treeView)
+	//TODO have fixed the treepath freeing error, clean up code....
+	private bool tvParent_Tree_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("tvParent_Tree_RowActivated");
+		debug output("tvParent_Tree_ButtonRelease");
 
-		TreeIter selectedItem = treeView.getSelectedIter();
-
-		if (selectedItem.getValueInt(0))
+		TreeIter selectedItem = _tvParent.getSelectedIter();
+		
+		if (selectedItem !is null)
 		{
-			//Use TreePath to iterate over library to get the selected value, can then get video details from this
-			Library currentVideo = _completeLibrary;
-			string[] paths = split(treePath.toString(), ":");
-
-			foreach (string path; paths)
+			if (selectedItem.getValueInt(0))
 			{
-				currentVideo = currentVideo.Children[to!long(path)];
-			}
+				debug output("selected item has value");
 
-			LoadVideo(currentVideo);
+				//Use TreePath to iterate over library to get the selected value, can then get video details from this
+				Library currentVideo = _completeLibrary;
+
+				string[] paths = split(selectedItem.getTreePath().toString(), ":");
+	
+				foreach (string path; paths)
+				{
+					currentVideo = currentVideo.Children[to!long(path)];
+				}
+	
+				LoadVideo(currentVideo);
+			}
+			else
+			{
+				debug output("No value");
+			}
 		}
 		else
 		{
-			debug output("No value");
+			debug output("selecteditem is null");
 		}
+
+		return false;
 	}
 
 	private void KillLoadingWindow()
@@ -558,7 +580,7 @@ protected final class Viewer
 		_bboxBreadCrumbs.removeAll();
 
 		//Get the size available for each bread crumb button, and the maximum length allowed for the title
-		if (_breadCrumbs !is null)
+		if (_breadCrumbs !is null && _breadCrumbs.length > 0)
 		{
 			int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
 			int titleLength = breadCrumbWidth / 8;

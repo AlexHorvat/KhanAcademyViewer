@@ -25,8 +25,6 @@ import std.datetime;
 
 public final class Library
 {
-	//TODO which of these fields am I going to use?
-
 	private string _title;
 	public @property {
 		string Title() { return _title; }
@@ -43,19 +41,6 @@ public final class Library
 	public @property {
 		string Description() { return _description; }
 		void Description(string new_Description) { _description = new_Description; }
-	}
-
-	//TODO probably don't need this as calculating it when loading video
-	private long _duration;
-	public @property {
-		long Duration() { return _duration; }
-		void Duration(long new_Duration) { _duration = new_Duration; }
-	}
-
-	private int _views;
-	public @property {
-		int Views() { return _views; }
-		void Views(int new_Views) { _views = new_Views; }
 	}
 
 	private string[] _authorNames;

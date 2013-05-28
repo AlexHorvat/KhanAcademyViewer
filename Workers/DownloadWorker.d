@@ -23,6 +23,9 @@
 
 module KhanAcademyViewer.Workers.DownloadWorker;
 
+//TODO testing only
+import std.datetime;
+
 import std.json;
 import std.net.curl;
 import std.path;
@@ -36,7 +39,7 @@ import msgpack;
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.Include.Config;
 
-debug alias std.stdio.writeln output;
+alias std.stdio.writeln output;
 
 public static class DownloadWorker
 {
@@ -68,8 +71,18 @@ public static class DownloadWorker
 
 		DownloadJson(eTag, jsonValues, parentThread);
 		SaveETag(eTag);
+
+		long startTime = Clock.currStdTime;
 		completeLibrary = ConvertJsonToLibrary(parseJSON(jsonValues).object);
+		long endTime = Clock.currStdTime;
+		output("Time taken to create complete library: ", (endTime - startTime) / 1000);
+
 		SaveLibrary(completeLibrary);
+
+		//Send the kill signal back to the parent of this thread
+		//Can't just send bool as this seems to get interpreted as a ulong
+		//so sending back parentThread just to have something to send
+		parentThread.send(parentThread);
 	}
 
 	private static bool LoadETagFromDisk(out string eTag)
@@ -109,11 +122,6 @@ public static class DownloadWorker
 		jsonValues = cast(string)get(G_TopicTreeUrl, connection);
 		eTag = connection.responseHeaders["etag"];
 		connection.destroy();
-
-		//Send the kill signal back to the parent of this thread
-		//Can't just send bool as this seems to get interpreted as a ulong
-		//so sending back parentThread just to have something to send
-		parentThread.send(parentThread);
 	}
 
 	private static void SaveETag(string eTag)
@@ -156,7 +164,15 @@ public static class DownloadWorker
 				}
 			}
 
-			return library;
+			//If all children were exercises, then don't return the parent
+			if (library.Children is null)
+			{
+				return null;
+			}
+			else
+			{
+				return library;
+			}
 		}
 		//If no children then check if there's download links, if there are then this is a video
 		else if ("download_urls" in json && json["download_urls"].type !is JSON_TYPE.NULL)
@@ -168,11 +184,6 @@ public static class DownloadWorker
 			//Every entry has a title, no need to null check
 			debug output("adding title ", json["title"].str);
 			library.Title = json["title"].str;
-
-			if ("duration" in json)
-			{
-				library.Duration = json["duration"].integer;
-			}
 			
 			//Check if there is an author_names object at all
 			if ("author_names" in json)
