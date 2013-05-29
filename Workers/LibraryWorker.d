@@ -21,10 +21,7 @@
 
 module KhanAcademyViewer.Workers.LibraryWorker;
 
-alias std.stdio.writeln output;
-
-//TODO testing only
-import std.datetime;
+debug alias std.stdio.writeln output;
 
 import std.path;
 import std.file;
@@ -59,22 +56,8 @@ public static class LibraryWorker
 	public static Library LoadOfflineLibrary()
 	{
 		debug output("LoadOfflineLibrary");
-		//TODO
-		//Load library - remove all items who's videos are not downloaded i.e. do an exists() on every MP4 filename
-		//Can remove whole branches if no child videos???
-		//Library offlineLibrary = LoadLibrary();
+		Library offlineLibrary = RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
 
-		//check if library has mp4, if so and mp4 is not on disc return null, else return library
-
-		//replace children[] with offlinechildren[] which is an array of all offline children
-
-		//if all child libraries are null - return null
-		long startTime = Clock.currStdTime;
-		Library offlineLibrary = RecurseOfflineLibrary(LoadLibrary, GetDownloadedFiles());
-		long endTime = Clock.currStdTime;
-		output("Time taken to create offline library: ", (endTime - startTime) / 1000);
-
-		debug output("Return offline library");
 		return offlineLibrary;
 	}
 
@@ -96,32 +79,29 @@ public static class LibraryWorker
 	private static Library RecurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)
 	{
 		debug output("RecurseOfflineLibrary");
-
-		//If current library has children, recurse down another level
+		//If current library has children, recurse down another level and replace it's children with updated values
 		if (currentLibrary.Children !is null)
 		{
-			Library[] newChildren;
+			Library[] currentChildren = currentLibrary.Children;
+			currentLibrary.Children = null;
 
-			foreach(Library childLibrary; currentLibrary.Children)
+			foreach(Library childLibrary; currentChildren)
 			{
 				Library newChildLibrary = RecurseOfflineLibrary(childLibrary, downloadedFiles);
 
 				if (newChildLibrary !is null)
 				{
-					newChildren.length++;
-					newChildren[newChildren.length - 1] = newChildLibrary;
+					currentLibrary.AddChildLibrary(newChildLibrary);
 				}
 			}
 
-			currentLibrary.Children = newChildren;
-
-			if (currentLibrary.Children !is null)
+			if (currentLibrary.Children is null)
 			{
-				return currentLibrary;
+				return null;
 			}
 			else
 			{
-				return null;
+				return currentLibrary;
 			}
 		}
 		//This is a video containing library, check if video exists on disc, if so return the library

@@ -68,6 +68,10 @@ public final class Library
 
 	public void AddChildLibrary(Library new_ChildLibrary)
 	{
+		//Checked if using a custom linked list, SList or appender is faster than resizing the array and adding the new library
+		//turns out they're not.
+		//Documentation on speed of resizing the array varies from O(1) to "very costly", seems to be more down the O(1) end
+		//so will just go with this code for now...
 		_children.length++;
 		_children[_children.length - 1] = new_ChildLibrary;
 	}

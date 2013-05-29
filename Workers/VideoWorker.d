@@ -122,14 +122,10 @@ protected final class VideoWorker
 
 		//Remove listeners, otherwise old listeners are retained between
 		//video loads causing a crash
-		//_drawVideo.onButtonReleaseListeners.destroy();
-		_drawVideo.onButtonReleaseListeners.length = 0;
-		//_btnPlay.onClickedListeners.destroy();
-		_btnPlay.onClickedListeners.length = 0;
-		//_sclPosition.onChangeValueListeners.destroy();
-		_sclPosition.onChangeValueListeners.length = 0;
-		//_btnFullscreen.onClickedListeners.destroy();
-		_btnFullscreen.onClickedListeners.length = 0;
+		_drawVideo.onButtonReleaseListeners.destroy();
+		_btnPlay.onClickedListeners.destroy();
+		_sclPosition.onChangeValueListeners.destroy();
+		_btnFullscreen.onClickedListeners.destroy();
 
 		//Stop and get rid of video and all resources
 		_source.setState(GstState.NULL);

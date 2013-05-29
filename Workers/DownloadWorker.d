@@ -23,8 +23,7 @@
 
 module KhanAcademyViewer.Workers.DownloadWorker;
 
-//TODO testing only
-import std.datetime;
+debug alias std.stdio.writeln output;
 
 import std.json;
 import std.net.curl;
@@ -38,8 +37,6 @@ import msgpack;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.Include.Config;
-
-alias std.stdio.writeln output;
 
 public static class DownloadWorker
 {
@@ -67,16 +64,11 @@ public static class DownloadWorker
 	public static void DownloadLibrary(Tid parentThread)
 	{
 		string eTag, jsonValues;
-		Library completeLibrary;
 
 		DownloadJson(eTag, jsonValues, parentThread);
 		SaveETag(eTag);
 
-		long startTime = Clock.currStdTime;
-		completeLibrary = ConvertJsonToLibrary(parseJSON(jsonValues).object);
-		long endTime = Clock.currStdTime;
-		output("Time taken to create complete library: ", (endTime - startTime) / 1000);
-
+		Library completeLibrary = ConvertJsonToLibrary(parseJSON(jsonValues).object);
 		SaveLibrary(completeLibrary);
 
 		//Send the kill signal back to the parent of this thread
@@ -145,45 +137,44 @@ public static class DownloadWorker
 		if ("children" in json && json["children"].type !is JSON_TYPE.NULL)
 		{
 			debug output("Found a node library");
-			Library library = new Library();
+			Library newLibrary = new Library();
 
 			//Every entry has a title, no need to null check
 			debug output("adding title ", json["title"].str);
-			library.Title = json["title"].str;
+			newLibrary.Title = json["title"].str;
 
 			//Get all children of this library
 			foreach(JSONValue jsonChild; json["children"].array)
 			{
-				Library returnedLibrary = ConvertJsonToLibrary(jsonChild.object);
+				Library childLibrary = ConvertJsonToLibrary(jsonChild.object);
 
 				//returnedLibrary will be null if it is an exercise
 				//in that case don't add it to the main library
-				if (returnedLibrary !is null)
+				if (childLibrary !is null)
 				{
-					library.AddChildLibrary(returnedLibrary);
+					newLibrary.AddChildLibrary(childLibrary);
 				}
 			}
 
 			//If all children were exercises, then don't return the parent
-			if (library.Children is null)
+			if (newLibrary.Children is null)
 			{
 				return null;
 			}
 			else
 			{
-				return library;
+				return newLibrary;
 			}
 		}
 		//If no children then check if there's download links, if there are then this is a video
 		else if ("download_urls" in json && json["download_urls"].type !is JSON_TYPE.NULL)
 		{
 			debug output("Found a video");
-
-			Library library = new Library();
+			Library newLibrary = new Library();
 			
 			//Every entry has a title, no need to null check
 			debug output("adding title ", json["title"].str);
-			library.Title = json["title"].str;
+			newLibrary.Title = json["title"].str;
 			
 			//Check if there is an author_names object at all
 			if ("author_names" in json)
@@ -194,11 +185,11 @@ public static class DownloadWorker
 				if (jsonAuthorNames.length != 0)
 				{
 					//There are author_names, loop thru and add them to library
-					library.AuthorNamesLength = jsonAuthorNames.length;
+					newLibrary.AuthorNamesLength = jsonAuthorNames.length;
 					
 					foreach(authorCounter; 0 .. jsonAuthorNames.length)
 					{
-						library.AuthorNames[authorCounter] = jsonAuthorNames[authorCounter].str;
+						newLibrary.AuthorNames[authorCounter] = jsonAuthorNames[authorCounter].str;
 					}
 				}
 			}
@@ -206,12 +197,12 @@ public static class DownloadWorker
 			if ("date_added" in json)
 			{
 				//Have to cut off the trailing 'Z' from date as D library doesn't like it
-				library.DateAdded = DateTime.fromISOExtString(chomp(json["date_added"].str, "Z"));
+				newLibrary.DateAdded = DateTime.fromISOExtString(chomp(json["date_added"].str, "Z"));
 			}
 			
 			if ("description" in json)
 			{
-				library.Description = json["description"].str;
+				newLibrary.Description = json["description"].str;
 			}
 
 			//Get the download urls
@@ -219,10 +210,10 @@ public static class DownloadWorker
 
 			if ("mp4" in urls)
 			{
-				library.MP4 = urls["mp4"].str;
+				newLibrary.MP4 = urls["mp4"].str;
 			}
 
-			return library;
+			return newLibrary;
 		}
 		//No children, but no video's as well, must be an exercice - don't load it
 		else
@@ -248,7 +239,6 @@ public static class DownloadWorker
 	public static bool VideoIsDownloaded(string localFileName)
 	{
 		debug output("Checking for file ", localFileName);
-
 		return exists(localFileName);
 	}
 
@@ -281,7 +271,6 @@ public static class DownloadWorker
 	public static void DeleteVideo(string localFileName)
 	{
 		debug output("Deleting file ", localFileName);
-
 		//Double check file exists just in case it's been deleted manually
 		if (exists(localFileName))
 		{

@@ -21,10 +21,7 @@
 
 module KhanAcademyViewer.Windows.Viewer;
 
-alias std.stdio.writeln output;
-
-//TODO testing only
-import std.datetime;
+debug alias std.stdio.writeln output;
 
 import std.c.process;
 import std.conv;
@@ -214,7 +211,7 @@ protected final class Viewer
 		//Enable full library
 		_completeLibrary = LibraryWorker.LoadLibrary();
 		LoadNavigation();
-			
+		
 		_miOnline.setImage(imgOnline);
 		_miOnline.setTooltipText("Working Online");
 	}
@@ -237,10 +234,8 @@ protected final class Viewer
 	private bool imiFlow_ButtonRelease(Event e, Widget sender)
 	{
 		debug output("imiFlow_ButtonRelease");
-
 		_settings.ViewModeSetting = ViewMode.Flow;
 		SettingsWorker.SaveSettings(_settings);
-
 		LoadNavigation();
 
 		return false;
@@ -249,10 +244,8 @@ protected final class Viewer
 	private bool imiTree_ButtonRelease(Event e, Widget sender)
 	{
 		debug output("imiTree_ButtonRelease");
-
 		_settings.ViewModeSetting = ViewMode.Tree;
 		SettingsWorker.SaveSettings(_settings);
-
 		LoadNavigation();
 
 		return false;
@@ -260,6 +253,7 @@ protected final class Viewer
 
 	private void SetupLoader()
 	{
+		debug output("SetupLoader");
 		bool onwards, needToDownLoadLibrary;
 
 		//Show the loading window and make sure it's loaded before starting the download
@@ -276,9 +270,9 @@ protected final class Viewer
 				dur!"msecs"(500),
 				(bool refreshNeeded)
 				{
-					needToDownLoadLibrary = refreshNeeded;
-					onwards = true;
-				});
+				needToDownLoadLibrary = refreshNeeded;
+				onwards = true;
+			});
 
 			RefreshUI();
 		}
@@ -299,14 +293,14 @@ protected final class Viewer
 					dur!"msecs"(500),
 					(ulong amountDownloaded)
 					{
-						//Update the loading window with amount downloaded
-						_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
-					},
-					(Tid deathSignal)
-					{
-						//Been sent the TID of death, exit the loading loop
-						onwards = true;
-					});
+					//Update the loading window with amount downloaded
+					_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
+				},
+				(Tid deathSignal)
+				{
+					//Been sent the TID of death, exit the loading loop
+					onwards = true;
+				});
 				
 				RefreshUI();
 			}
@@ -315,12 +309,12 @@ protected final class Viewer
 
 	private void LoadLibraryFromStorage()
 	{
+		debug output("LoadLibraryFromStorage");
 		//Maybe make this async in the future
 		//Seems to be difficult to pass the loaded library around async
 		//If passed in a message it locks the sending thread
 		//And if passed as a shared variable it is always null in this thread
 		//even after being set on the loading thread
-
 		_loadingWindow.UpdateStatus("Processing library");
 
 		//The library takes a few seconds to write to disc after being downloaded
@@ -329,7 +323,7 @@ protected final class Viewer
 		while(!LibraryWorker.LibraryFileExists())
 		{
 			RefreshUI();
-			Thread.sleep(dur!"msecs"(500));
+			Thread.sleep(dur!"msecs"(250));
 		}
 
 		_completeLibrary = LibraryWorker.LoadLibrary();
@@ -358,8 +352,7 @@ protected final class Viewer
 
 	private void LoadFlowNavigation()
 	{
-		debug output("Using flow navigation");
-
+		debug output("LoadFlowNavigation");
 		_imiFlow.setActive(true);
 		_tvChild.getParent().setVisible(true);
 
@@ -381,18 +374,14 @@ protected final class Viewer
 
 	private void ClearNavigationControls()
 	{
-		debug output("Clearing navigation settings");
-		//Clear any existing values
-		//_tvParent.onButtonReleaseListeners.destroy();
-		_tvParent.onButtonReleaseListeners.length = 0;
-		//_tvParent.onRowActivatedListeners.destroy();
-		_tvParent.onRowActivatedListeners.length = 0;
+		debug output("ClearNavigationControls");
+		_tvParent.onButtonReleaseListeners.destroy();
+		_tvParent.onRowActivatedListeners.destroy();
+		_tvChild.onButtonReleaseListeners.destroy();
 
-		//_tvChild.onButtonReleaseListeners.destroy();
-		_tvChild.onButtonReleaseListeners.length = 0;
-		//_breadCrumbs.destroy();
-		_breadCrumbs.length = 0;
+		_breadCrumbs.destroy();
 		LoadBreadCrumbs();
+
 		_tvParent.setModel(null);
 		_tvChild.setModel(null);
 
@@ -416,20 +405,17 @@ protected final class Viewer
 
 	private void LoadTreeNavigation()
 	{
-		debug output("Using tree navigation");
-
+		debug output("LoadTreeNavigation");
 		_imiTree.setActive(true);
 		_tvChild.getParent().setVisible(false);
-		CreateTreeColumns(_tvParent);
 
 		//tvChild is the reference width, tvParent is always the same width, so it's safe to assume that
 		//both treeviews together are tvChild.width * 2
 		//So stretch tvParent to take up both spaces to give the tree room to grow
 		_tvParent.getParent().setSizeRequest(_tvChild.getParent().getWidth() * 2, -1);
-
-		_tvParent.setModel(CreateTreeModel());
-		//_tvParent.addOnRowActivated(&tvParent_Tree_RowActivated);
 		_tvParent.addOnButtonRelease(&tvParent_Tree_ButtonRelease);
+		CreateTreeColumns(_tvParent);
+		_tvParent.setModel(CreateTreeModel());
 	}
 
 	private void CreateTreeColumns(TreeView treeView)
@@ -454,7 +440,6 @@ protected final class Viewer
 		}
 
 		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING]);
-		Library workingLibrary = _completeLibrary;
 
 		RecurseTreeChildren(treeStore, _completeLibrary, null);
 
@@ -464,7 +449,6 @@ protected final class Viewer
 	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
 	{
 		debug output("RecurseTreeChildren");
-
 		foreach(Library childLibrary; library.Children)
 		{
 			TreeIter iter;
@@ -488,9 +472,9 @@ protected final class Viewer
 	private ListStore CreateFlowModel(bool isParentTree)
 	{
 		debug output("CreateFlowModel");
-		Library workingLibrary;
 		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
 		TreeIter tree = new TreeIter();
+		Library workingLibrary;
 		
 		if (isParentTree)
 		{
@@ -515,37 +499,28 @@ protected final class Viewer
 		
 		return listStore;
 	}
-
-	//TODO have fixed the treepath freeing error, clean up code....
+	
 	private bool tvParent_Tree_ButtonRelease(Event e, Widget sender)
 	{
 		debug output("tvParent_Tree_ButtonRelease");
-
 		TreeIter selectedItem = _tvParent.getSelectedIter();
-		
-		if (selectedItem !is null)
+
+		//If there is a selected item, and it's value in column 0 is true then get the video details
+		if (selectedItem !is null && selectedItem.getValueInt(0))
 		{
-			if (selectedItem.getValueInt(0))
-			{
-				debug output("selected item has value");
+			debug output("selected item has video");
+			//Use TreePath to iterate over library to get the selected value, can then get video details from this
+			Library currentVideo = _completeLibrary;
+			string[] paths = split(selectedItem.getTreePath().toString(), ":");
 
-				//Use TreePath to iterate over library to get the selected value, can then get video details from this
-				Library currentVideo = _completeLibrary;
-
-				string[] paths = split(selectedItem.getTreePath().toString(), ":");
-	
-				foreach (string path; paths)
-				{
-					currentVideo = currentVideo.Children[to!long(path)];
-				}
-	
-				LoadVideo(currentVideo);
-			}
-			else
+			foreach (string path; paths)
 			{
-				debug output("No value");
+				currentVideo = currentVideo.Children[to!long(path)];
 			}
+
+			LoadVideo(currentVideo);
 		}
+		//TODO remove this else once debugging done
 		else
 		{
 			debug output("selecteditem is null");
@@ -580,13 +555,12 @@ protected final class Viewer
 		_bboxBreadCrumbs.removeAll();
 
 		//Get the size available for each bread crumb button, and the maximum length allowed for the title
-		if (_breadCrumbs !is null && _breadCrumbs.length > 0)
+		if (_breadCrumbs !is null && _breadCrumbs.length != 0)
 		{
 			int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
 			int titleLength = breadCrumbWidth / 8;
 
-			//Create new breadcrumb buttons
-			for (int breadCrumbIndex = 0; breadCrumbIndex < _breadCrumbs.length; breadCrumbIndex++)
+			foreach(ulong breadCrumbIndex; 0 .. _breadCrumbs.length)
 			{
 				string title = _breadCrumbs[breadCrumbIndex].Title;
 
@@ -598,7 +572,7 @@ protected final class Viewer
 
 				Button breadButton = new Button(title, false);
 				
-				breadButton.setName(to!(string)(breadCrumbIndex + 1));
+				breadButton.setName(to!string(breadCrumbIndex + 1));
 				breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].Title);
 				breadButton.setAlignment(0.0, 0.5);
 				breadButton.setSizeRequest(breadCrumbWidth, -1);
@@ -710,7 +684,7 @@ protected final class Viewer
 			authors ~= author;
 			authors ~= ", ";
 		}
-
+		//Cut off trailing ", "
 		authors.length = authors.length - 2;
 
 		_lblVideoTitle.setText(currentVideo.Title);
@@ -721,6 +695,7 @@ protected final class Viewer
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
 	{
+		debug output("miAbout_ButtonRelease");
 		About about = new About();
 
 		return true;
@@ -728,20 +703,22 @@ protected final class Viewer
 
 	private bool miExit_ButtonRelease(Event e, Widget sender)
 	{
+		debug output("miExit_ButtonRelease");
 		exit(0);
 		return true;
 	}
 
 	private void breadButton_Clicked(Button sender)
 	{
+		debug output("breadButton_Clicked");
 		//Cut _breadCrumbs down to breadCrumbIndex length, then set the parent and child to the last two breadcrumb items
-		int breadCrumbNewLength = to!(int)(sender.getName());
+		int breadCrumbNewLength = to!int(sender.getName());
 		_breadCrumbs.length = breadCrumbNewLength;
 
 		//Set parent library to 2nd to last breadcrumb item
-		_parentLibrary = cast(Library)_completeLibrary;
+		_parentLibrary = _completeLibrary;
 
-		for (int breadCrumbCounter = 0; breadCrumbCounter < _breadCrumbs.length - 1; breadCrumbCounter++)
+		foreach(ulong breadCrumbCounter; 0 .. _breadCrumbs.length - 1)
 		{
 			_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
 		}
@@ -765,6 +742,7 @@ protected final class Viewer
 
 	private void fixedVideo_SizeAllocate(GdkRectangle* newSize, Widget sender)
 	{
+		debug output("fixedVideo_SizeAllocate");
 		//Need to keep drawVideo the same size as it's parent - the fixed widget
 		//this has to be done manually
 		_drawVideo.setSizeRequest(newSize.width, newSize.height);
@@ -772,6 +750,7 @@ protected final class Viewer
 
 	private void wdwViewer_Destroy(Widget sender)
 	{
+		debug output("wdwViewer_Destroy");
 		exit(0);
 	}
 }
