@@ -29,33 +29,32 @@ import gtk.Widget;
 import gdk.Event;
 import gdk.Keysyms;
 
-import KhanAcademyViewer.Workers.VideoWorker;
-
-protected final class Fullscreen
+public final class Fullscreen
 {
 	private const string _gladeFile = "./Windows/Fullscreen.glade";
 
 	private Window _wdwFullscreen;
 	private DrawingArea _drawVideo;
 	private DrawingArea _originalDrawingArea;
-	private VideoWorker _videoWorker;
+	
+	private void delegate(DrawingArea) ChangeOverlay;
 
-	this(VideoWorker videoWorker, DrawingArea originalDrawingArea)
+	private void delegate() PlayPause;
+	
+	public this(DrawingArea originalDrawingArea, void delegate(DrawingArea) changeOverlay, void delegate() playPause)
 	{
-		_videoWorker = videoWorker;
 		_originalDrawingArea = originalDrawingArea;
+		ChangeOverlay = changeOverlay;
+		PlayPause = playPause;
+
 		SetupWindow();
 	}
-
-	~this()
+	
+	public ~this()
 	{
-		//if (_videoWorker !is null)
-		//{
-			//Switch the video back to the main window drawing area and get rid of the fullscreen window
-			_videoWorker.ChangeOverlay(_originalDrawingArea);
-			_wdwFullscreen.hide();
-			_wdwFullscreen.destroy();
-		//}
+		ChangeOverlay(_originalDrawingArea);
+		_wdwFullscreen.hide();
+		_wdwFullscreen.destroy();
 	}
 
 	private void SetupWindow()
@@ -73,12 +72,13 @@ protected final class Fullscreen
 		_wdwFullscreen.showAll();
 
 		//Move the video onto the fullscreen drawing area
-		_videoWorker.ChangeOverlay(_drawVideo);
+		//_videoWorker.ChangeOverlay(_drawVideo);
+		ChangeOverlay(_drawVideo);
 	}
 
 	private bool wdwFullscreen_ButtonRelease(Event e, Widget sender)
 	{
-		_videoWorker.PlayPause();
+		PlayPause();
 
 		return false;
 	}

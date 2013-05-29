@@ -21,7 +21,7 @@
 
 module KhanAcademyViewer.Workers.VideoWorker;
 
-alias std.stdio.writeln output;
+debug alias std.stdio.writeln output;
 
 import std.string;
 import std.path;
@@ -35,7 +35,6 @@ import gtk.Scale;
 import gtk.Range;
 import gtk.Widget;
 import gtk.Spinner;
-//import gtk.Main;
 import gtk.Fixed;
 import gtk.Label;
 
@@ -136,7 +135,7 @@ protected final class VideoWorker
 
 	private void btnFullscreen_Clicked(Button sender)
 	{
-		Fullscreen screen = new Fullscreen(this, _drawVideo);
+		Fullscreen fullScreen = new Fullscreen(_drawVideo, &ChangeOverlay, &PlayPause);
 	}
 
 	private void ShowSpinner()
@@ -310,7 +309,7 @@ protected final class VideoWorker
 		_isPlaying = false;
 	}
 
-	public void ChangeOverlay(ref DrawingArea area)
+	private void ChangeOverlay(DrawingArea area)
 	{
 		//Switch the video overlay to the provided drawing area
 		_overlay.setWindowHandle(X11.windowGetXid(area.getWindow()));
@@ -361,7 +360,7 @@ protected final class VideoWorker
 		PlayPause();
 	}
 
-	public void PlayPause()
+	private void PlayPause()
 	{
 		if (_isPlaying)
 		{

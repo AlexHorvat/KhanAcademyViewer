@@ -57,12 +57,16 @@
     <Compile Include="Include\Enums.d" />
     <Compile Include="Workers\SettingsWorker.d" />
     <Compile Include="Include\Functions.d" />
+    <Compile Include="Controls\TreeViewControl.d" />
+    <Compile Include="Controls\FlowViewControl.d" />
+    <Compile Include="Controls\ViewControl.d" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Windows\" />
     <Folder Include="DataStructures\" />
     <Folder Include="Workers\" />
     <Folder Include="Include\" />
+    <Folder Include="Controls\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Windows\Viewer.glade">
