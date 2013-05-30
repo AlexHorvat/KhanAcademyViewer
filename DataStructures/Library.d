@@ -50,8 +50,8 @@ public final class Library
 	}
 
 	public @property {
-		long AuthorNamesLength() { return _authorNames.length; }
-		void AuthorNamesLength(long new_Length) { _authorNames.length = new_Length; }
+		size_t AuthorNamesLength() { return _authorNames.length; }
+		void AuthorNamesLength(size_t new_Length) { _authorNames.length = new_Length; }
 	}
 
 	private DateTime _dateAdded;

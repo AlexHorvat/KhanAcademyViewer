@@ -20,14 +20,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Controls.ViewControl;
+module KhanAcademyViewer.Controls.IViewControl;
 
 import gtk.TreeView;
 import gtk.ScrolledWindow;
 
 import KhanAcademyViewer.DataStructures.Library;
 
-protected interface ViewControl
+protected interface IViewControl
 {
 	protected static ScrolledWindow _scrollParent;
 	protected static ScrolledWindow _scrollChild;

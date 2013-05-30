@@ -38,10 +38,10 @@ import gtk.CellRendererText;
 
 import gdk.Event;
 
-import KhanAcademyViewer.Controls.ViewControl;
+import KhanAcademyViewer.Controls.IViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 
-public final class TreeViewControl : ViewControl
+public final class TreeViewControl : IViewControl
 {
 	private TreeView _tvTree;
 
@@ -146,7 +146,7 @@ public final class TreeViewControl : ViewControl
 			
 			foreach (string path; paths)
 			{
-				currentVideo = currentVideo.Children[to!long(path)];
+				currentVideo = currentVideo.Children[to!size_t(path)];
 			}
 			
 			LoadVideo(currentVideo);

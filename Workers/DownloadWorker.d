@@ -40,6 +40,34 @@ import KhanAcademyViewer.Include.Config;
 
 public static class DownloadWorker
 {
+	public static void HasInternetConnection(Tid parentThread)
+	{
+		debug output("HasInternetConnection");
+		HTTP connection = HTTP(G_TopicTreeUrl);
+
+		connection.method = HTTP.Method.head;
+		connection.connectTimeout(dur!"seconds"(10));
+
+		//If there's an internet connection and the program can contact khan academy this will not
+		//throw an error and thus return true
+		try
+		{
+			connection.perform();
+			parentThread.send(true);
+		}
+		//However if something goes wrong this will catch it
+		//Doesn't matter what's wrong, just that a connection to Khan Academy webserver cannot be established
+		catch(Exception ex)
+		{
+			debug output("No internet connection error: ", ex);
+			parentThread.send(false);
+		}
+		finally
+		{
+			connection.destroy();
+		}
+	}
+
 	public static void NeedToDownloadLibrary(Tid parentThread)
 	{
 		string eTag;
@@ -53,6 +81,7 @@ public static class DownloadWorker
 			
 			string newETag = connection.responseHeaders["etag"];
 
+			connection.destroy();
 			parentThread.send(newETag != eTag);
 		}
 		else
@@ -187,7 +216,7 @@ public static class DownloadWorker
 					//There are author_names, loop thru and add them to library
 					newLibrary.AuthorNamesLength = jsonAuthorNames.length;
 					
-					foreach(authorCounter; 0 .. jsonAuthorNames.length)
+					foreach(size_t authorCounter; 0 .. jsonAuthorNames.length)
 					{
 						newLibrary.AuthorNames[authorCounter] = jsonAuthorNames[authorCounter].str;
 					}

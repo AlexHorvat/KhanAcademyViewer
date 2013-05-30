@@ -41,11 +41,11 @@ import gtk.Button;
 
 import gdk.Event;
 
-import KhanAcademyViewer.Controls.ViewControl;
+import KhanAcademyViewer.Controls.IViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.BreadCrumb;
 
-public final class FlowViewControl : ViewControl
+public final class FlowViewControl : IViewControl
 {
 	private ButtonBox _bboxBreadCrumbs;
 	private Library _parentLibrary;
@@ -125,10 +125,10 @@ public final class FlowViewControl : ViewControl
 			return null;
 		}
 
-		foreach(int index; 0 .. cast(int)workingLibrary.Children.length)
+		foreach(size_t index; 0 .. workingLibrary.Children.length)
 		{
 			listStore.append(tree);
-			listStore.setValue(tree, 0, index);
+			listStore.setValue(tree, 0, cast(int)index);
 			listStore.setValue(tree, 1, workingLibrary.Children[index].Title);
 		}
 		
@@ -155,7 +155,7 @@ public final class FlowViewControl : ViewControl
 		
 		if (selectedItem !is null)
 		{
-			int rowIndex = selectedItem.getValueInt(0);
+			size_t rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
 			
 			//If there are no breadcrumbs yet create a new breadcrumb
@@ -163,7 +163,7 @@ public final class FlowViewControl : ViewControl
 			{
 				BreadCrumb crumb = new BreadCrumb();
 				
-				crumb.RowIndex = rowIndex;
+				crumb.RowIndex = cast(int)rowIndex;
 				crumb.Title = title;
 				
 				_breadCrumbs.length = 1;
@@ -173,7 +173,7 @@ public final class FlowViewControl : ViewControl
 			//entry for it, so overwrite that entry
 			else
 			{
-				_breadCrumbs[_breadCrumbs.length - 1].RowIndex = rowIndex;
+				_breadCrumbs[_breadCrumbs.length - 1].RowIndex = cast(int)rowIndex;
 				_breadCrumbs[_breadCrumbs.length - 1].Title = title;
 			}
 			
@@ -195,7 +195,7 @@ public final class FlowViewControl : ViewControl
 		
 		if (selectedItem !is null)
 		{
-			int rowIndex = selectedItem.getValueInt(0);
+			size_t rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
 			
 			//If this child has children then make this a parent and it's child the new child
@@ -204,7 +204,7 @@ public final class FlowViewControl : ViewControl
 			{
 				BreadCrumb crumb = new BreadCrumb();
 				
-				crumb.RowIndex = rowIndex;
+				crumb.RowIndex = cast(int)rowIndex;
 				crumb.Title = title;
 				
 				_breadCrumbs.length = _breadCrumbs.length + 1;
@@ -242,7 +242,7 @@ public final class FlowViewControl : ViewControl
 			int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
 			int titleLength = breadCrumbWidth / 8;
 			
-			foreach(ulong breadCrumbIndex; 0 .. _breadCrumbs.length)
+			foreach(size_t breadCrumbIndex; 0 .. _breadCrumbs.length)
 			{
 				string title = _breadCrumbs[breadCrumbIndex].Title;
 				
@@ -276,7 +276,7 @@ public final class FlowViewControl : ViewControl
 		//Set parent library to 2nd to last breadcrumb item
 		_parentLibrary = _completeLibrary;
 		
-		foreach(ulong breadCrumbCounter; 0 .. _breadCrumbs.length - 1)
+		foreach(size_t breadCrumbCounter; 0 .. _breadCrumbs.length - 1)
 		{
 			_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
 		}

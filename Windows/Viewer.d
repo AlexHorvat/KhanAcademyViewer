@@ -60,7 +60,7 @@ import KhanAcademyViewer.Windows.About;
 import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Controls.TreeViewControl;
 import KhanAcademyViewer.Controls.FlowViewControl;
-import KhanAcademyViewer.Controls.ViewControl;
+import KhanAcademyViewer.Controls.IViewControl;
 
 protected final class Viewer
 {
@@ -91,13 +91,13 @@ protected final class Viewer
 	private RadioMenuItem _imiFlow;
 	private RadioMenuItem _imiTree;
 	private ImageMenuItem _miOnline;
-	private ViewControl _vcView;
+	private IViewControl _vcView;
 
 	this()
 	{
-		debug output("this");
-		LoadSettings();
+		debug output("Constructor");
 		SetupWindow();
+		LoadSettings();
 		SetupLoader();
 		LoadLibraryFromStorage();
 		SetOnlineOrOffline();
@@ -108,6 +108,29 @@ protected final class Viewer
 	{
 		debug output("LoadSettings");
 		_settings = SettingsWorker.LoadSettings();
+	}
+
+	private bool HasInternetConnection()
+	{
+		bool onwards = false;
+		bool hasInternetConnection;
+
+		spawn(&DownloadWorker.HasInternetConnection, thisTid);
+		
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(250),
+				(bool hasConnection)
+				{
+				hasInternetConnection = hasConnection;
+				onwards = true;
+			});
+			
+			RefreshUI();
+		}
+
+		return hasInternetConnection;
 	}
 
 	private void SetupWindow()
@@ -193,6 +216,11 @@ protected final class Viewer
 	private void SetOnline()
 	{
 		debug output("SetOnline");
+		if (!HasInternetConnection())
+		{
+			return;
+		}
+
 		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
 
 		_settings.IsOnline = true;
@@ -249,49 +277,57 @@ protected final class Viewer
 		_loadingWindow = new Loading();
 		RefreshUI();
 
-		//Async check if need to download library (async because sometimes it's really slow)
-		onwards = false;
-		spawn(&DownloadWorker.NeedToDownloadLibrary, thisTid);
-
-		while (!onwards)
+		//Obviously don't try to download library if no internet connection
+		if (!HasInternetConnection())
 		{
-			receiveTimeout(
-				dur!"msecs"(500),
-				(bool refreshNeeded)
-				{
-				needToDownLoadLibrary = refreshNeeded;
-				onwards = true;
-			});
-
-			RefreshUI();
+			_settings.IsOnline = false;
 		}
-
-		//If library needs to downloaded do another async call to DownloadLibrary
-		//keep _loadingWindow updated with progress
-		if (needToDownLoadLibrary)
+		else
 		{
+			//Async check if need to download library (async because sometimes it's really slow)
 			onwards = false;
-
-			_loadingWindow.UpdateStatus("Downloading library");
-
-			spawn(&DownloadWorker.DownloadLibrary, thisTid);
+			spawn(&DownloadWorker.NeedToDownloadLibrary, thisTid);
 
 			while (!onwards)
 			{
 				receiveTimeout(
-					dur!"msecs"(500),
-					(ulong amountDownloaded)
+					dur!"msecs"(250),
+					(bool refreshNeeded)
 					{
-					//Update the loading window with amount downloaded
-					_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
-				},
-				(Tid deathSignal)
-				{
-					//Been sent the TID of death, exit the loading loop
+					needToDownLoadLibrary = refreshNeeded;
 					onwards = true;
 				});
-				
+
 				RefreshUI();
+			}
+
+			//If library needs to downloaded do another async call to DownloadLibrary
+			//keep _loadingWindow updated with progress
+			if (needToDownLoadLibrary)
+			{
+				onwards = false;
+
+				_loadingWindow.UpdateStatus("Downloading library");
+
+				spawn(&DownloadWorker.DownloadLibrary, thisTid);
+
+				while (!onwards)
+				{
+					receiveTimeout(
+						dur!"msecs"(250),
+						(ulong amountDownloaded)
+						{
+						//Update the loading window with amount downloaded
+						_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
+					},
+					(Tid deathSignal)
+					{
+						//Been sent the TID of death, exit the loading loop
+						onwards = true;
+					});
+					
+					RefreshUI();
+				}
 			}
 		}
 	}
