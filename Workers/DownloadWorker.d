@@ -46,7 +46,7 @@ public static class DownloadWorker
 		HTTP connection = HTTP(G_TopicTreeUrl);
 
 		connection.method = HTTP.Method.head;
-		connection.connectTimeout(dur!"seconds"(10));
+		connection.connectTimeout(G_ConnectionTimeOut);
 
 		//If there's an internet connection and the program can contact khan academy this will not
 		//throw an error and thus return true

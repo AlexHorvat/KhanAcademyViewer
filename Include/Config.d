@@ -23,8 +23,11 @@
 
 module KhanAcademyViewer.Include.Config;
 
+import core.time;
+
 protected static immutable string G_TopicTreeUrl = "http://www.khanacademy.org/api/v1/topictree";
 protected static immutable string G_ETagFilePath = "~/.config/KhanAcademyViewer/ETag";
 protected static immutable string G_LibraryFilePath = "~/.config/KhanAcademyViewer/Library";
 protected static immutable string G_SettingsFilePath = "~/.config/KhanAcademyViewer/Settings";
 protected static immutable string G_DownloadFilePath = "~/.config/KhanAcademyViewer";
+protected static immutable Duration G_ConnectionTimeOut = dur!"seconds"(15);
