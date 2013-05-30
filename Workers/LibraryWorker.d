@@ -73,6 +73,8 @@ public static class LibraryWorker
 			downloadedFiles[file[file.lastIndexOf("/") .. $]] = true;
 		}
 
+		downloadedFiles.rehash();
+
 		return downloadedFiles;
 	}
 
