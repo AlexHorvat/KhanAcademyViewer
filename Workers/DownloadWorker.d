@@ -32,6 +32,7 @@ import std.datetime;
 import std.string;
 import std.file;
 import std.concurrency;
+import std.array;
 
 import msgpack;
 
@@ -174,6 +175,7 @@ public static class DownloadWorker
 		{
 			debug output("Found a node library");
 			Library newLibrary = new Library();
+			Appender!(Library[], Library) appendLibrary = appender!(Library[], Library);
 
 			//Every entry has a title, no need to null check
 			debug output("adding title ", json["title"].str);
@@ -188,17 +190,18 @@ public static class DownloadWorker
 				//in that case don't add it to the main library
 				if (childLibrary !is null)
 				{
-					newLibrary.AddChildLibrary(childLibrary);
+					appendLibrary.put(childLibrary);
 				}
 			}
 
 			//If all children were exercises, then don't return the parent
-			if (newLibrary.Children is null)
+			if (appendLibrary.data is null)
 			{
 				return null;
 			}
 			else
 			{
+				newLibrary.Children = appendLibrary.data;
 				return newLibrary;
 			}
 		}

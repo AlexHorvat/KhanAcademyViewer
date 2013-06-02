@@ -25,7 +25,6 @@ module KhanAcademyViewer.Windows.Loading;
 
 debug alias std.stdio.writeln output;
 
-import std.conv;
 import std.string;
 
 import gtk.Builder;

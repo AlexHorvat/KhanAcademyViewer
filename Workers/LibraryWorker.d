@@ -26,6 +26,7 @@ debug alias std.stdio.writeln output;
 import std.path;
 import std.file;
 import std.string;
+import std.array;
 
 import msgpack;
 
@@ -87,25 +88,25 @@ public static class LibraryWorker
 		//If current library has children, recurse down another level and replace it's children with updated values
 		if (currentLibrary.Children !is null)
 		{
-			Library[] currentChildren = currentLibrary.Children;
-			currentLibrary.Children = null;
+			Appender!(Library[], Library) appendLibrary = appender!(Library[], Library);
 
-			foreach(Library childLibrary; currentChildren)
+			foreach(Library childLibrary; currentLibrary.Children)
 			{
 				Library newChildLibrary = RecurseOfflineLibrary(childLibrary, downloadedFiles);
 
 				if (newChildLibrary !is null)
 				{
-					currentLibrary.AddChildLibrary(newChildLibrary);
+					appendLibrary.put(newChildLibrary);
 				}
 			}
 
-			if (currentLibrary.Children is null)
+			if (appendLibrary.data is null)
 			{
 				return null;
 			}
 			else
 			{
+				currentLibrary.Children = appendLibrary.data;
 				return currentLibrary;
 			}
 		}
