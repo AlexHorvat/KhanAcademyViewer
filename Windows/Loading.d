@@ -57,6 +57,10 @@ protected final class Loading
 		debug output(__FUNCTION__);
 		_lblStatus.setText(newStatus);
 	}
+	
+	public @property {
+		void DataDownloadedVisible(bool visible) { _lblDataDownloaded.setVisible(visible); }
+	}
 
 	public void UpdateAmountDownloaded(long amountDownloaded)
 	{

@@ -116,14 +116,15 @@ protected final class Viewer
 		bool onwards = false;
 		bool hasInternetConnection;
 
+		_loadingWindow.UpdateStatus("Checking for internet connection");
+		_loadingWindow.DataDownloadedVisible = false;
 		spawn(&DownloadWorker.HasInternetConnection);
 		
 		while (!onwards)
 		{
 			receiveTimeout(
 				dur!"msecs"(250),
-				(bool hasConnection)
-				{
+				(bool hasConnection) {
 				hasInternetConnection = hasConnection;
 				onwards = true;
 			});
@@ -203,23 +204,34 @@ protected final class Viewer
 	private void SetOnlineOrOffline()
 	{
 		debug output(__FUNCTION__);
-		_settings.IsOnline ? SetOnline() : SetOffline();
+		//This is only called from the constructor - which also checks for internet connection when loading
+		//so no need to double check
+		_settings.IsOnline ? SetOnline(false) : SetOffline();
 	}
 
 	private bool miOnline_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		_settings.IsOnline ? SetOffline() : SetOnline();
+		_settings.IsOnline ? SetOffline() : SetOnline(true);
 
 		return false;
 	}
 
-	private void SetOnline()
+	private void SetOnline(bool checkForInternetConnection)
 	{
 		debug output(__FUNCTION__);
-		if (!HasInternetConnection())
+
+		if (checkForInternetConnection)
 		{
-			return;
+			_loadingWindow = new Loading();
+			RefreshUI();
+
+			if (!HasInternetConnection())
+			{
+				return;
+			}
+
+			_loadingWindow.destroy();
 		}
 
 		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
@@ -238,11 +250,27 @@ protected final class Viewer
 	{
 		debug output(__FUNCTION__);
 		Image imgOffline = new Image(StockID.DISCONNECT, GtkIconSize.BUTTON);
+		bool onwards = false;
 
 		_settings.IsOnline = false;
 		SettingsWorker.SaveSettings(_settings);
+
 		//Only show video's which are downloaded, need to change _completeLibrary to reflect this
-		_completeLibrary = LibraryWorker.LoadOfflineLibrary();
+		//Make async as might be slow on older computers
+		spawn(&LibraryWorker.LoadOfflineLibrary);
+
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(250),
+				(shared Library offlineLibrary)	{
+				_completeLibrary = cast(Library)offlineLibrary;
+				onwards = true;
+			});
+			
+			RefreshUI();
+		}
+
 		LoadNavigation();
 
 		_miOnline.setImage(imgOffline);
@@ -287,6 +315,7 @@ protected final class Viewer
 		{
 			//Async check if need to download library (async because sometimes it's really slow)
 			onwards = false;
+			_loadingWindow.UpdateStatus("Checking for library updates");
 			spawn(&DownloadWorker.NeedToDownloadLibrary);
 
 			while (!onwards)
@@ -307,9 +336,8 @@ protected final class Viewer
 			if (needToDownLoadLibrary)
 			{
 				onwards = false;
-
 				_loadingWindow.UpdateStatus("Downloading library");
-
+				_loadingWindow.DataDownloadedVisible = true;
 				spawn(&DownloadWorker.DownloadLibrary);
 
 				while (!onwards)
@@ -342,6 +370,7 @@ protected final class Viewer
 		//And if passed as a shared variable it is always null in this thread
 		//even after being set on the loading thread
 		_loadingWindow.UpdateStatus("Processing library");
+		_loadingWindow.DataDownloadedVisible = false;
 
 		//The library takes a few seconds to write to disc after being downloaded
 		//loop and wait until it shows up, otherwise cannot load library and program

@@ -27,6 +27,7 @@ import std.path;
 import std.file;
 import std.string;
 import std.array;
+import std.concurrency;
 
 import msgpack;
 
@@ -56,12 +57,13 @@ public static class LibraryWorker
 		return completeLibrary;
 	}
 
-	public static Library LoadOfflineLibrary()
+	public static Library offlineLibrary;
+	public static void LoadOfflineLibrary()
 	{
 		debug output(__FUNCTION__);
-		Library offlineLibrary = RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
+		offlineLibrary = RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
 
-		return offlineLibrary;
+		ownerTid.send(cast(shared)offlineLibrary);
 	}
 
 	private static bool[string] GetDownloadedFiles()
