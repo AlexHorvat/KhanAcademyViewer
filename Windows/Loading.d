@@ -26,6 +26,7 @@ module KhanAcademyViewer.Windows.Loading;
 debug alias std.stdio.writeln output;
 
 import std.conv;
+import std.string;
 
 import gtk.Builder;
 import gtk.Window;
@@ -61,11 +62,7 @@ protected final class Loading
 	public void UpdateAmountDownloaded(long amountDownloaded)
 	{
 		debug output(__FUNCTION__);
-		//amountDownloaded is in bytes
-		string downloaded = to!string(amountDownloaded / 1024);
-
-		downloaded ~= " KB";
-		_lblDataDownloaded.setText(downloaded);
+		_lblDataDownloaded.setText(format("%s KB", amountDownloaded / 1024));
 	}
 	
 	private void SetupWindow()
