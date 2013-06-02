@@ -60,7 +60,7 @@ import KhanAcademyViewer.Windows.About;
 import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Controls.TreeViewControl;
 import KhanAcademyViewer.Controls.FlowViewControl;
-import KhanAcademyViewer.Controls.IViewControl;
+import KhanAcademyViewer.Controls.ViewControl;
 
 protected final class Viewer
 {
@@ -91,7 +91,7 @@ protected final class Viewer
 	private RadioMenuItem _imiFlow;
 	private RadioMenuItem _imiTree;
 	private ImageMenuItem _miOnline;
-	private IViewControl _vcView;
+	private ViewControl _vcView;
 
 	this()
 	{

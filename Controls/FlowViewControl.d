@@ -41,11 +41,11 @@ import gtk.Button;
 
 import gdk.Event;
 
-import KhanAcademyViewer.Controls.IViewControl;
+import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.BreadCrumb;
 
-public final class FlowViewControl : IViewControl
+protected final class FlowViewControl : ViewControl
 {
 	private ButtonBox _bboxBreadCrumbs;
 	private Library _parentLibrary;
@@ -55,7 +55,7 @@ public final class FlowViewControl : IViewControl
 	private int _breadCrumbAvailableWidth;
 	private BreadCrumb[] _breadCrumbs;
 
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library) loadVideoMethod)
+	this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library) loadVideoMethod)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -68,7 +68,7 @@ public final class FlowViewControl : IViewControl
 		BuildView();
 	}
 	
-	public ~this()
+	~this()
 	{
 		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
@@ -76,7 +76,7 @@ public final class FlowViewControl : IViewControl
 		_bboxBreadCrumbs.removeAll();
 	}
 	
-	protected void BuildView()
+	private void BuildView()
 	{
 		debug output(__FUNCTION__);
 		_tvParent = new TreeView(CreateModel(true));
@@ -137,7 +137,7 @@ public final class FlowViewControl : IViewControl
 		return listStore;
 	}
 
-	protected void CreateColumns(TreeView treeView)
+	private void CreateColumns(TreeView treeView)
 	{
 		debug output(__FUNCTION__);
 		CellRendererText renderer = new CellRendererText();

@@ -38,14 +38,14 @@ import gtk.CellRendererText;
 
 import gdk.Event;
 
-import KhanAcademyViewer.Controls.IViewControl;
+import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 
-public final class TreeViewControl : IViewControl
+protected final class TreeViewControl : ViewControl
 {
 	private TreeView _tvTree;
-
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library) loadVideoMethod)
+	
+	this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library) loadVideoMethod)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -56,7 +56,7 @@ public final class TreeViewControl : IViewControl
 		BuildView();
 	}
 
-	public ~this()
+	~this()
 	{
 		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
@@ -64,7 +64,7 @@ public final class TreeViewControl : IViewControl
 		_scrollChild.setVisible(true);
 	}
 	
-	protected void BuildView()
+	private void BuildView()
 	{
 		debug output(__FUNCTION__);
 		_tvTree = new TreeView(CreateModel());
@@ -121,7 +121,7 @@ public final class TreeViewControl : IViewControl
 		}
 	}
 
-	protected void CreateColumns(TreeView treeView)
+	private void CreateColumns(TreeView treeView)
 	{
 		debug output(__FUNCTION__);
 		CellRendererText renderer = new CellRendererText();
