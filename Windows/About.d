@@ -22,6 +22,8 @@
  */
 module KhanAcademyViewer.Windows.About;
 
+debug alias std.stdio.writeln output;
+
 import gtk.Builder;
 import gtk.AboutDialog;
 import gtk.Dialog;
@@ -34,11 +36,13 @@ protected final class About
 
 	this()
 	{
+		debug output(__FUNCTION__);
 		SetupWindow();
 	}
 
 	private void SetupWindow()
 	{
+		debug output(__FUNCTION__);
 		Builder windowBuilder = new Builder();
 		
 		windowBuilder.addFromFile(_gladeFile);
@@ -51,6 +55,7 @@ protected final class About
 
 	private void wdwAbout_Response(int response, Dialog sender)
 	{
+		debug output(__FUNCTION__);
 		if (response == GtkResponseType.CANCEL)
 		{
 			sender.hide();

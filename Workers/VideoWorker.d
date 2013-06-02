@@ -84,6 +84,7 @@ protected final class VideoWorker
 
 	this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
 	{
+		debug output(__FUNCTION__);
 		//Set class level variables
 		_fixedVideo = fixedVideo;
 		_drawVideo = drawVideo;
@@ -104,14 +105,15 @@ protected final class VideoWorker
 
 	private bool CheckIfVideoDownloaded()
 	{
+		debug output(__FUNCTION__);
 		_localFileName = expandTilde(G_DownloadFilePath) ~ _fileName[_fileName.lastIndexOf("/") .. $];
-		debug output("Local file name set to ", _localFileName);
 
 		return DownloadWorker.VideoIsDownloaded(_localFileName);
 	}
 
 	~this()
 	{
+		debug output(__FUNCTION__);
 		//Don't leave icon as pause icon and move scale pointer back to 0
 		_btnPlay.setImage(_imgPlay);
 		_sclPosition.setValue(0);
@@ -135,11 +137,13 @@ protected final class VideoWorker
 
 	private void btnFullscreen_Clicked(Button sender)
 	{
+		debug output(__FUNCTION__);
 		Fullscreen fullScreen = new Fullscreen(_drawVideo, &ChangeOverlay, &PlayPause);
 	}
 
 	private void ShowSpinner()
 	{
+		debug output(__FUNCTION__);
 		_spinLoading = new Spinner();
 		RGBA rgbaWhite = new RGBA(255,255,255);
 		RGBA rgbaBlack = new RGBA(0,0,0);
@@ -167,6 +171,7 @@ protected final class VideoWorker
 
 	private void SetupVideo(bool isDownloaded)
 	{
+		debug output(__FUNCTION__);
 		GstState current;
 		GstState pending;
 		string[] args;
@@ -236,12 +241,14 @@ protected final class VideoWorker
 
 	private void HideSpinner()
 	{
+		debug output(__FUNCTION__);
 		_fixedVideo.remove(_spinLoading);
 		_drawVideo.setVisible(true);
 	}
 	
 	private void Play()
 	{
+		debug output(__FUNCTION__);
 		if (_source.setState(GstState.PLAYING) == GstStateChangeReturn.FAILURE)
 		{
 			return;
@@ -304,6 +311,7 @@ protected final class VideoWorker
 
 	private void Pause()
 	{
+		debug output(__FUNCTION__);
 		_source.setState(GstState.PAUSED);
 		_btnPlay.setImage(_imgPlay);
 		_isPlaying = false;
@@ -311,12 +319,14 @@ protected final class VideoWorker
 
 	private void ChangeOverlay(DrawingArea area)
 	{
+		debug output(__FUNCTION__);
 		//Switch the video overlay to the provided drawing area
 		_overlay.setWindowHandle(X11.windowGetXid(area.getWindow()));
 	}
 
 	private double GetDuration()
 	{
+		debug output(__FUNCTION__);
 		//Return in seconds as that's way more managable
 		long duration = _source.queryDuration();
 
@@ -325,12 +335,14 @@ protected final class VideoWorker
 
 	private void SeekTo(double seconds)
 	{
+		debug output(__FUNCTION__);
 		long nanoSeconds = cast(long)seconds * 1000000000;
 		_source.seek(nanoSeconds);
 	}
 
 	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range range)
 	{
+		debug output(__FUNCTION__);
 		if (scrollType == GtkScrollType.JUMP)
 		{
 			if (position > _maxRange)
@@ -351,17 +363,20 @@ protected final class VideoWorker
 
 	private bool drawVideo_ButtonRelease(Event e, Widget sender)
 	{
+		debug output(__FUNCTION__);
 		PlayPause();
 		return true;
 	}
 
 	private void btnPlay_Clicked(Button sender)
 	{
+		debug output(__FUNCTION__);
 		PlayPause();
 	}
 
 	private void PlayPause()
 	{
+		debug output(__FUNCTION__);
 		if (_isPlaying)
 		{
 			Pause();

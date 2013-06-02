@@ -95,7 +95,7 @@ protected final class Viewer
 
 	this()
 	{
-		debug output("Constructor");
+		debug output(__FUNCTION__);
 		SetupWindow();
 		LoadSettings();
 		SetupLoader();
@@ -106,16 +106,17 @@ protected final class Viewer
 
 	private void LoadSettings()
 	{
-		debug output("LoadSettings");
+		debug output(__FUNCTION__);
 		_settings = SettingsWorker.LoadSettings();
 	}
 
 	private bool HasInternetConnection()
 	{
+		debug output(__FUNCTION__);
 		bool onwards = false;
 		bool hasInternetConnection;
 
-		spawn(&DownloadWorker.HasInternetConnection, thisTid);
+		spawn(&DownloadWorker.HasInternetConnection);
 		
 		while (!onwards)
 		{
@@ -135,7 +136,7 @@ protected final class Viewer
 
 	private void SetupWindow()
 	{
-		debug output("SetupWindow");
+		debug output(__FUNCTION__);
 		Builder windowBuilder = new Builder();
 		RGBA rgbaBlack = new RGBA(0,0,0);
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
@@ -201,13 +202,13 @@ protected final class Viewer
 
 	private void SetOnlineOrOffline()
 	{
-		debug output("SetOnlineOrOffline");
+		debug output(__FUNCTION__);
 		_settings.IsOnline ? SetOnline() : SetOffline();
 	}
 
 	private bool miOnline_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("miOnline_ButtonRelease");
+		debug output(__FUNCTION__);
 		_settings.IsOnline ? SetOffline() : SetOnline();
 
 		return false;
@@ -215,7 +216,7 @@ protected final class Viewer
 
 	private void SetOnline()
 	{
-		debug output("SetOnline");
+		debug output(__FUNCTION__);
 		if (!HasInternetConnection())
 		{
 			return;
@@ -235,7 +236,7 @@ protected final class Viewer
 
 	private void SetOffline()
 	{
-		debug output("SetOffline");
+		debug output(__FUNCTION__);
 		Image imgOffline = new Image(StockID.DISCONNECT, GtkIconSize.BUTTON);
 
 		_settings.IsOnline = false;
@@ -250,7 +251,7 @@ protected final class Viewer
 
 	private bool imiFlow_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("imiFlow_ButtonRelease");
+		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Flow;
 		SettingsWorker.SaveSettings(_settings);
 		LoadNavigation();
@@ -260,7 +261,7 @@ protected final class Viewer
 
 	private bool imiTree_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("imiTree_ButtonRelease");
+		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Tree;
 		SettingsWorker.SaveSettings(_settings);
 		LoadNavigation();
@@ -270,7 +271,7 @@ protected final class Viewer
 
 	private void SetupLoader()
 	{
-		debug output("SetupLoader");
+		debug output(__FUNCTION__);
 		bool onwards, needToDownLoadLibrary;
 
 		//Show the loading window and make sure it's loaded before starting the download
@@ -286,7 +287,7 @@ protected final class Viewer
 		{
 			//Async check if need to download library (async because sometimes it's really slow)
 			onwards = false;
-			spawn(&DownloadWorker.NeedToDownloadLibrary, thisTid);
+			spawn(&DownloadWorker.NeedToDownloadLibrary);
 
 			while (!onwards)
 			{
@@ -309,7 +310,7 @@ protected final class Viewer
 
 				_loadingWindow.UpdateStatus("Downloading library");
 
-				spawn(&DownloadWorker.DownloadLibrary, thisTid);
+				spawn(&DownloadWorker.DownloadLibrary);
 
 				while (!onwards)
 				{
@@ -334,7 +335,7 @@ protected final class Viewer
 
 	private void LoadLibraryFromStorage()
 	{
-		debug output("LoadLibraryFromStorage");
+		debug output(__FUNCTION__);
 		//Maybe make this async in the future
 		//Seems to be difficult to pass the loaded library around async
 		//If passed in a message it locks the sending thread
@@ -356,12 +357,11 @@ protected final class Viewer
 
 	private void LoadNavigation()
 	{
-		debug output("LoadNavigation");
+		debug output(__FUNCTION__);
 		//Stop any playing video
 		if (_videoWorker !is null)
 		{
 			_videoWorker.destroy();
-			debug output("_videoWorker destroyed");
 		}
 
 		if (_vcView !is null)
@@ -369,7 +369,7 @@ protected final class Viewer
 			_vcView.destroy();
 		}
 
-		switch (_settings.ViewModeSetting)
+		final switch (_settings.ViewModeSetting)
 		{
 			case ViewMode.Flow:
 				_imiFlow.setActive(true);
@@ -380,22 +380,20 @@ protected final class Viewer
 				_imiTree.setActive(true);
 				_vcView = new TreeViewControl(_scrollParent, _scrollChild, _completeLibrary, &LoadVideo);
 				break;
-
-			default:
-				return;
 		}
 	}
 
 	private void KillLoadingWindow()
 	{
-		debug output("KillLoadingWindow");
+		debug output(__FUNCTION__);
 		_loadingWindow.destroy();
 	}
 	
 	private void LoadVideo(Library currentVideo)
 	{
-		debug output("LoadVideo");
-		debug output("Video to play ", currentVideo.MP4);
+		debug output(__FUNCTION__);
+		assert(currentVideo.MP4 != "", "No video data! There should be as this item is at the end of the tree");
+
 		//If a video is already playing, dispose of it
 		if (_videoWorker !is null)
 		{
@@ -421,7 +419,7 @@ protected final class Viewer
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("miAbout_ButtonRelease");
+		debug output(__FUNCTION__);
 		About about = new About();
 
 		return true;
@@ -429,14 +427,14 @@ protected final class Viewer
 
 	private bool miExit_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("miExit_ButtonRelease");
+		debug output(__FUNCTION__);
 		exit(0);
 		return true;
 	}
 
 	private void fixedVideo_SizeAllocate(GdkRectangle* newSize, Widget sender)
 	{
-		debug output("fixedVideo_SizeAllocate");
+		debug output(__FUNCTION__);
 		//Need to keep drawVideo the same size as it's parent - the fixed widget
 		//this has to be done manually
 		_drawVideo.setSizeRequest(newSize.width, newSize.height);
@@ -444,7 +442,7 @@ protected final class Viewer
 
 	private void wdwViewer_Destroy(Widget sender)
 	{
-		debug output("wdwViewer_Destroy");
+		debug output(__FUNCTION__);
 		exit(0);
 	}
 }

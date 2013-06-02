@@ -31,6 +31,7 @@ import gstreamer.gstreamer;
 import KhanAcademyViewer.Windows.Viewer;
 
 public void main(string args[]) {
+	debug output(__FUNCTION__);
 	//Test for gtk and gstreamer
 	try
 	{

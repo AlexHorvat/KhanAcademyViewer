@@ -57,6 +57,7 @@ public final class FlowViewControl : IViewControl
 
 	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library) loadVideoMethod)
 	{
+		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
 		_scrollChild = scrollChild;
 		_bboxBreadCrumbs = bboxBreadCrumbs;
@@ -69,6 +70,7 @@ public final class FlowViewControl : IViewControl
 	
 	public ~this()
 	{
+		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
 		_scrollChild.removeAll();
 		_bboxBreadCrumbs.removeAll();
@@ -76,7 +78,7 @@ public final class FlowViewControl : IViewControl
 	
 	protected void BuildView()
 	{
-		debug output("BuildFlowView");
+		debug output(__FUNCTION__);
 		_tvParent = new TreeView(CreateModel(true));
 
 		_tvParent.setHeadersVisible(false);
@@ -106,7 +108,7 @@ public final class FlowViewControl : IViewControl
 
 	private ListStore CreateModel(bool isParentTree)
 	{
-		debug output("CreateModel");
+		debug output(__FUNCTION__);
 		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
 		TreeIter tree = new TreeIter();
 		Library workingLibrary;
@@ -137,7 +139,7 @@ public final class FlowViewControl : IViewControl
 
 	protected void CreateColumns(TreeView treeView)
 	{
-		debug output("CreateColumns");
+		debug output(__FUNCTION__);
 		CellRendererText renderer = new CellRendererText();
 		TreeViewColumn indexColumn = new TreeViewColumn("Index", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
@@ -150,7 +152,7 @@ public final class FlowViewControl : IViewControl
 
 	private bool tvParent_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("tvParent_ButtonRelease");
+		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvParent.getSelectedIter();
 		
 		if (selectedItem !is null)
@@ -190,7 +192,7 @@ public final class FlowViewControl : IViewControl
 	
 	private bool tvChild_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("tvChild_ButtonRelease");
+		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvChild.getSelectedIter();
 		
 		if (selectedItem !is null)
@@ -232,7 +234,7 @@ public final class FlowViewControl : IViewControl
 
 	private void LoadBreadCrumbs()
 	{
-		debug output("LoadBreadCrumbs");
+		debug output(__FUNCTION__);
 		//Clear existing breadcrumb buttons
 		_bboxBreadCrumbs.removeAll();
 		
@@ -268,7 +270,7 @@ public final class FlowViewControl : IViewControl
 
 	private void breadButton_Clicked(Button sender)
 	{
-		debug output("breadButton_Clicked");
+		debug output(__FUNCTION__);
 		//Cut _breadCrumbs down to breadCrumbIndex length, then set the parent and child to the last two breadcrumb items
 		int breadCrumbNewLength = to!int(sender.getName());
 		_breadCrumbs.length = breadCrumbNewLength;

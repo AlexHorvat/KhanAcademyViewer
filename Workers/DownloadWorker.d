@@ -40,9 +40,9 @@ import KhanAcademyViewer.Include.Config;
 
 public static class DownloadWorker
 {
-	public static void HasInternetConnection(Tid parentThread)
+	public static void HasInternetConnection()
 	{
-		debug output("HasInternetConnection");
+		debug output(__FUNCTION__);
 		HTTP connection = HTTP(G_TopicTreeUrl);
 
 		connection.method = HTTP.Method.head;
@@ -53,14 +53,14 @@ public static class DownloadWorker
 		try
 		{
 			connection.perform();
-			parentThread.send(true);
+			ownerTid.send(true);
 		}
 		//However if something goes wrong this will catch it
 		//Doesn't matter what's wrong, just that a connection to Khan Academy webserver cannot be established
 		catch(Exception ex)
 		{
 			debug output("No internet connection error: ", ex);
-			parentThread.send(false);
+			ownerTid.send(false);
 		}
 		finally
 		{
@@ -68,8 +68,9 @@ public static class DownloadWorker
 		}
 	}
 
-	public static void NeedToDownloadLibrary(Tid parentThread)
+	public static void NeedToDownloadLibrary()
 	{
+		debug output(__FUNCTION__);
 		string eTag;
 		
 		if (LoadETagFromDisk(eTag) && LibraryExists())
@@ -82,19 +83,20 @@ public static class DownloadWorker
 			string newETag = connection.responseHeaders["etag"];
 
 			connection.destroy();
-			parentThread.send(newETag != eTag);
+			ownerTid.send(newETag != eTag);
 		}
 		else
 		{
-			parentThread.send(true);
+			ownerTid.send(true);
 		}
 	}
 
-	public static void DownloadLibrary(Tid parentThread)
+	public static void DownloadLibrary()
 	{
+		debug output(__FUNCTION__);
 		string eTag, jsonValues;
 
-		DownloadJson(eTag, jsonValues, parentThread);
+		DownloadJson(eTag, jsonValues);
 		SaveETag(eTag);
 
 		Library completeLibrary = ConvertJsonToLibrary(parseJSON(jsonValues).object);
@@ -103,11 +105,12 @@ public static class DownloadWorker
 		//Send the kill signal back to the parent of this thread
 		//Can't just send bool as this seems to get interpreted as a ulong
 		//so sending back parentThread just to have something to send
-		parentThread.send(parentThread);
+		ownerTid.send(ownerTid);
 	}
 
 	private static bool LoadETagFromDisk(out string eTag)
 	{
+		debug output(__FUNCTION__);
 		string eTagFileName = expandTilde(G_ETagFilePath);
 		
 		if (exists(eTagFileName))
@@ -123,20 +126,22 @@ public static class DownloadWorker
 
 	private static bool LibraryExists()
 	{
+		debug output(__FUNCTION__);
 		string libraryFileName = expandTilde(G_LibraryFilePath);
 
 		return exists(libraryFileName);
 	}
 
-	private static void DownloadJson(out string eTag, out string jsonValues, Tid parentThread)
+	private static void DownloadJson(out string eTag, out string jsonValues)
 	{
+		debug output(__FUNCTION__);
 		//Download whole library in json format
 		HTTP connection = HTTP();
 
 		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
 		{
 			//Send a progress update to the parent of this thread
-			parentThread.send(dlnow);
+			ownerTid.send(dlnow);
 			return 0;
 		};
 
@@ -147,6 +152,7 @@ public static class DownloadWorker
 
 	private static void SaveETag(string eTag)
 	{	
+		debug output(__FUNCTION__);
 		string eTagFileName = expandTilde(G_ETagFilePath);
 		string filePath = dirName(eTagFileName);
 		
@@ -162,6 +168,7 @@ public static class DownloadWorker
 
 	private static Library ConvertJsonToLibrary(JSONValue[string] json)
 	{
+		debug output(__FUNCTION__);
 		//If the node still has children load the current title and recurse again
 		if ("children" in json && json["children"].type !is JSON_TYPE.NULL)
 		{
@@ -254,6 +261,7 @@ public static class DownloadWorker
 
 	private static void SaveLibrary(Library completeLibrary)
 	{
+		debug output(__FUNCTION__);
 		//No need to check for save directory existance here as it was checked and created if needed in SaveETag()
 		
 		//Use msgpack to serialise _completeLibrary
@@ -267,12 +275,14 @@ public static class DownloadWorker
 
 	public static bool VideoIsDownloaded(string localFileName)
 	{
+		debug output(__FUNCTION__);
 		debug output("Checking for file ", localFileName);
 		return exists(localFileName);
 	}
 
-	public static void DownloadVideo(string fileName, string localFileName, Tid parentThread)
+	public static void DownloadVideo(string fileName, string localFileName)
 	{
+		debug output(__FUNCTION__);
 		debug output("Downloading file ", fileName, " to ", localFileName);
 		//Download whole library in json format
 		HTTP connection = HTTP();
@@ -280,7 +290,7 @@ public static class DownloadWorker
 		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
 		{
 			//Send a progress update to the parent of this thread
-			parentThread.send(dlnow);
+			ownerTid.send(dlnow);
 			return 0;
 		};
 
@@ -294,11 +304,12 @@ public static class DownloadWorker
 		//Send the kill signal back to the parent of this thread
 		//Can't just send bool as this seems to get interpreted as a ulong
 		//so sending back parentThread just to have something to send
-		parentThread.send(parentThread);
+		ownerTid.send(ownerTid);
 	}
 
 	public static void DeleteVideo(string localFileName)
 	{
+		debug output(__FUNCTION__);
 		debug output("Deleting file ", localFileName);
 		//Double check file exists just in case it's been deleted manually
 		if (exists(localFileName))

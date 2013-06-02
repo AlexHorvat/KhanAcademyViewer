@@ -47,6 +47,7 @@ public final class TreeViewControl : IViewControl
 
 	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library) loadVideoMethod)
 	{
+		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
 		_scrollChild = scrollChild;
 		_completeLibrary = completeLibrary;
@@ -57,6 +58,7 @@ public final class TreeViewControl : IViewControl
 
 	public ~this()
 	{
+		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
 		_scrollParent.setSizeRequest(_scrollChild.getWidth(), -1);
 		_scrollChild.setVisible(true);
@@ -64,6 +66,7 @@ public final class TreeViewControl : IViewControl
 	
 	protected void BuildView()
 	{
+		debug output(__FUNCTION__);
 		_tvTree = new TreeView(CreateModel());
 
 		_tvTree.setHeadersVisible(false);
@@ -82,7 +85,7 @@ public final class TreeViewControl : IViewControl
 	
 	private TreeStore CreateModel()
 	{
-		debug output("CreateModel");
+		debug output(__FUNCTION__);
 		if (_completeLibrary is null)
 		{
 			return null;
@@ -97,7 +100,7 @@ public final class TreeViewControl : IViewControl
 	
 	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
 	{
-		debug output("RecurseTreeChildren");
+		debug output(__FUNCTION__);
 		foreach(Library childLibrary; library.Children)
 		{
 			TreeIter iter;
@@ -120,7 +123,7 @@ public final class TreeViewControl : IViewControl
 
 	protected void CreateColumns(TreeView treeView)
 	{
-		debug output("CreateColumns");
+		debug output(__FUNCTION__);
 		CellRendererText renderer = new CellRendererText();
 		TreeViewColumn indexColumn = new TreeViewColumn("HasVideo", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
@@ -133,13 +136,12 @@ public final class TreeViewControl : IViewControl
 
 	private bool tvTree_ButtonRelease(Event e, Widget sender)
 	{
-		debug output("treeView_ButtonRelease");
+		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvTree.getSelectedIter();
 		
 		//If there is a selected item, and it's value in column 0 is true then get the video details
 		if (selectedItem !is null && selectedItem.getValueInt(0))
 		{
-			debug output("selected item has video");
 			//Use TreePath to iterate over library to get the selected value, can then get video details from this
 			Library currentVideo = _completeLibrary;
 			string[] paths = split(selectedItem.getTreePath().toString(), ":");

@@ -21,6 +21,8 @@
 
 module KhanAcademyViewer.Windows.Fullscreen;
 
+debug alias std.stdio.writeln output;
+
 import gtk.Builder;
 import gtk.Window;
 import gtk.DrawingArea;
@@ -43,6 +45,7 @@ public final class Fullscreen
 	
 	public this(DrawingArea originalDrawingArea, void delegate(DrawingArea) changeOverlay, void delegate() playPause)
 	{
+		debug output(__FUNCTION__);
 		_originalDrawingArea = originalDrawingArea;
 		ChangeOverlay = changeOverlay;
 		PlayPause = playPause;
@@ -52,6 +55,7 @@ public final class Fullscreen
 	
 	public ~this()
 	{
+		debug output(__FUNCTION__);
 		ChangeOverlay(_originalDrawingArea);
 		_wdwFullscreen.hide();
 		_wdwFullscreen.destroy();
@@ -59,6 +63,7 @@ public final class Fullscreen
 
 	private void SetupWindow()
 	{
+		debug output(__FUNCTION__);
 		Builder windowBuilder = new Builder();
 		
 		windowBuilder.addFromFile(_gladeFile);
@@ -78,6 +83,7 @@ public final class Fullscreen
 
 	private bool wdwFullscreen_ButtonRelease(Event e, Widget sender)
 	{
+		debug output(__FUNCTION__);
 		PlayPause();
 
 		return false;
@@ -85,6 +91,7 @@ public final class Fullscreen
 
 	private bool wdwFullscreen_KeyPress(Event e, Widget sender)
 	{
+		debug output(__FUNCTION__);
 		uint key;
 
 		e.getKeyval(key);

@@ -22,10 +22,13 @@
  */
 module KhanAcademyViewer.Include.Functions;
 
+debug alias std.stdio.writeln output;
+
 import gtk.Main;
 
 public void RefreshUI()
 {
+	debug output(__FUNCTION__);
 	//Run any gtk events pending to refresh the UI
 	while (Main.eventsPending)
 	{

@@ -36,6 +36,7 @@ public static class LibraryWorker
 {
 	public static bool LibraryFileExists()
 	{
+		debug output(__FUNCTION__);
 		string libraryFileName = expandTilde(G_LibraryFilePath);
 
 		return exists(libraryFileName);
@@ -43,6 +44,7 @@ public static class LibraryWorker
 
 	public static Library LoadLibrary()
 	{
+		debug output(__FUNCTION__);
 		Library completeLibrary;
 		string libraryFileName = expandTilde(G_LibraryFilePath);
 		ubyte[] serialised = cast(ubyte[])read(libraryFileName);
@@ -55,7 +57,7 @@ public static class LibraryWorker
 
 	public static Library LoadOfflineLibrary()
 	{
-		debug output("LoadOfflineLibrary");
+		debug output(__FUNCTION__);
 		Library offlineLibrary = RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
 
 		return offlineLibrary;
@@ -63,6 +65,7 @@ public static class LibraryWorker
 
 	private static bool[string] GetDownloadedFiles()
 	{
+		debug output(__FUNCTION__);
 		//Load all existing mp4 files into hashtable then pass to RecurseOfflineLibrary
 		//this is faster than accessing the disc everytime to check if a file exists
 		bool[string] downloadedFiles;
@@ -80,7 +83,7 @@ public static class LibraryWorker
 
 	private static Library RecurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)
 	{
-		debug output("RecurseOfflineLibrary");
+		debug output(__FUNCTION__);
 		//If current library has children, recurse down another level and replace it's children with updated values
 		if (currentLibrary.Children !is null)
 		{

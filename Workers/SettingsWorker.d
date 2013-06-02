@@ -22,7 +22,7 @@
  */
 module KhanAcademyViewer.Workers.SettingsWorker;
 
-alias std.stdio.writeln output;
+debug alias std.stdio.writeln output;
 
 import std.file;
 import std.path;
@@ -37,6 +37,7 @@ public static class SettingsWorker
 {
 	public static Settings LoadSettings()
 	{
+		debug output(__FUNCTION__);
 		if (SettingsFileExists())
 		{
 			return GetSavedSettings();
@@ -49,16 +50,16 @@ public static class SettingsWorker
 
 	public static void SaveSettings(Settings settings)
 	{
+		debug output(__FUNCTION__);
 		string settingsFileName = expandTilde(G_SettingsFilePath);
 		ubyte[] serialised = pack(settings);
 		
 		write(settingsFileName, serialised);
-
-		debug output("Settings saved");
 	}
 
 	private static bool SettingsFileExists()
 	{
+		debug output(__FUNCTION__);
 		string settingsFileName = expandTilde(G_SettingsFilePath);
 		
 		return exists(settingsFileName);
@@ -66,14 +67,13 @@ public static class SettingsWorker
 
 	private static Settings GetSavedSettings()
 	{
+		debug output(__FUNCTION__);
 		Settings settings;
 		string settingsFileName = expandTilde(G_SettingsFilePath);
 		ubyte[] serialised = cast(ubyte[])read(settingsFileName);
 		
 		//Convert the serialised library back into a Library object
 		unpack(serialised, settings);
-
-		debug output("Settings loaded, returning them...");
 
 		return settings;
 	}

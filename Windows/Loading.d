@@ -23,6 +23,8 @@
 
 module KhanAcademyViewer.Windows.Loading;
 
+debug alias std.stdio.writeln output;
+
 import std.conv;
 
 import gtk.Builder;
@@ -39,22 +41,26 @@ protected final class Loading
 
 	this()
 	{
+		debug output(__FUNCTION__);
 		SetupWindow();
 	}
 
 	~this()
 	{
+		debug output(__FUNCTION__);
 		_wdwLoading.hide();
 		_wdwLoading.destroy();
 	}
 
 	public void UpdateStatus(string newStatus)
 	{
+		debug output(__FUNCTION__);
 		_lblStatus.setText(newStatus);
 	}
 
 	public void UpdateAmountDownloaded(long amountDownloaded)
 	{
+		debug output(__FUNCTION__);
 		//amountDownloaded is in bytes
 		string downloaded = to!string(amountDownloaded / 1024);
 
@@ -64,6 +70,7 @@ protected final class Loading
 	
 	private void SetupWindow()
 	{
+		debug output(__FUNCTION__);
 		Builder windowBuilder = new Builder();
 				
 		windowBuilder.addFromFile(_gladeFile);
