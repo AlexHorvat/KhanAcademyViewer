@@ -59,7 +59,7 @@ public void main(string args[]) {
 	}
 
 	//Has gtk and gstreamer, should be able to run
-	Main.init(args[]);
+	Main.init(args);
 
 	new Viewer();
 
