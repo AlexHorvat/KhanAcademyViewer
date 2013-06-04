@@ -59,7 +59,7 @@ protected final class About
 		if (response == GtkResponseType.CANCEL)
 		{
 			sender.hide();
-			sender.destroy();
+			destroy(sender);
 		}
 	}
 }

@@ -49,7 +49,7 @@ protected final class Loading
 	{
 		debug output(__FUNCTION__);
 		_wdwLoading.hide();
-		_wdwLoading.destroy();
+		destroy(_wdwLoading);
 	}
 
 	public void UpdateStatus(string newStatus)

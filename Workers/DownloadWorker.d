@@ -65,7 +65,7 @@ public static class DownloadWorker
 		}
 		finally
 		{
-			connection.destroy();
+			destroy(connection);
 		}
 	}
 
@@ -83,7 +83,7 @@ public static class DownloadWorker
 			
 			string newETag = connection.responseHeaders["etag"];
 
-			connection.destroy();
+			destroy(connection);
 			ownerTid.send(newETag != eTag);
 		}
 		else
@@ -102,7 +102,6 @@ public static class DownloadWorker
 
 		Library completeLibrary = ConvertJsonToLibrary(parseJSON(jsonValues).object);
 		SaveLibrary(completeLibrary);
-
 		//Send the kill signal back to the parent of this thread
 		//Can't just send bool as this seems to get interpreted as a ulong
 		//so sending back parentThread just to have something to send
@@ -148,7 +147,7 @@ public static class DownloadWorker
 
 		jsonValues = cast(string)get(G_TopicTreeUrl, connection);
 		eTag = connection.responseHeaders["etag"];
-		connection.destroy();
+		destroy(connection);
 	}
 
 	private static void SaveETag(string eTag)
@@ -299,7 +298,7 @@ public static class DownloadWorker
 
 		//TODO this isn't saving the video corretly - it's corrupted, might need to save byte[] instead of char[]
 		char[] video = get(fileName, connection);
-		connection.destroy();
+		destroy(connection);
 		debug output("video downloaded, saving");
 		write(localFileName, video);
 

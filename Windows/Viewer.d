@@ -56,6 +56,7 @@ import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Workers.VideoWorker;
 import KhanAcademyViewer.Workers.SettingsWorker;
 import KhanAcademyViewer.Windows.Loading;
+import KhanAcademyViewer.Windows.DownloadManager;
 import KhanAcademyViewer.Windows.About;
 import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Controls.TreeViewControl;
@@ -74,6 +75,7 @@ protected final class Viewer
 	private ScrolledWindow _scrollParent;
 	private ScrolledWindow _scrollChild;
 	private MenuItem _miAbout;
+	private MenuItem _miDownloadManager;
 	private MenuItem _miExit;
 	private Label _lblVideoTitle;
 	private Label _lblVideoDescription;
@@ -98,7 +100,7 @@ protected final class Viewer
 		debug output(__FUNCTION__);
 		SetupWindow();
 		LoadSettings();
-		SetupLoader();
+		DownloadLibrary();
 		LoadLibraryFromStorage();
 		SetOnlineOrOffline();
 		KillLoadingWindow();
@@ -191,6 +193,9 @@ protected final class Viewer
 		_miOnline = cast(ImageMenuItem)windowBuilder.getObject("miOnline");
 		_miOnline.addOnButtonRelease(&miOnline_ButtonRelease);
 
+		_miDownloadManager = cast(MenuItem)windowBuilder.getObject("miDownloadManager");
+		_miDownloadManager.addOnButtonRelease(&miDownloadManager_ButtonRelease);
+
 		_miAbout = cast(MenuItem)windowBuilder.getObject("miAbout");
 		_miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
 
@@ -231,7 +236,7 @@ protected final class Viewer
 				return;
 			}
 
-			_loadingWindow.destroy();
+			destroy(_loadingWindow);
 		}
 
 		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
@@ -297,7 +302,7 @@ protected final class Viewer
 		return false;
 	}
 
-	private void SetupLoader()
+	private void DownloadLibrary()
 	{
 		debug output(__FUNCTION__);
 		bool onwards, needToDownLoadLibrary;
@@ -390,12 +395,12 @@ protected final class Viewer
 		//Stop any playing video
 		if (_videoWorker !is null)
 		{
-			_videoWorker.destroy();
+			destroy(_videoWorker);
 		}
 
 		if (_vcView !is null)
 		{
-			_vcView.destroy();
+			destroy(_vcView);
 		}
 
 		final switch (_settings.ViewModeSetting)
@@ -415,7 +420,7 @@ protected final class Viewer
 	private void KillLoadingWindow()
 	{
 		debug output(__FUNCTION__);
-		_loadingWindow.destroy();
+		destroy(_loadingWindow);
 	}
 	
 	private void LoadVideo(Library currentVideo)
@@ -426,7 +431,7 @@ protected final class Viewer
 		//If a video is already playing, dispose of it
 		if (_videoWorker !is null)
 		{
-			_videoWorker.destroy();
+			destroy(_videoWorker);
 		}
 
 		//Get the authors
@@ -450,6 +455,14 @@ protected final class Viewer
 	{
 		debug output(__FUNCTION__);
 		About about = new About();
+
+		return true;
+	}
+
+	private bool miDownloadManager_ButtonRelease(Event e, Widget sender)
+	{
+		debug output(__FUNCTION__);
+		DownloadManager downloadManager = new DownloadManager();
 
 		return true;
 	}

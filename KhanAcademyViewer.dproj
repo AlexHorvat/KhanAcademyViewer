@@ -60,6 +60,7 @@
     <Compile Include="Controls\TreeViewControl.d" />
     <Compile Include="Controls\FlowViewControl.d" />
     <Compile Include="Controls\ViewControl.d" />
+    <Compile Include="Windows\DownloadManager.d" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Windows\" />
@@ -79,6 +80,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Windows\About.glade">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Windows\DownloadManager.glade">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

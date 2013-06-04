@@ -123,16 +123,16 @@ protected final class VideoWorker
 
 		//Remove listeners, otherwise old listeners are retained between
 		//video loads causing a crash
-		_drawVideo.onButtonReleaseListeners.destroy();
-		_btnPlay.onClickedListeners.destroy();
-		_sclPosition.onChangeValueListeners.destroy();
-		_btnFullscreen.onClickedListeners.destroy();
+		destroy(_drawVideo.onButtonReleaseListeners);
+		destroy(_btnPlay.onClickedListeners);
+		destroy(_sclPosition.onChangeValueListeners);
+		destroy(_btnFullscreen.onClickedListeners);
 
 		//Stop and get rid of video and all resources
 		_source.setState(GstState.NULL);
-		_source.destroy();
-		_videoSink.destroy();
-		_overlay.destroy();
+		destroy(_source);
+		destroy(_videoSink);
+		destroy(_overlay);
 	}
 
 	private void btnFullscreen_Clicked(Button sender)
@@ -280,7 +280,7 @@ protected final class VideoWorker
 						break;
 
 					case GstMessageType.ERROR:
-						this.destroy();
+						destroy(this);
 						break;
 
 					default:
