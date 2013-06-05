@@ -24,6 +24,10 @@ module KhanAcademyViewer.Windows.DownloadManager;
 
 debug alias std.stdio.writeln output;
 
+import std.file;
+import std.path;
+import std.string;
+
 import gtk.Window;
 import gtk.Builder;
 import gtk.Button;
@@ -38,6 +42,7 @@ import gtk.CellRendererProgress;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.Workers.LibraryWorker;
+import KhanAcademyViewer.Include.Config;
 
 //TODO
 //Images for tree, also act as buttons
@@ -152,12 +157,23 @@ public final class DownloadManager
 
 	private void btnDone_Clicked(Button sender)
 	{
+		debug output(__FUNCTION__);
 		destroy(this);
 	}
 
 	private void DownloadedVideoSize()
 	{
-		//TODO
+		debug output(__FUNCTION__);
 		//Set item on status bar with total size of videos in download directory
+		string downloadDirectory = expandTilde(G_DownloadFilePath);
+		ulong totalFileSize;
+
+		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
+		{
+			totalFileSize += getSize(file);
+		}
+
+		uint contextID = _statusDownloads.getContextId("Total File Size");
+		_statusDownloads.push(contextID, format("Total size of downloaded videos: %sKB", totalFileSize / 1024));
 	}
 }
