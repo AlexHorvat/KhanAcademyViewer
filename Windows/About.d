@@ -28,13 +28,13 @@ import gtk.Builder;
 import gtk.AboutDialog;
 import gtk.Dialog;
 
-protected final class About
+public final class About
 {
-	private const string _gladeFile = "./Windows/About.glade";
+	private immutable string _gladeFile = "./Windows/About.glade";
 
 	private AboutDialog _wdwAbout;
 
-	this()
+	public this()
 	{
 		debug output(__FUNCTION__);
 		SetupWindow();

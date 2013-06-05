@@ -63,9 +63,9 @@ import KhanAcademyViewer.Controls.TreeViewControl;
 import KhanAcademyViewer.Controls.FlowViewControl;
 import KhanAcademyViewer.Controls.ViewControl;
 
-protected final class Viewer
+public final class Viewer
 {
-	private const string _gladeFile = "./Windows/Viewer.glade";
+	private immutable string _gladeFile = "./Windows/Viewer.glade";
 	
 	private Library _completeLibrary;
 	private Settings _settings;
@@ -95,7 +95,7 @@ protected final class Viewer
 	private ImageMenuItem _miOnline;
 	private ViewControl _vcView;
 
-	this()
+	public this()
 	{
 		debug output(__FUNCTION__);
 		SetupWindow();

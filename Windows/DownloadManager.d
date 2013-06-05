@@ -43,9 +43,9 @@ import KhanAcademyViewer.Workers.LibraryWorker;
 //Images for tree, also act as buttons
 //Total downloaded files size for status bar
 
-protected final class DownloadManager
+public final class DownloadManager
 {
-	private const string _gladeFile = "./Windows/DownloadManager.glade";
+	private immutable string _gladeFile = "./Windows/DownloadManager.glade";
 
 	private Library _completeLibrary;
 	private Window _wdwDownloadManager;
@@ -53,7 +53,7 @@ protected final class DownloadManager
 	private TreeView _tvVideos;
 	private Button _btnDone;
 
-	this()
+	public this()
 	{
 		debug output(__FUNCTION__);
 		_completeLibrary = LibraryWorker.LoadLibrary();
@@ -62,7 +62,7 @@ protected final class DownloadManager
 		DownloadedVideoSize();
 	}
 
-	~this()
+	public ~this()
 	{
 		debug output(__FUNCTION__);
 		_wdwDownloadManager.hide();

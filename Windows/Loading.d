@@ -31,21 +31,21 @@ import gtk.Builder;
 import gtk.Window;
 import gtk.Label;
 
-protected final class Loading
+public final class Loading
 {
-	private const string _gladeFile = "./Windows/Loading.glade";
+	private immutable string _gladeFile = "./Windows/Loading.glade";
 	
 	private Window _wdwLoading;
 	private Label _lblStatus;
 	private Label _lblDataDownloaded;
 
-	this()
+	public this()
 	{
 		debug output(__FUNCTION__);
 		SetupWindow();
 	}
 
-	~this()
+	public ~this()
 	{
 		debug output(__FUNCTION__);
 		_wdwLoading.hide();

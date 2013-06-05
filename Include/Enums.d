@@ -22,7 +22,7 @@
  */
 module KhanAcademyViewer.Include.Enums;
 
-public enum ViewMode
+protected immutable enum ViewMode
 {
 	Flow = 1,
 	Tree = 2

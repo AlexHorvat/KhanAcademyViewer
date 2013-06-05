@@ -33,7 +33,7 @@ import gdk.Keysyms;
 
 public final class Fullscreen
 {
-	private const string _gladeFile = "./Windows/Fullscreen.glade";
+	private immutable string _gladeFile = "./Windows/Fullscreen.glade";
 
 	private Window _wdwFullscreen;
 	private DrawingArea _drawVideo;

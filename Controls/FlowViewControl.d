@@ -45,7 +45,7 @@ import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.BreadCrumb;
 
-protected final class FlowViewControl : ViewControl
+public final class FlowViewControl : ViewControl
 {
 	private ButtonBox _bboxBreadCrumbs;
 	private Library _parentLibrary;
@@ -55,7 +55,7 @@ protected final class FlowViewControl : ViewControl
 	private int _breadCrumbAvailableWidth;
 	private BreadCrumb[] _breadCrumbs;
 
-	this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library) loadVideoMethod)
+	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library) loadVideoMethod)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -68,7 +68,7 @@ protected final class FlowViewControl : ViewControl
 		BuildView();
 	}
 	
-	~this()
+	public ~this()
 	{
 		debug output(__FUNCTION__);
 		_scrollParent.removeAll();

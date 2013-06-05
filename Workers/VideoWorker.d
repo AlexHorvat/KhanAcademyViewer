@@ -62,27 +62,27 @@ import KhanAcademyViewer.Windows.Fullscreen;
  * Resizing the video still doesn't work all that well
  */
 
-protected final class VideoWorker
+public final class VideoWorker
 {
-	Element _videoSink;
-	Element _source;
-	VideoOverlay _overlay;
-	Image _imgPlay;
-	Image _imgPause;
-	DrawingArea _drawVideo;
-	Button _btnPlay;
-	Button _btnFullscreen;
-	Scale _sclPosition;
-	Spinner _spinLoading;
-	Label _lblCurrentTime;
-	Label _lblTotalTime;
-	Fixed _fixedVideo;
-	bool _isPlaying;
-	double _maxRange;
-	string _fileName;
-	string _localFileName;
+	private Element _videoSink;
+	private Element _source;
+	private VideoOverlay _overlay;
+	private Image _imgPlay;
+	private Image _imgPause;
+	private DrawingArea _drawVideo;
+	private Button _btnPlay;
+	private Button _btnFullscreen;
+	private Scale _sclPosition;
+	private Spinner _spinLoading;
+	private Label _lblCurrentTime;
+	private Label _lblTotalTime;
+	private Fixed _fixedVideo;
+	private bool _isPlaying;
+	private double _maxRange;
+	private string _fileName;
+	private string _localFileName;
 
-	this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
+	public this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
 	{
 		debug output(__FUNCTION__);
 		//Set class level variables
@@ -111,7 +111,7 @@ protected final class VideoWorker
 		return DownloadWorker.VideoIsDownloaded(_localFileName);
 	}
 
-	~this()
+	public ~this()
 	{
 		debug output(__FUNCTION__);
 		//Don't leave icon as pause icon and move scale pointer back to 0

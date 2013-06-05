@@ -41,11 +41,11 @@ import gdk.Event;
 import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 
-protected final class TreeViewControl : ViewControl
+public final class TreeViewControl : ViewControl
 {
 	private TreeView _tvTree;
 	
-	this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library) loadVideoMethod)
+	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library) loadVideoMethod)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -56,7 +56,7 @@ protected final class TreeViewControl : ViewControl
 		BuildView();
 	}
 
-	~this()
+	public ~this()
 	{
 		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
