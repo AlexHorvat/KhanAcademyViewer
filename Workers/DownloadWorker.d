@@ -46,44 +46,32 @@ public static class DownloadWorker
 		debug output(__FUNCTION__);
 		HTTP connection = HTTP(G_TopicTreeUrl);
 
+		scope(success)ownerTid.send(true);
+		scope(failure)ownerTid.send(false);
+		scope(exit)connection.destroy();
+
 		connection.method = HTTP.Method.head;
 		connection.connectTimeout(G_ConnectionTimeOut);
-
-		//If there's an internet connection and the program can contact khan academy this will not
-		//throw an error and thus return true
-		try
-		{
-			connection.perform();
-			ownerTid.send(true);
-		}
-		//However if something goes wrong this will catch it
-		//Doesn't matter what's wrong, just that a connection to Khan Academy webserver cannot be established
-		catch(Exception ex)
-		{
-			debug output("No internet connection error: ", ex);
-			ownerTid.send(false);
-		}
-		finally
-		{
-			destroy(connection);
-		}
+		connection.perform();
 	}
 
 	public static void NeedToDownloadLibrary()
 	{
 		debug output(__FUNCTION__);
 		string eTag;
+
+		scope(failure)ownerTid.send(true);
 		
 		if (LoadETagFromDisk(eTag) && LibraryExists())
 		{
 			HTTP connection = HTTP(G_TopicTreeUrl);
+			scope(exit)connection.destroy();
 
 			connection.method = HTTP.Method.head;
 			connection.perform();
 			
 			string newETag = connection.responseHeaders["etag"];
 
-			destroy(connection);
 			ownerTid.send(newETag != eTag);
 		}
 		else
@@ -137,6 +125,7 @@ public static class DownloadWorker
 		debug output(__FUNCTION__);
 		//Download whole library in json format
 		HTTP connection = HTTP();
+		scope(exit)connection.destroy();
 
 		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
 		{
@@ -147,7 +136,6 @@ public static class DownloadWorker
 
 		jsonValues = cast(string)get(G_TopicTreeUrl, connection);
 		eTag = connection.responseHeaders["etag"];
-		destroy(connection);
 	}
 
 	private static void SaveETag(string eTag)
@@ -288,6 +276,7 @@ public static class DownloadWorker
 		debug output("Downloading file ", fileName, " to ", localFileName);
 		//Download whole library in json format
 		HTTP connection = HTTP();
+		scope(exit)connection.destroy();
 
 		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
 		{
@@ -298,7 +287,6 @@ public static class DownloadWorker
 
 		//TODO this isn't saving the video corretly - it's corrupted, might need to save byte[] instead of char[]
 		char[] video = get(fileName, connection);
-		destroy(connection);
 		debug output("video downloaded, saving");
 		write(localFileName, video);
 

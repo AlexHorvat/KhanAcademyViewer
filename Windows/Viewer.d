@@ -229,14 +229,14 @@ public final class Viewer
 		if (checkForInternetConnection)
 		{
 			_loadingWindow = new Loading();
+			scope(exit) _loadingWindow.destroy();
+
 			RefreshUI();
 
 			if (!HasInternetConnection())
 			{
 				return;
 			}
-
-			destroy(_loadingWindow);
 		}
 
 		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
