@@ -34,34 +34,41 @@ import gtk.Button;
 import gtk.Statusbar;
 import gtk.TreeView;
 import gtk.TreeIter;
+import gtk.TreePath;
 import gtk.TreeStore;
 import gtk.TreeViewColumn;
 import gtk.CellRendererText;
 import gtk.CellRendererPixbuf;
 import gtk.CellRendererProgress;
+import gtk.Image;
+
+import gdk.Pixbuf;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Include.Config;
+import KhanAcademyViewer.Include.Functions;
 
 //TODO
 //Images for tree, also act as buttons
-//Total downloaded files size for status bar
 
 public final class DownloadManager
 {
 	private immutable string _gladeFile = "./Windows/DownloadManager.glade";
-
+	
 	private Library _completeLibrary;
 	private Window _wdwDownloadManager;
 	private Statusbar _statusDownloads;
 	private TreeView _tvVideos;
 	private Button _btnDone;
+	private Pixbuf _downloadImage;
+	private Pixbuf _deleteImage;
 
 	public this()
 	{
 		debug output(__FUNCTION__);
 		_completeLibrary = LibraryWorker.LoadLibrary();
+
 		SetupWindow();
 		LoadTree();
 		DownloadedVideoSize();
@@ -78,6 +85,11 @@ public final class DownloadManager
 	{
 		debug output(__FUNCTION__);
 		Builder windowBuilder = new Builder();
+		Image imageSetter = new Image();
+
+		_downloadImage = imageSetter.renderIconPixbuf("gtk-save", GtkIconSize.DND);
+
+		_deleteImage = imageSetter.renderIconPixbuf("gtk-delete", GtkIconSize.DND);
 		
 		windowBuilder.addFromFile(_gladeFile);
 		
@@ -97,6 +109,21 @@ public final class DownloadManager
 	{
 		CreateColumns(_tvVideos);
 		_tvVideos.setModel(CreateModel());
+		_tvVideos.addOnRowActivated(&tvVideos_RowActivated);
+	}
+
+	private void tvVideos_RowActivated(TreePath path, TreeViewColumn column, TreeView tree)
+	{
+		debug output("Tree clicked");
+		debug output("Path ", path, " Column ", column, " Tree ", tree);
+		debug output(column.getTitle());
+
+		//TODO
+		//Check if column is image column and if it has a video and what the icon is
+		//If is image column and has video then
+			//If icon is download then download file (show progress?)
+			//If icon is delete then delete file
+		//In both cases change the icon
 	}
 
 	private TreeStore CreateModel()
@@ -107,16 +134,19 @@ public final class DownloadManager
 			return null;
 		}
 		
-		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING]);
+		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING, Pixbuf.getType()]);
+
+		debug output("treestore ", treeStore);
 		
-		RecurseTreeChildren(treeStore, _completeLibrary, null);
+		RecurseTreeChildren(treeStore, _completeLibrary, null, GetDownloadedFiles());
 		
 		return treeStore;
 	}
 	
-	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
+	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter, bool[string] downloadedFiles)
 	{
 		debug output(__FUNCTION__);
+
 		foreach(Library childLibrary; library.Children)
 		{
 			TreeIter iter;
@@ -129,11 +159,32 @@ public final class DownloadManager
 			{
 				iter = treeStore.append(parentIter);
 			}
-			
-			treeStore.setValue(iter, 0, childLibrary.MP4 != "");
+
+			//Fill the rows
 			treeStore.setValue(iter, 1, childLibrary.Title);
-			
-			RecurseTreeChildren(treeStore, childLibrary, iter);
+
+			//If there is no video link just load a text only row
+			if (childLibrary.MP4 == "")
+			{
+				treeStore.setValue(iter, 0, false);
+			}
+			//If there is a video link, see if the video already exists, if it does, show the delete icon
+			//otherwise show the download icon
+			else
+			{
+				treeStore.setValue(iter, 0, true);
+
+				if (childLibrary.MP4[childLibrary.MP4.lastIndexOf("/") .. $] in downloadedFiles)
+				{
+					treeStore.setValue(iter, 2, _deleteImage);
+				}
+				else
+				{
+					treeStore.setValue(iter, 2, _downloadImage);
+				}
+			}
+						
+			RecurseTreeChildren(treeStore, childLibrary, iter, downloadedFiles);
 		}
 	}
 	
@@ -142,17 +193,20 @@ public final class DownloadManager
 		debug output(__FUNCTION__);
 		CellRendererText renderer = new CellRendererText();
 		CellRendererPixbuf imageRenderer = new CellRendererPixbuf();
+
 		//TODO add image column
 		//Add download icon for when video not downloaded
 		//Add spinner or progress item when downloading
 		//Add delete image when video is downloaded to delete it
 		TreeViewColumn indexColumn = new TreeViewColumn("HasVideo", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
+		TreeViewColumn imageColumn = new TreeViewColumn("Image", imageRenderer, "pixbuf", 2);
 
 		indexColumn.setVisible(false);
-		
+
 		treeView.appendColumn(indexColumn);
 		treeView.appendColumn(titleColumn);
+		treeView.appendColumn(imageColumn);
 	}
 
 	private void btnDone_Clicked(Button sender)

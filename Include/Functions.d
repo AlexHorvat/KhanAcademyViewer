@@ -22,7 +22,15 @@
  */
 module KhanAcademyViewer.Include.Functions;
 
+debug alias std.stdio.writeln output;
+
+import std.file;
+import std.path;
+import std.string;
+
 import gtk.Main;
+
+import KhanAcademyViewer.Include.Config;
 
 protected final void RefreshUI()
 {
@@ -31,4 +39,22 @@ protected final void RefreshUI()
 	{
 		Main.iteration();
 	}
+}
+
+protected bool[string] GetDownloadedFiles()
+{
+	debug output(__FUNCTION__);
+	//Load all existing mp4 files into hashtable then pass to RecurseOfflineLibrary
+	//this is faster than accessing the disc everytime to check if a file exists
+	bool[string] downloadedFiles;
+	string downloadDirectory = expandTilde(G_DownloadFilePath);
+	
+	foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
+	{
+		downloadedFiles[file[file.lastIndexOf("/") .. $]] = true;
+	}
+	
+	downloadedFiles.rehash();
+	
+	return downloadedFiles;
 }
