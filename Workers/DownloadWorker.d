@@ -175,21 +175,21 @@ public static class DownloadWorker
 
 				//returnedLibrary will be null if it is an exercise
 				//in that case don't add it to the main library
-				if (childLibrary !is null)
+				if (childLibrary)
 				{
 					appendLibrary.put(childLibrary);
 				}
 			}
 
 			//If all children were exercises, then don't return the parent
-			if (appendLibrary.data is null)
-			{
-				return null;
-			}
-			else
+			if (appendLibrary.data)
 			{
 				newLibrary.Children = appendLibrary.data;
 				return newLibrary;
+			}
+			else
+			{
+				return null;
 			}
 		}
 		//If no children then check if there's download links, if there are then this is a video

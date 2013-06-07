@@ -122,7 +122,7 @@ public final class FlowViewControl : ViewControl
 			workingLibrary = _childLibrary;
 		}
 		
-		if (workingLibrary is null)
+		if (!workingLibrary)
 		{
 			return null;
 		}
@@ -155,7 +155,7 @@ public final class FlowViewControl : ViewControl
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvParent.getSelectedIter();
 		
-		if (selectedItem !is null)
+		if (selectedItem)
 		{
 			size_t rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
@@ -195,14 +195,14 @@ public final class FlowViewControl : ViewControl
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvChild.getSelectedIter();
 		
-		if (selectedItem !is null)
+		if (selectedItem)
 		{
 			size_t rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
 			
 			//If this child has children then make this a parent and it's child the new child
 			//Otherwise this is the end of the tree - play the video
-			if (_childLibrary.Children[rowIndex].Children !is null)
+			if (_childLibrary.Children[rowIndex].Children)
 			{
 				BreadCrumb crumb = new BreadCrumb();
 				
@@ -239,7 +239,7 @@ public final class FlowViewControl : ViewControl
 		_bboxBreadCrumbs.removeAll();
 		
 		//Get the size available for each bread crumb button, and the maximum length allowed for the title
-		if (_breadCrumbs !is null && _breadCrumbs.length != 0)
+		if (_breadCrumbs && _breadCrumbs.length != 0)
 		{
 			int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
 			int titleLength = breadCrumbWidth / 8;

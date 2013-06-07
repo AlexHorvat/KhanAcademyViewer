@@ -393,12 +393,12 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		//Stop any playing video
-		if (_videoWorker !is null)
+		if (_videoWorker)
 		{
 			destroy(_videoWorker);
 		}
 
-		if (_vcView !is null)
+		if (_vcView)
 		{
 			destroy(_vcView);
 		}
@@ -429,7 +429,7 @@ public final class Viewer
 		assert(currentVideo.MP4 != "", "No video data! There should be as this item is at the end of the tree");
 
 		//If a video is already playing, dispose of it
-		if (_videoWorker !is null)
+		if (_videoWorker)
 		{
 			destroy(_videoWorker);
 		}

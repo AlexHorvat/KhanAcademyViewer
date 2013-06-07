@@ -268,7 +268,7 @@ public final class VideoWorker
 			//Is a new message required every time?
 			message = bus.timedPopFiltered(100000000, GstMessageType.EOS | GstMessageType.ERROR);
 
-			if (message !is null)
+			if (message)
 			{
 				//EOF or error happened
 				switch (message.type)

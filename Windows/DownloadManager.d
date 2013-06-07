@@ -129,7 +129,7 @@ public final class DownloadManager
 	private TreeStore CreateModel()
 	{
 		debug output(__FUNCTION__);
-		if (_completeLibrary is null)
+		if (!_completeLibrary)
 		{
 			return null;
 		}
@@ -151,13 +151,13 @@ public final class DownloadManager
 		{
 			TreeIter iter;
 			
-			if (parentIter is null)
+			if (parentIter)
 			{
-				iter = treeStore.createIter();
+				iter = treeStore.append(parentIter);
 			}
 			else
 			{
-				iter = treeStore.append(parentIter);
+				iter = treeStore.createIter();
 			}
 
 			//Fill the rows

@@ -86,7 +86,7 @@ public final class TreeViewControl : ViewControl
 	private TreeStore CreateModel()
 	{
 		debug output(__FUNCTION__);
-		if (_completeLibrary is null)
+		if (!_completeLibrary)
 		{
 			return null;
 		}
@@ -105,13 +105,13 @@ public final class TreeViewControl : ViewControl
 		{
 			TreeIter iter;
 			
-			if (parentIter is null)
+			if (parentIter)
 			{
-				iter = treeStore.createIter();
+				iter = treeStore.append(parentIter);
 			}
 			else
 			{
-				iter = treeStore.append(parentIter);
+				iter = treeStore.createIter();
 			}
 			
 			treeStore.setValue(iter, 0, childLibrary.MP4 != "");
@@ -140,7 +140,7 @@ public final class TreeViewControl : ViewControl
 		TreeIter selectedItem = _tvTree.getSelectedIter();
 		
 		//If there is a selected item, and it's value in column 0 is true then get the video details
-		if (selectedItem !is null && selectedItem.getValueInt(0))
+		if (selectedItem && selectedItem.getValueInt(0))
 		{
 			//Use TreePath to iterate over library to get the selected value, can then get video details from this
 			Library currentVideo = _completeLibrary;

@@ -89,7 +89,7 @@ public static class LibraryWorker
 	{
 		debug output(__FUNCTION__);
 		//If current library has children, recurse down another level and replace it's children with updated values
-		if (currentLibrary.Children !is null)
+		if (currentLibrary.Children)
 		{
 			Appender!(Library[], Library) appendLibrary = appender!(Library[], Library);
 
@@ -97,20 +97,20 @@ public static class LibraryWorker
 			{
 				Library newChildLibrary = RecurseOfflineLibrary(childLibrary, downloadedFiles);
 
-				if (newChildLibrary !is null)
+				if (newChildLibrary)
 				{
 					appendLibrary.put(newChildLibrary);
 				}
 			}
 
-			if (appendLibrary.data is null)
-			{
-				return null;
-			}
-			else
+			if (appendLibrary.data)
 			{
 				currentLibrary.Children = appendLibrary.data;
 				return currentLibrary;
+			}
+			else
+			{
+				return null;
 			}
 		}
 		//This is a video containing library, check if video exists on disc, if so return the library
