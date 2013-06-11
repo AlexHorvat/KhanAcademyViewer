@@ -63,6 +63,12 @@ import KhanAcademyViewer.Controls.TreeViewControl;
 import KhanAcademyViewer.Controls.FlowViewControl;
 import KhanAcademyViewer.Controls.ViewControl;
 
+//TODO
+//IMPORTANT
+//Should be able to put whole objects into treeview (i.e. a library model) then pull that back directly
+//So no need to iterate over tree to get values
+//http://www.mono-project.com/GtkSharp_TreeView_Tutorial
+
 public final class Viewer
 {
 	private immutable string _gladeFile = "./Windows/Viewer.glade";
@@ -462,7 +468,7 @@ public final class Viewer
 	private bool miDownloadManager_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		DownloadManager downloadManager = new DownloadManager();
+		DownloadManager downloadManager = new DownloadManager(_settings.IsOnline);
 
 		return true;
 	}

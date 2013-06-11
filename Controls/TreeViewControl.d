@@ -138,7 +138,9 @@ public final class TreeViewControl : ViewControl
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvTree.getSelectedIter();
-		
+
+		assert(selectedItem, "Selected item is null"); //TODO why does this crash instead of throwing error?
+
 		//If there is a selected item, and it's value in column 0 is true then get the video details
 		if (selectedItem && selectedItem.getValueInt(0))
 		{
@@ -152,11 +154,6 @@ public final class TreeViewControl : ViewControl
 			}
 			
 			LoadVideo(currentVideo);
-		}
-		//TODO remove this else once debugging done
-		else
-		{
-			debug output("selecteditem is null");
 		}
 		
 		return false;
