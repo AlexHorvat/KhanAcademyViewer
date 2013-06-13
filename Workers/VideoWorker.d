@@ -25,6 +25,7 @@ debug alias std.stdio.writeln output;
 
 import std.string;
 import std.path;
+import std.file : exists;
 
 import glib.Date;
 
@@ -79,8 +80,8 @@ public final class VideoWorker
 	private Fixed _fixedVideo;
 	private bool _isPlaying;
 	private double _maxRange;
-	private string _fileName;
-	private string _localFileName;
+	//private string _fileName;
+	//private string _localFileName;
 
 	public this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
 	{
@@ -96,20 +97,26 @@ public final class VideoWorker
 		_isPlaying = false;
 		_imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
 		_imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.BUTTON);
-		_fileName = fileName;
+		//_fileName = fileName;
 
+		//SetLocalFileName();
 		ShowSpinner();
-		SetupVideo(CheckIfVideoDownloaded());
+		SetupVideo(fileName);
 		HideSpinner();
 	}
 
-	private bool CheckIfVideoDownloaded()
-	{
-		debug output(__FUNCTION__);
-		_localFileName = expandTilde(G_DownloadFilePath) ~ _fileName[_fileName.lastIndexOf("/") .. $];
+//	private void SetLocalFileName()
+//	{
+//		_localFileName = expandTilde(G_DownloadFilePath) ~ _fileName[_fileName.lastIndexOf("/") .. $];
+//	}
 
-		return DownloadWorker.VideoIsDownloaded(_localFileName);
-	}
+//	private string CheckIfVideoDownloaded()
+//	{
+//		debug output(__FUNCTION__);
+//		string 
+//
+//		return DownloadWorker.VideoIsDownloaded(localFileName);
+//	}
 
 	public ~this()
 	{
@@ -169,7 +176,7 @@ public final class VideoWorker
 		_spinLoading.start();
 	}
 
-	private void SetupVideo(bool isDownloaded)
+	private void SetupVideo(string fileName)
 	{
 		debug output(__FUNCTION__);
 		GstState current;
@@ -200,16 +207,19 @@ public final class VideoWorker
 		//Create a playbin element and point it at the selected video
 		_source = ElementFactory.make("playbin", "playBin");
 
-		if (isDownloaded)
+		//If file is saved locally then load it, otherwise stream it
+		string localFileName = GetLocalFileName(fileName);
+
+		if (exists(localFileName))
 		{
 			debug output("Loading downloaded video");
-			debug output("file://" ~ _localFileName);
-			_source.setProperty("uri", "file://" ~ _localFileName);
+			debug output("file://" ~ localFileName);
+			_source.setProperty("uri", "file://" ~ localFileName);
 		}
 		else
 		{
 			debug output("Loading remote video");
-			_source.setProperty("uri", _fileName);
+			_source.setProperty("uri", fileName);
 		}
 
 		//Work around to .setProperty not accepting Element type directly

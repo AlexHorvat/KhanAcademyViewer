@@ -58,3 +58,8 @@ protected bool[string] GetDownloadedFiles()
 	
 	return downloadedFiles;
 }
+
+protected string GetLocalFileName(string url)
+{
+	return expandTilde(G_DownloadFilePath) ~ url[url.lastIndexOf("/") .. $];
+}

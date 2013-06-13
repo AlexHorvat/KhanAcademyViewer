@@ -100,6 +100,7 @@ public final class Viewer
 	private RadioMenuItem _imiTree;
 	private ImageMenuItem _miOnline;
 	private ViewControl _vcView;
+	private DownloadManager _downloadManager;
 
 	public this()
 	{
@@ -249,12 +250,15 @@ public final class Viewer
 
 		_settings.IsOnline = true;
 		SettingsWorker.SaveSettings(_settings);
+
+		_miOnline.setImage(imgOnline);
+		_miOnline.setTooltipText("Working Online");
+
+		_miDownloadManager.setSensitive(true);
+
 		//Enable full library
 		_completeLibrary = LibraryWorker.LoadLibrary();
 		LoadNavigation();
-		
-		_miOnline.setImage(imgOnline);
-		_miOnline.setTooltipText("Working Online");
 	}
 
 	private void SetOffline()
@@ -265,6 +269,11 @@ public final class Viewer
 
 		_settings.IsOnline = false;
 		SettingsWorker.SaveSettings(_settings);
+
+		_miOnline.setImage(imgOffline);
+		_miOnline.setTooltipText("Working Offline");
+
+		_miDownloadManager.setSensitive(false);
 
 		//Only show video's which are downloaded, need to change _completeLibrary to reflect this
 		//Make async as might be slow on older computers
@@ -283,9 +292,6 @@ public final class Viewer
 		}
 
 		LoadNavigation();
-
-		_miOnline.setImage(imgOffline);
-		_miOnline.setTooltipText("Working Offline");
 	}
 
 	private bool imiFlow_ButtonRelease(Event e, Widget sender)
@@ -318,7 +324,7 @@ public final class Viewer
 		RefreshUI();
 
 		//Obviously don't try to download library if no internet connection
-		if (!HasInternetConnection())
+		if (!_settings.IsOnline || !HasInternetConnection())
 		{
 			_settings.IsOnline = false;
 		}
@@ -346,6 +352,7 @@ public final class Viewer
 			//keep _loadingWindow updated with progress
 			if (needToDownLoadLibrary)
 			{
+				bool downloadSuccess;
 				onwards = false;
 				_loadingWindow.UpdateStatus("Downloading library");
 				_loadingWindow.DataDownloadedVisible = true;
@@ -355,18 +362,25 @@ public final class Viewer
 				{
 					receiveTimeout(
 						dur!"msecs"(250),
+						(bool quit)
+						{
+							//Download has finished
+							downloadSuccess = quit;
+							onwards = true;
+						},
 						(ulong amountDownloaded)
 						{
-						//Update the loading window with amount downloaded
-						_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
-					},
-					(Tid deathSignal)
-					{
-						//Been sent the TID of death, exit the loading loop
-						onwards = true;
-					});
+							//Update the loading window with amount downloaded
+							_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
+						});
 					
 					RefreshUI();
+				}
+
+				if (!downloadSuccess)
+				{
+					output("Could not download library");
+					exit(1);
 				}
 			}
 		}
@@ -468,7 +482,7 @@ public final class Viewer
 	private bool miDownloadManager_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		DownloadManager downloadManager = new DownloadManager(_settings.IsOnline);
+		DownloadManager downloadManager = new DownloadManager();
 
 		return true;
 	}

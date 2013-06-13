@@ -28,6 +28,9 @@ import std.file;
 import std.path;
 import std.string;
 import std.conv;
+import std.concurrency;
+
+import core.time;
 
 import gtk.Window;
 import gtk.Builder;
@@ -48,18 +51,11 @@ import gdk.Event;
 
 import gobject.Value;
 
-import gobject.ObjectG;
-
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Include.Config;
 import KhanAcademyViewer.Include.Functions;
-
-//TODO - Rest of project, not just here
-//IMPORTANT
-//Should be able to put whole objects into treeview (i.e. a library model) then pull that back directly
-//So no need to iterate over tree to get values
-//http://www.mono-project.com/GtkSharp_TreeView_Tutorial
+import KhanAcademyViewer.Workers.DownloadWorker;
 
 public final class DownloadManager
 {
@@ -74,13 +70,13 @@ public final class DownloadManager
 	private Pixbuf _downloadImage;
 	private Pixbuf _deleteImage;
 	private Pixbuf _stopImage;
-	private bool _isOnline; //TODO don't allow downloads if offline
+	private uint _statusBarContextID;
+	private TreeIter[string] _activeIters; //Keep track of which videos are downloading by tracking their TreeIter
 
-	public this(bool isOnline)
+	public this()
 	{
 		debug output(__FUNCTION__);
 		_completeLibrary = LibraryWorker.LoadLibrary();
-		_isOnline = isOnline;
 
 		SetupWindow();
 		LoadTree();
@@ -91,7 +87,7 @@ public final class DownloadManager
 	{
 		debug output(__FUNCTION__);
 		_wdwDownloadManager.hide();
-		destroy(_wdwDownloadManager);
+		_wdwDownloadManager.destroy();
 	}
 
 	private void SetupWindow()
@@ -126,13 +122,17 @@ public final class DownloadManager
 		_tvVideos.setModel(CreateModel());
 		_tvVideos.addOnButtonRelease(&tvVideos_ButtonRelease);
 	}
-
+	
 	private bool tvVideos_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvVideos.getSelectedIter();
 
-		assert(selectedItem, "Selected item is null"); //TODO why does this crash instead of throwing error?
+		if (!selectedItem)
+		{
+			debug output("Selected item is null");
+			return false;
+		}
 
 		//If there is a selected item, and it's value in column 0 is true then get the video details
 		if (!selectedItem.getValueString(0))
@@ -142,7 +142,7 @@ public final class DownloadManager
 		}
 
 		double xPos, yPos;
-	
+		
 		//If getting coords fails exit this method
 		if (!e.getCoords(xPos, yPos))
 		{
@@ -161,10 +161,6 @@ public final class DownloadManager
 			return false;
 		}
 
-		debug output("got path and column");
-		debug output(path);
-		debug output(column.getTitle());
-
 		//If user has not clicked on the third column exit this method
 		if (column.getTitle() != _imageColumnName)
 		{
@@ -181,43 +177,112 @@ public final class DownloadManager
 			return false;
 		}
 
+		//Get the treestore back out of the treeview
+		//TODO In theory TreeStore store = cast(TreeStore)_tvVideos.GetModel(); should give the TreeStore, but is just returning null. BUG???
+		TreeStore store = new TreeStore(cast(GtkTreeStore*)selectedItem.gtkTreeModel);
+
+		//Get video url
+		string url = selectedItem.getValueString(0);
+
+		//Get the selected cell
+		Value value = new Value();
+		selectedItem.getValue(2, value);
+
+		//Extract the image from the selected cell
+		GdkPixbuf* selectedImage = cast(GdkPixbuf*)value.getObject();
+
 		//So the image is stored in the treeview object as a pointer to GdkPixbuf
 		//to find out what image is being clicked on compare it's GdkPixbuf to that
 		//of the fixed images (remember to use pointers)
-		Value value = new Value();
-
-		selectedItem.getValue(2, value);
-
-		GdkPixbuf* selectedImage = cast(GdkPixbuf*)value.getObject();
-		TreeStore store = new TreeStore(cast(GtkTreeStore*)selectedItem.gtkTreeModel); //Works
-		//TreeStore store = ObjectG.getDObject!(TreeStore)(cast(GtkTreeStore*)selectedItem.gtkTreeModel); //Creates treemodel
-		//TreeStore store = cast(TreeStore)_tvVideos.getModel(); //store is null
-
-		debug output("Store: ", store);
-
-		//Check which image the user has clicked on to determine what to do
 		if (selectedImage == _downloadImage.getPixbufStruct())
 		{
-			debug output("Download image");
-			store.setValue(selectedItem, 2, _stopImage);
+			//When the user clicks the download image:
+			//Change image to stop image and set progress column text to downloading
+			//Store reference to current TreeIter for use while still downloading
+			//Start downloading in another thread, this will report progress until download is complete
+			//Update progress in progress column
+			//Once download complete remove reference to TreeIter
+			bool onwards = false;
 
-			//TODO Download video
-			debug output("Video file name ", selectedItem.getValueString(0));
+			store.setValue(selectedItem, 2, _stopImage);
+			store.setValue(selectedItem, 3, "Downloading...");
+
+			_activeIters[url] = selectedItem;
+			spawn(&DownloadWorker.DownloadVideo, url);
+
+			while (!onwards)
+			{
+				receiveTimeout(
+					dur!"msecs"(250),
+					(ulong amountDownloaded, string childUrl, Tid childTid)
+					{
+						if (childUrl in _activeIters)
+						{
+							store.setValue(_activeIters[childUrl], 3, format("%s KB", amountDownloaded / 1024));
+						}
+						else
+						{
+							childTid.send(true);
+						}
+					},
+					(bool success, string childUrl)
+					{
+						//Only reason filename wouldn't be in iters is if it was removed by stopImage in which case image and text have been updated already
+						if (childUrl in _activeIters)
+						{
+							if (success)
+							{
+								store.setValue(_activeIters[childUrl], 2, _deleteImage);
+							}
+							else
+							{
+								store.setValue(_activeIters[childUrl], 2, _downloadImage);
+							}
+							
+							store.setValue(_activeIters[childUrl], 3, "");
+							
+							_activeIters[childUrl].destroy();
+							_activeIters.remove(childUrl);
+						}
+						
+						onwards = true;
+					});
+
+				RefreshUI();
+			}
+
+			//If user closes window before all downloads are done then code will crash here
+			//unless ejected
+			if (!_wdwDownloadManager)
+			{
+				//Window has been destroyed
+				return false;
+			}
+
+			DownloadedVideoSize();
 		}
 		else if (selectedImage == _stopImage.getPixbufStruct())
 		{
-			debug output("Stop image");
-			store.setValue(selectedItem, 2, _downloadImage);
+			//When the user clicks the stop image:
+			//Change the icon back to the download image and clear the process column
+			//Remove the TreeIter item from activeIters this will cause the download receiver to respond
+			//with a kill signal for the download thread, stopping it.
+			store.setValue(_activeIters[url], 2, _downloadImage);
+			store.setValue(_activeIters[url], 3, "");
 
-			//TODO stop download - this might need to go in it's own thread
+			_activeIters[url].destroy();
+			_activeIters.remove(url);
 		}
 		else if (selectedImage == _deleteImage.getPixbufStruct())
 		{
-			debug output("Delete image");
+			//When the user clicks the delete image:
+			//Change the icon back to the download icon
+			//Delete the file
+			//Recalc total video size on disk
 			store.setValue(selectedItem, 2, _downloadImage);
 
-			//TODO Delete video
-			debug output("Video file name ", selectedItem.getValueString(0));
+			DownloadWorker.DeleteVideo(url);
+			DownloadedVideoSize();
 		}
 		else
 		{
@@ -235,7 +300,7 @@ public final class DownloadManager
 			return null;
 		}
 
-		TreeStore treeStore = new TreeStore([GType.STRING, GType.STRING, Pixbuf.getType()]);
+		TreeStore treeStore = new TreeStore([GType.STRING, GType.STRING, Pixbuf.getType(), GType.STRING]);
 
 		RecurseTreeChildren(treeStore, _completeLibrary, null, GetDownloadedFiles());
 
@@ -245,7 +310,6 @@ public final class DownloadManager
 	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter, bool[string] downloadedFiles)
 	{
 		debug output(__FUNCTION__);
-
 		foreach(Library childLibrary; library.Children)
 		{
 			TreeIter iter;
@@ -266,20 +330,18 @@ public final class DownloadManager
 			//otherwise show the download icon
 			if (childLibrary.MP4 != "")
 			{
-				//TODO can putting the file name in the treeviewcolumn 0 work in other places?
 				treeStore.setValue(iter, 0, childLibrary.MP4);
 
 				if (childLibrary.MP4[childLibrary.MP4.lastIndexOf("/") .. $] in downloadedFiles)
 				{
 					treeStore.setValue(iter, 2, _deleteImage);
 				}
-				//Only show download icon when online
-				else if (_isOnline)
+				else
 				{
 					treeStore.setValue(iter, 2, _downloadImage);
 				}
 			}
-						
+			
 			RecurseTreeChildren(treeStore, childLibrary, iter, downloadedFiles);
 		}
 	}
@@ -290,25 +352,34 @@ public final class DownloadManager
 		CellRendererText renderer = new CellRendererText();
 		CellRendererPixbuf imageRenderer = new CellRendererPixbuf();
 
-		//TODO add image column
-		//Add download icon for when video not downloaded
-		//Add spinner or progress item when downloading
-		//Add delete image when video is downloaded to delete it
-		TreeViewColumn indexColumn = new TreeViewColumn("VideoUrl", renderer, "text", 0);
+		TreeViewColumn urlColumn = new TreeViewColumn("VideoUrl", renderer, "text", 0);
 		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
 		TreeViewColumn imageColumn = new TreeViewColumn(_imageColumnName, imageRenderer, "pixbuf", 2);
+		TreeViewColumn progressColumn = new TreeViewColumn("Progress", renderer, "text", 3);
 
-		indexColumn.setVisible(false);
+		urlColumn.setVisible(false);
 
-		treeView.appendColumn(indexColumn);
+		treeView.appendColumn(urlColumn);
 		treeView.appendColumn(titleColumn);
 		treeView.appendColumn(imageColumn);
+		treeView.appendColumn(progressColumn);
 	}
 
 	private void btnDone_Clicked(Button sender)
 	{
 		debug output(__FUNCTION__);
-		destroy(this);
+
+		if (_activeIters.length >  0)
+		{
+			//There are still downloads going, cancel them all
+			foreach( url; _activeIters.keys)
+			{
+				_activeIters[url].destroy();
+				_activeIters.remove(url);
+			}
+		}
+
+		this.destroy();
 	}
 
 	private void DownloadedVideoSize()
@@ -318,12 +389,17 @@ public final class DownloadManager
 		string downloadDirectory = expandTilde(G_DownloadFilePath);
 		ulong totalFileSize;
 
+		if (_statusBarContextID != 0)
+		{
+			_statusDownloads.removeAll(_statusBarContextID);
+		}
+
 		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
 		{
 			totalFileSize += getSize(file);
 		}
 
-		uint contextID = _statusDownloads.getContextId("Total File Size");
-		_statusDownloads.push(contextID, format("Total size of downloaded videos: %sKB", totalFileSize / 1024));
+		_statusBarContextID = _statusDownloads.getContextId("Total File Size");
+		_statusDownloads.push(_statusBarContextID, format("Total size of downloaded videos: %sKB", totalFileSize / 1024));
 	}
 }

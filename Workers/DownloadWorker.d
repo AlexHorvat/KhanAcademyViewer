@@ -38,6 +38,7 @@ import msgpack;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.Include.Config;
+import KhanAcademyViewer.Include.Functions;
 
 public static class DownloadWorker
 {
@@ -45,7 +46,6 @@ public static class DownloadWorker
 	{
 		debug output(__FUNCTION__);
 		HTTP connection = HTTP(G_TopicTreeUrl);
-
 		scope(success)ownerTid.send(true);
 		scope(failure)ownerTid.send(false);
 		scope(exit)connection.destroy();
@@ -59,7 +59,6 @@ public static class DownloadWorker
 	{
 		debug output(__FUNCTION__);
 		string eTag;
-
 		scope(failure)ownerTid.send(true);
 		
 		if (LoadETagFromDisk(eTag) && LibraryExists())
@@ -93,7 +92,7 @@ public static class DownloadWorker
 		//Send the kill signal back to the parent of this thread
 		//Can't just send bool as this seems to get interpreted as a ulong
 		//so sending back parentThread just to have something to send
-		ownerTid.send(ownerTid);
+		ownerTid.send(true);
 	}
 
 	private static bool LoadETagFromDisk(out string eTag)
@@ -124,17 +123,29 @@ public static class DownloadWorker
 	{
 		debug output(__FUNCTION__);
 		//Download whole library in json format
+		int progressCounter;
 		HTTP connection = HTTP();
 		scope(exit)connection.destroy();
+		scope(failure)ownerTid.send(false);
 
 		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
 		{
 			//Send a progress update to the parent of this thread
-			ownerTid.send(dlnow);
+			//Only send every 50 progress updates so to not clog the message bus
+			if (progressCounter < 50)
+			{
+				progressCounter++;
+			}
+			else
+			{
+				ownerTid.send(dlnow);
+				progressCounter = 0;
+			}
+
 			return 0;
 		};
 
-		jsonValues = cast(string)get(G_TopicTreeUrl, connection);
+		jsonValues = cast(string)get!(HTTP, char)(G_TopicTreeUrl, connection);
 		eTag = connection.responseHeaders["etag"];
 	}
 
@@ -263,44 +274,65 @@ public static class DownloadWorker
 		write(libraryFileName, serialised);
 	}
 
-	public static bool VideoIsDownloaded(string localFileName)
+	public static void DownloadVideo(string url)
 	{
 		debug output(__FUNCTION__);
-		debug output("Checking for file ", localFileName);
-		return exists(localFileName);
-	}
-
-	public static void DownloadVideo(string fileName, string localFileName)
-	{
-		debug output(__FUNCTION__);
-		debug output("Downloading file ", fileName, " to ", localFileName);
-		//Download whole library in json format
+		bool keepGoing = true;
+		string localFileName = GetLocalFileName(url);
+		int progressCounter;
 		HTTP connection = HTTP();
+		scope(success)ownerTid.send(true, url);
+		scope(failure)ownerTid.send(false, url);
 		scope(exit)connection.destroy();
 
 		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
 		{
 			//Send a progress update to the parent of this thread
-			ownerTid.send(dlnow);
-			return 0;
+			receiveTimeout(
+				dur!"msecs"(1),
+				(bool quit)
+				{
+					keepGoing = false;
+				});
+
+			if (keepGoing)
+			{
+				//Only send update every 50 progress updates to avoid clogging the message bus
+				if (progressCounter < 50)
+				{
+					progressCounter++;
+				}
+				else
+				{
+					ownerTid.send(dlnow, url, thisTid);
+					progressCounter = 0;
+				}
+				
+				//Keep download going
+				return 0;
+			}
+			else
+			{
+				//Kill the download
+				return -1;
+			}
 		};
 
-		//TODO this isn't saving the video corretly - it's corrupted, might need to save byte[] instead of char[]
-		char[] video = get(fileName, connection);
-		debug output("video downloaded, saving");
-		write(localFileName, video);
+		//Start the download
+		ubyte[] video = get!(HTTP, ubyte)(url, connection);
 
-		debug output("video saved");
-		//Send the kill signal back to the parent of this thread
-		//Can't just send bool as this seems to get interpreted as a ulong
-		//so sending back parentThread just to have something to send
-		ownerTid.send(ownerTid);
+		//Only save the video if it got a chance to complete properly
+		if (keepGoing)
+		{
+			write(localFileName, video);
+		}
 	}
 
-	public static void DeleteVideo(string localFileName)
+	public static void DeleteVideo(string url)
 	{
 		debug output(__FUNCTION__);
-		debug output("Deleting file ", localFileName);
+		string localFileName = GetLocalFileName(url);
+	
 		//Double check file exists just in case it's been deleted manually
 		if (exists(localFileName))
 		{
