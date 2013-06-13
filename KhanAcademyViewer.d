@@ -26,7 +26,7 @@ alias std.stdio.writeln output;
 import gtk.Main;
 import gtk.Version;
 
-import gstreamer.gstreamer;
+import gstreamer.gstreamer:GStreamer;
 
 import KhanAcademyViewer.Windows.Viewer;
 

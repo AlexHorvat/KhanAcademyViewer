@@ -58,8 +58,7 @@ public final class About
 		debug output(__FUNCTION__);
 		if (response == GtkResponseType.CANCEL)
 		{
-			sender.hide();
-			destroy(sender);
+			sender.destroy();
 		}
 	}
 }

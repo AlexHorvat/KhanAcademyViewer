@@ -69,6 +69,8 @@ import KhanAcademyViewer.Controls.ViewControl;
 //So no need to iterate over tree to get values
 //http://www.mono-project.com/GtkSharp_TreeView_Tutorial
 
+//Can do this when loading treeview control and probably in other places too
+
 public final class Viewer
 {
 	private immutable string _gladeFile = "./Windows/Viewer.glade";
@@ -415,12 +417,12 @@ public final class Viewer
 		//Stop any playing video
 		if (_videoWorker)
 		{
-			destroy(_videoWorker);
+			_videoWorker.destroy();
 		}
 
 		if (_vcView)
 		{
-			destroy(_vcView);
+			_vcView.destroy();
 		}
 
 		final switch (_settings.ViewModeSetting)
@@ -440,7 +442,7 @@ public final class Viewer
 	private void KillLoadingWindow()
 	{
 		debug output(__FUNCTION__);
-		destroy(_loadingWindow);
+		_loadingWindow.destroy();
 	}
 	
 	private void LoadVideo(Library currentVideo)
@@ -451,7 +453,7 @@ public final class Viewer
 		//If a video is already playing, dispose of it
 		if (_videoWorker)
 		{
-			destroy(_videoWorker);
+			_videoWorker.destroy();
 		}
 
 		//Get the authors
@@ -482,6 +484,12 @@ public final class Viewer
 	private bool miDownloadManager_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
+		//Stop any playing videos as it's possible to delete a video that's playing
+		if (_videoWorker)
+		{
+			_videoWorker.destroy();
+		}
+
 		DownloadManager downloadManager = new DownloadManager();
 
 		return true;

@@ -57,8 +57,7 @@ public final class Fullscreen
 	{
 		debug output(__FUNCTION__);
 		ChangeOverlay(_originalDrawingArea);
-		_wdwFullscreen.hide();
-		destroy(_wdwFullscreen);
+		_wdwFullscreen.destroy();
 	}
 
 	private void SetupWindow()
@@ -99,7 +98,7 @@ public final class Fullscreen
 		if (key == GdkKeysyms.GDK_Escape)
 		{
 			//The destructor switches the video back to the original drawing area
-			destroy(this);
+			this.destroy();
 		}
 
 		return false;

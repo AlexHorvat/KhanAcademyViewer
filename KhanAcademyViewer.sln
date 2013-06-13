@@ -19,5 +19,6 @@ Global
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = KhanAcademyViewer.dproj
+		version = 0.2
 	EndGlobalSection
 EndGlobal

@@ -24,8 +24,8 @@ module KhanAcademyViewer.Workers.VideoWorker;
 debug alias std.stdio.writeln output;
 
 import std.string;
-import std.path;
-import std.file : exists;
+import std.path:expandTilde;
+import std.file:exists;
 
 import glib.Date;
 
@@ -58,11 +58,6 @@ import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Windows.Fullscreen;
 
-/* TODO
- * Clean up code, there's lot's of redundent stuff in here
- * Resizing the video still doesn't work all that well
- */
-
 public final class VideoWorker
 {
 	private Element _videoSink;
@@ -80,8 +75,6 @@ public final class VideoWorker
 	private Fixed _fixedVideo;
 	private bool _isPlaying;
 	private double _maxRange;
-	//private string _fileName;
-	//private string _localFileName;
 
 	public this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
 	{
@@ -105,19 +98,6 @@ public final class VideoWorker
 		HideSpinner();
 	}
 
-//	private void SetLocalFileName()
-//	{
-//		_localFileName = expandTilde(G_DownloadFilePath) ~ _fileName[_fileName.lastIndexOf("/") .. $];
-//	}
-
-//	private string CheckIfVideoDownloaded()
-//	{
-//		debug output(__FUNCTION__);
-//		string 
-//
-//		return DownloadWorker.VideoIsDownloaded(localFileName);
-//	}
-
 	public ~this()
 	{
 		debug output(__FUNCTION__);
@@ -130,16 +110,16 @@ public final class VideoWorker
 
 		//Remove listeners, otherwise old listeners are retained between
 		//video loads causing a crash
-		destroy(_drawVideo.onButtonReleaseListeners);
-		destroy(_btnPlay.onClickedListeners);
-		destroy(_sclPosition.onChangeValueListeners);
-		destroy(_btnFullscreen.onClickedListeners);
+		_drawVideo.onButtonReleaseListeners.destroy();
+		_btnPlay.onClickedListeners.destroy();
+		_sclPosition.onChangeValueListeners.destroy();
+		_btnFullscreen.onClickedListeners.destroy();
 
 		//Stop and get rid of video and all resources
 		_source.setState(GstState.NULL);
-		destroy(_source);
-		destroy(_videoSink);
-		destroy(_overlay);
+		_source.destroy();
+		_videoSink.destroy();
+		_overlay.destroy();
 	}
 
 	private void btnFullscreen_Clicked(Button sender)
@@ -183,6 +163,7 @@ public final class VideoWorker
 		GstState pending;
 		string[] args;
 		string totalTime;
+		string localFileName = GetLocalFileName(fileName);
 
 		//Setup controls
 		GStreamer.init(args);
@@ -208,20 +189,18 @@ public final class VideoWorker
 		_source = ElementFactory.make("playbin", "playBin");
 
 		//If file is saved locally then load it, otherwise stream it
-		string localFileName = GetLocalFileName(fileName);
-
 		if (exists(localFileName))
 		{
-			debug output("Loading downloaded video");
-			debug output("file://" ~ localFileName);
+			debug output("Local video");
 			_source.setProperty("uri", "file://" ~ localFileName);
 		}
 		else
 		{
-			debug output("Loading remote video");
+			debug output("Streaming video");
 			_source.setProperty("uri", fileName);
 		}
 
+		//TODO this seems to be a bug in GtkD, check for fixes BUG???
 		//Work around to .setProperty not accepting Element type directly
 		Value val = new Value();
 		val.init(GType.OBJECT);
@@ -290,7 +269,7 @@ public final class VideoWorker
 						break;
 
 					case GstMessageType.ERROR:
-						destroy(this);
+						this.destroy();
 						break;
 
 					default:
@@ -338,9 +317,7 @@ public final class VideoWorker
 	{
 		debug output(__FUNCTION__);
 		//Return in seconds as that's way more managable
-		long duration = _source.queryDuration();
-
-		return duration / 1000000000;
+		return _source.queryDuration() / 1000000000;
 	}
 
 	private void SeekTo(double seconds)
@@ -355,17 +332,13 @@ public final class VideoWorker
 		debug output(__FUNCTION__);
 		if (scrollType == GtkScrollType.JUMP)
 		{
+			//Don't allow seeking past end of video
 			if (position > _maxRange)
 			{
 				position = _maxRange;
 			}
-			
-			debug output("Seeking to ", position);
-			SeekTo(position);
 
-			long time;
-			_source.queryPosition(GstFormat.TIME, time);
-			debug output("new time ", time);
+			SeekTo(position);
 		}
 		
 		return false;
@@ -375,7 +348,7 @@ public final class VideoWorker
 	{
 		debug output(__FUNCTION__);
 		PlayPause();
-		return true;
+		return false;
 	}
 
 	private void btnPlay_Clicked(Button sender)

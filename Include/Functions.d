@@ -25,8 +25,8 @@ module KhanAcademyViewer.Include.Functions;
 debug alias std.stdio.writeln output;
 
 import std.file;
-import std.path;
-import std.string;
+import std.path:expandTilde;
+import std.string:lastIndexOf;
 
 import gtk.Main;
 

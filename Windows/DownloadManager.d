@@ -25,9 +25,8 @@ module KhanAcademyViewer.Windows.DownloadManager;
 debug alias std.stdio.writeln output;
 
 import std.file;
-import std.path;
+import std.path:expandTilde;
 import std.string;
-import std.conv;
 import std.concurrency;
 
 import core.time;
@@ -86,7 +85,6 @@ public final class DownloadManager
 	public ~this()
 	{
 		debug output(__FUNCTION__);
-		_wdwDownloadManager.hide();
 		_wdwDownloadManager.destroy();
 	}
 

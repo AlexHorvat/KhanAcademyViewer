@@ -25,7 +25,7 @@ module KhanAcademyViewer.Windows.Loading;
 
 debug alias std.stdio.writeln output;
 
-import std.string;
+import std.string:format;
 
 import gtk.Builder;
 import gtk.Window;
@@ -48,8 +48,7 @@ public final class Loading
 	public ~this()
 	{
 		debug output(__FUNCTION__);
-		_wdwLoading.hide();
-		destroy(_wdwLoading);
+		_wdwLoading.destroy();
 	}
 
 	public void UpdateStatus(string newStatus)
