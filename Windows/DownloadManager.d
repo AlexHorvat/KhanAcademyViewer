@@ -75,9 +75,8 @@ public final class DownloadManager
 	public this()
 	{
 		debug output(__FUNCTION__);
-		_completeLibrary = LibraryWorker.LoadLibrary();
-
 		SetupWindow();
+		_completeLibrary = LibraryWorker.LoadLibrary();
 		LoadTree();
 		DownloadedVideoSize();
 	}
@@ -112,6 +111,7 @@ public final class DownloadManager
 		_btnDone.addOnClicked(&btnDone_Clicked);
 		
 		_wdwDownloadManager.showAll();
+		RefreshUI();
 	}
 
 	private void LoadTree()

@@ -135,10 +135,11 @@ public final class Viewer
 		{
 			receiveTimeout(
 				dur!"msecs"(250),
-				(bool hasConnection) {
-				hasInternetConnection = hasConnection;
-				onwards = true;
-			});
+				(bool hasConnection)
+				{
+					hasInternetConnection = hasConnection;
+					onwards = true;
+				});
 			
 			RefreshUI();
 		}
@@ -285,10 +286,11 @@ public final class Viewer
 		{
 			receiveTimeout(
 				dur!"msecs"(250),
-				(shared Library offlineLibrary)	{
-				_completeLibrary = cast(Library)offlineLibrary;
-				onwards = true;
-			});
+				(shared Library offlineLibrary)
+				{
+					_completeLibrary = cast(Library)offlineLibrary;
+					onwards = true;
+				});
 			
 			RefreshUI();
 		}
@@ -343,9 +345,9 @@ public final class Viewer
 					dur!"msecs"(250),
 					(bool refreshNeeded)
 					{
-					needToDownLoadLibrary = refreshNeeded;
-					onwards = true;
-				});
+						needToDownLoadLibrary = refreshNeeded;
+						onwards = true;
+					});
 
 				RefreshUI();
 			}
