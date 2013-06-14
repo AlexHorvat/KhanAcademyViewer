@@ -63,14 +63,6 @@ import KhanAcademyViewer.Controls.TreeViewControl;
 import KhanAcademyViewer.Controls.FlowViewControl;
 import KhanAcademyViewer.Controls.ViewControl;
 
-//TODO
-//IMPORTANT
-//Should be able to put whole objects into treeview (i.e. a library model) then pull that back directly
-//So no need to iterate over tree to get values
-//http://www.mono-project.com/GtkSharp_TreeView_Tutorial
-
-//Can do this when loading treeview control and probably in other places too
-
 public final class Viewer
 {
 	private immutable string _gladeFile = "./Windows/Viewer.glade";
@@ -458,18 +450,22 @@ public final class Viewer
 			_videoWorker.destroy();
 		}
 
-		//Get the authors
+		//Get the authors (if there are any)
 		string authors;
 
-		foreach (string author; currentVideo.AuthorNames)
+		if (currentVideo.AuthorNames.length > 0)
 		{
-			authors ~= author;
-			authors ~= ", ";
+			foreach (string author; currentVideo.AuthorNames)
+			{
+				authors ~= author;
+				authors ~= ", ";
+			}
+			//Cut off trailing ", "
+			authors.length = authors.length - 2;
 		}
-		//Cut off trailing ", "
-		authors.length = authors.length - 2;
 
 		_lblVideoTitle.setText(currentVideo.Title);
+
 		//Add authors and date added to description
 		_lblVideoDescription.setText(currentVideo.Description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.DateAdded.date.toString());
 		_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _btnFullscreen, _sclPosition, _lblCurrentTime, _lblTotalTime);

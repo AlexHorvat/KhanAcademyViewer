@@ -24,8 +24,8 @@ module KhanAcademyViewer.Controls.TreeViewControl;
 
 debug alias std.stdio.writeln output;
 
-import std.conv;
-import std.string;
+import std.conv:to;
+import std.array:split;
 
 import gtk.ScrolledWindow;
 import gtk.ButtonBox;
