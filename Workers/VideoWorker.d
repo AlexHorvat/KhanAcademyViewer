@@ -76,7 +76,7 @@ public final class VideoWorker
 	private bool _isPlaying;
 	private double _maxRange;
 
-	public this(string fileName, Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
+	public this(Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
 	{
 		debug output(__FUNCTION__);
 		//Set class level variables
@@ -90,23 +90,14 @@ public final class VideoWorker
 		_isPlaying = false;
 		_imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
 		_imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.BUTTON);
-		//_fileName = fileName;
 
-		//SetLocalFileName();
-		ShowSpinner();
-		SetupVideo(fileName);
-		HideSpinner();
+		SetupVideo();
 	}
-
+	
 	public ~this()
 	{
 		debug output(__FUNCTION__);
-		//Don't leave icon as pause icon and move scale pointer back to 0
-		_btnPlay.setImage(_imgPlay);
-		_sclPosition.setValue(0);
-		_btnPlay.setSensitive(false);
-		_sclPosition.setSensitive(false);
-		_btnFullscreen.setSensitive(false);
+		ResetVideo();
 
 		//Remove listeners, otherwise old listeners are retained between
 		//video loads causing a crash
@@ -115,11 +106,38 @@ public final class VideoWorker
 		_sclPosition.onChangeValueListeners.destroy();
 		_btnFullscreen.onClickedListeners.destroy();
 
-		//Stop and get rid of video and all resources
-		_source.setState(GstState.NULL);
+		//Get rid of video and all resources
 		_source.destroy();
 		_videoSink.destroy();
 		_overlay.destroy();
+	}
+
+	public void PlayVideo(string fileName)
+	{
+		debug output(__FUNCTION__);
+		//Always clear and reset current video before playing a new video
+		//Otherwise can end up with two videos playing at once
+		ResetVideo();
+		ShowSpinner();
+		StartVideo(fileName);
+		HideSpinner();
+	}
+
+	private void ResetVideo()
+	{
+		debug output(__FUNCTION__);
+		if (_source)
+		{
+			HideSpinner();
+			_source.setState(GstState.NULL);
+			_isPlaying = false;
+			_btnPlay.setImage(_imgPlay);
+			_sclPosition.setValue(0);
+			_btnPlay.setSensitive(false);
+			_sclPosition.setSensitive(false);
+			_btnFullscreen.setSensitive(false);
+			_drawVideo.setSensitive(false);
+		}
 	}
 
 	private void btnFullscreen_Clicked(Button sender)
@@ -156,56 +174,55 @@ public final class VideoWorker
 		_spinLoading.start();
 	}
 
-	private void SetupVideo(string fileName)
+	private void SetupVideo()
 	{
 		debug output(__FUNCTION__);
-		GstState current;
-		GstState pending;
 		string[] args;
-		string totalTime;
-		string localFileName = GetLocalFileName(fileName);
 
 		//Setup controls
-		GStreamer.init(args);
+		if (!GStreamer.isInitialized)
+		{
+			GStreamer.init(args);
+		}
 
 		_drawVideo.addOnButtonRelease(&drawVideo_ButtonRelease);
 
 		_btnPlay.addOnClicked(&btnPlay_Clicked);
-		_btnPlay.setSensitive(true);
 
 		_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
-		_btnFullscreen.setSensitive(true);
-		
+
 		_sclPosition.addOnChangeValue(&sclPosition_ChangeValue);
-		_sclPosition.setSensitive(true);
-		
+
 		_videoSink = ElementFactory.make("xvimagesink", "videosink");
-		
-		//Link the video sink to the drawingArea
+
 		_overlay = new VideoOverlay(_videoSink);
-		_overlay.setWindowHandle(X11.windowGetXid(_drawVideo.getWindow()));
-		
-		//Create a playbin element and point it at the selected video
+
+		//Create playbin element and link to videosink
 		_source = ElementFactory.make("playbin", "playBin");
+		_source.setProperty("video-sink", cast(ulong)_videoSink.getElementStruct());
+	}
+
+	private void StartVideo(string fileName)
+	{
+		debug output(__FUNCTION__);
+		GstState current;
+		GstState pending;
+		string localFileName = GetLocalFileName(fileName);
+		string totalTime;
+	
+		//Need to reset the overlay window everytime starting a new video
+		//Otherwise video opens in it's own window
+		_overlay.setWindowHandle(X11.windowGetXid(_drawVideo.getWindow()));
 
 		//If file is saved locally then load it, otherwise stream it
 		if (exists(localFileName))
 		{
-			debug output("Local video");
 			_source.setProperty("uri", "file://" ~ localFileName);
 		}
 		else
 		{
-			debug output("Streaming video");
 			_source.setProperty("uri", fileName);
 		}
-
-		//TODO this seems to be a bug in GtkD, check for fixes BUG???
-		//Work around to .setProperty not accepting Element type directly
-		Value val = new Value();
-		val.init(GType.OBJECT);
-		val.setObject(_videoSink.getElementStruct());
-		_source.setProperty("video-sink", val);
 
 		//Get the video buffered and ready to play
 		_source.setState(GstState.PAUSED);
@@ -226,12 +243,24 @@ public final class VideoWorker
 		totalTime = format("%s:%02s", cast(int)(_maxRange / 60) % 60, cast(int)_maxRange % 60);
 		_lblTotalTime.setText(totalTime);
 		_lblCurrentTime.setText("0:00");
+
+		//Finally re-enable the buttons
+		_btnPlay.setSensitive(true);
+		_btnFullscreen.setSensitive(true);
+		_sclPosition.setSensitive(true);
+		_drawVideo.setSensitive(true);
 	}
 
 	private void HideSpinner()
 	{
 		debug output(__FUNCTION__);
-		_fixedVideo.remove(_spinLoading);
+		if (_spinLoading)
+		{
+			_fixedVideo.remove(_spinLoading);
+			_spinLoading.destroy();
+			_spinLoading = null;
+		}
+
 		_drawVideo.setVisible(true);
 	}
 	

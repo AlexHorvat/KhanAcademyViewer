@@ -444,12 +444,6 @@ public final class Viewer
 		debug output(__FUNCTION__);
 		assert(currentVideo.MP4 != "", "No video data! There should be as this item is at the end of the tree");
 
-		//If a video is already playing, dispose of it
-		if (_videoWorker)
-		{
-			_videoWorker.destroy();
-		}
-
 		//Get the authors (if there are any)
 		string authors;
 
@@ -468,7 +462,15 @@ public final class Viewer
 
 		//Add authors and date added to description
 		_lblVideoDescription.setText(currentVideo.Description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.DateAdded.date.toString());
-		_videoWorker = new VideoWorker(currentVideo.MP4, _fixedVideo, _drawVideo, _btnPlay, _btnFullscreen, _sclPosition, _lblCurrentTime, _lblTotalTime);
+
+		//Create a new video worker if needed
+		if (!_videoWorker)
+		{
+			_videoWorker = new VideoWorker(_fixedVideo, _drawVideo, _btnPlay, _btnFullscreen, _sclPosition, _lblCurrentTime, _lblTotalTime);
+		}
+
+		//Start playing the video
+		_videoWorker.PlayVideo(currentVideo.MP4);
 	}
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
@@ -502,7 +504,7 @@ public final class Viewer
 
 	private void fixedVideo_SizeAllocate(GdkRectangle* newSize, Widget sender)
 	{
-		debug output(__FUNCTION__);
+		//debug output(__FUNCTION__);
 		//Need to keep drawVideo the same size as it's parent - the fixed widget
 		//this has to be done manually
 		_drawVideo.setSizeRequest(newSize.width, newSize.height);
