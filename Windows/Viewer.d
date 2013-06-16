@@ -95,6 +95,7 @@ public final class Viewer
 	private ImageMenuItem _miOnline;
 	private ViewControl _vcView;
 	private DownloadManager _downloadManager;
+	private About _about;
 
 	public this()
 	{
@@ -476,9 +477,24 @@ public final class Viewer
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		About about = new About();
+	
+		if (_about)
+		{
+			_about.GetWindow().present();
+		}
+		else
+		{
+			_about = new About(&DisposeAbout);
+		}
 
 		return true;
+	}
+
+	private void DisposeAbout()
+	{
+		debug output(__FUNCTION__);
+		//_about.destroy();
+		_about = null;
 	}
 
 	private bool miDownloadManager_ButtonRelease(Event e, Widget sender)
@@ -504,7 +520,7 @@ public final class Viewer
 
 	private void fixedVideo_SizeAllocate(GdkRectangle* newSize, Widget sender)
 	{
-		//debug output(__FUNCTION__);
+		debug output(__FUNCTION__);
 		//Need to keep drawVideo the same size as it's parent - the fixed widget
 		//this has to be done manually
 		_drawVideo.setSizeRequest(newSize.width, newSize.height);

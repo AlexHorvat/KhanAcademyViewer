@@ -34,10 +34,18 @@ public final class About
 
 	private AboutDialog _wdwAbout;
 
-	public this()
+	private void delegate() Dispose;
+
+	public this(void delegate() disposeFunction)
 	{
 		debug output(__FUNCTION__);
+		Dispose = disposeFunction;
 		SetupWindow();
+	}
+
+	public AboutDialog GetWindow()
+	{
+		return _wdwAbout;
 	}
 
 	private void SetupWindow()
@@ -59,6 +67,7 @@ public final class About
 		if (response == GtkResponseType.CANCEL)
 		{
 			sender.destroy();
+			Dispose();
 		}
 	}
 }
