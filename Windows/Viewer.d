@@ -21,7 +21,7 @@
 
 module KhanAcademyViewer.Windows.Viewer;
 
-debug alias std.stdio.writeln output;
+alias std.stdio.writeln output;
 
 import std.c.process;
 import std.concurrency;
@@ -412,7 +412,7 @@ public final class Viewer
 		//Stop any playing video
 		if (_videoWorker)
 		{
-			_videoWorker.destroy();
+			_videoWorker.ResetVideo();
 		}
 
 		if (_vcView)
@@ -493,7 +493,6 @@ public final class Viewer
 	private void DisposeAbout()
 	{
 		debug output(__FUNCTION__);
-		//_about.destroy();
 		_about = null;
 	}
 
@@ -503,11 +502,10 @@ public final class Viewer
 		//Stop any playing videos as it's possible to delete a video that's playing
 		if (_videoWorker)
 		{
-			_videoWorker.destroy();
+			_videoWorker.ResetVideo();
 		}
 
 		DownloadManager downloadManager = new DownloadManager();
-
 		return true;
 	}
 

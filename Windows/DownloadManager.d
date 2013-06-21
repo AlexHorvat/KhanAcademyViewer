@@ -111,7 +111,6 @@ public final class DownloadManager
 		_btnDone.addOnClicked(&btnDone_Clicked);
 		
 		_wdwDownloadManager.showAll();
-		RefreshUI();
 	}
 
 	private void LoadTree()
@@ -178,6 +177,14 @@ public final class DownloadManager
 		//Get the treestore back out of the treeview
 		//TODO In theory TreeStore store = cast(TreeStore)_tvVideos.GetModel(); should give the TreeStore, but is just returning null. BUG???
 		TreeStore store = new TreeStore(cast(GtkTreeStore*)selectedItem.gtkTreeModel);
+		//TreeStore store = cast(TreeStore)_tvVideos.getModel();
+		//TreeStore store = cast(TreeStore)cast(void*)_tvVideos.getModel();
+
+		debug
+		{
+			output("store");
+			output(store);
+		}
 
 		//Get video url
 		string url = selectedItem.getValueString(0);

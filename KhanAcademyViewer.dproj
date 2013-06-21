@@ -86,6 +86,9 @@
     <None Include="Windows\DownloadManager.glade">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="dmd.conf" />
+    <None Include="makefile" />
+    <None Include="README.md" />
   </ItemGroup>
   <ProjectExtensions>
     <MonoDevelop>

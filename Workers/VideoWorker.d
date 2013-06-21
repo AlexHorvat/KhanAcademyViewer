@@ -123,7 +123,7 @@ public final class VideoWorker
 		HideSpinner();
 	}
 
-	private void ResetVideo()
+	public void ResetVideo()
 	{
 		debug output(__FUNCTION__);
 		if (_source)
