@@ -37,6 +37,8 @@ import KhanAcademyViewer.Include.Functions;
 
 public static class LibraryWorker
 {
+	private static Library offlineLibrary;
+
 	public static bool LibraryFileExists()
 	{
 		debug output(__FUNCTION__);
@@ -58,32 +60,13 @@ public static class LibraryWorker
 		return completeLibrary;
 	}
 
-	public static Library offlineLibrary;
+	//public static Library offlineLibrary;
 	public static void LoadOfflineLibrary()
 	{
 		debug output(__FUNCTION__);
 		offlineLibrary = RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
-
 		ownerTid.send(cast(shared)offlineLibrary);
 	}
-
-//	private static bool[string] GetDownloadedFiles()
-//	{
-//		debug output(__FUNCTION__);
-//		//Load all existing mp4 files into hashtable then pass to RecurseOfflineLibrary
-//		//this is faster than accessing the disc everytime to check if a file exists
-//		bool[string] downloadedFiles;
-//		string downloadDirectory = expandTilde(G_DownloadFilePath);
-//
-//		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
-//		{
-//			downloadedFiles[file[file.lastIndexOf("/") .. $]] = true;
-//		}
-//
-//		downloadedFiles.rehash();
-//
-//		return downloadedFiles;
-//	}
 
 	private static Library RecurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)
 	{
@@ -114,7 +97,7 @@ public static class LibraryWorker
 			}
 		}
 		//This is a video containing library, check if video exists on disc, if so return the library
-		else if (currentLibrary.MP4[currentLibrary.MP4.lastIndexOf("/") .. $] in downloadedFiles)
+		else if (currentLibrary.MP4 != null && currentLibrary.MP4[currentLibrary.MP4.lastIndexOf("/") .. $] in downloadedFiles)
 		{
 			return currentLibrary;
 		}
