@@ -1,4 +1,4 @@
-compiler = dmd -v -O -release -inline -noboundscheck
+compiler = dmd -O -release -noboundscheck
 target = ./KhanAcademyViewer
 
 all:
