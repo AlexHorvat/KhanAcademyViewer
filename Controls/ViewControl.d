@@ -28,8 +28,9 @@ import KhanAcademyViewer.DataStructures.Library;
 
 protected abstract class ViewControl
 {
+	public void PreloadCategory(string);
 	protected ScrolledWindow _scrollParent;
 	protected ScrolledWindow _scrollChild;
 	protected Library _completeLibrary;
-	protected void delegate(Library) LoadVideo;
+	protected void delegate(Library, string) LoadVideo;
 }

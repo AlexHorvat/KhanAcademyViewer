@@ -37,4 +37,10 @@ public final class Settings
 		bool IsOnline() { return _isOnline; }
 		void IsOnline(bool new_IsOnline) { _isOnline = new_IsOnline; }
 	}
+
+	private string _lastSelectedCategory;
+	public @property {
+		string LastSelectedCategory() { return _lastSelectedCategory; }
+		void LastSelectedCategory(string new_LastSelectedCategory) { _lastSelectedCategory = new_LastSelectedCategory; }
+	}
 }

@@ -33,6 +33,10 @@ import KhanAcademyViewer.Windows.Viewer;
 public void main(string args[]) {
 	debug output(__FUNCTION__);
 	//Test for gtk and gstreamer
+
+	//TODO Check for mp4 support and maybe playbin support
+	//Is this possible using gstreamer, or should check for .so file directly?
+
 	try
 	{
 		uint majorVersion = Version.getMajorVersion;

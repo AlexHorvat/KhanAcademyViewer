@@ -26,6 +26,7 @@ debug alias std.stdio.writeln output;
 
 import std.conv:to;
 import std.array:split;
+import std.string:lastIndexOf;
 
 import gtk.ScrolledWindow;
 import gtk.ButtonBox;
@@ -33,6 +34,7 @@ import gtk.TreeView;
 import gtk.TreeViewColumn;
 import gtk.TreeStore;
 import gtk.TreeIter;
+import gtk.TreePath;
 import gtk.Widget;
 import gtk.CellRendererText;
 
@@ -44,8 +46,9 @@ import KhanAcademyViewer.DataStructures.Library;
 public final class TreeViewControl : ViewControl
 {
 	private TreeView _tvTree;
-	
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library) loadVideoMethod)
+	private string _currentTreePath;
+
+	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library, string) loadVideoMethod)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -62,6 +65,12 @@ public final class TreeViewControl : ViewControl
 		_scrollParent.removeAll();
 		_scrollParent.setSizeRequest(_scrollChild.getWidth(), -1);
 		_scrollChild.setVisible(true);
+	}
+
+	public override void PreloadCategory(string treePath)
+	{
+		debug output(__FUNCTION__);
+		_tvTree.expandToPath(new TreePath(treePath));
 	}
 	
 	private void BuildView()
@@ -142,16 +151,27 @@ public final class TreeViewControl : ViewControl
 		//If there is a selected item, and it's value in column 0 is true then get the video details
 		if (selectedItem && selectedItem.getValueInt(0))
 		{
-			//Use TreePath to iterate over library to get the selected value, can then get video details from this
-			Library currentVideo = _completeLibrary;
-			string[] paths = split(selectedItem.getTreePath().toString(), ":");
-			
-			foreach (string path; paths)
+			string treePath = selectedItem.getTreePath().toString();
+
+			//Only reload libray if the selection has changed i.e. don't load if clicking a parent item
+			if (_currentTreePath != treePath)
 			{
-				currentVideo = currentVideo.Children[to!size_t(path)];
+				//Use TreePath to iterate over library to get the selected value, can then get video details from this
+				Library currentVideo = _completeLibrary;
+				//string treePath = selectedItem.getTreePath().toString();
+				string[] paths = split(treePath, ":");
+				
+				foreach (string path; paths)
+				{
+					currentVideo = currentVideo.Children[to!size_t(path)];
+				}
+
+				//Pass in current treepath minus last item as this is used for the category not the video itself
+				LoadVideo(currentVideo, treePath[0 .. treePath.lastIndexOf(":")]);
+
+				//Set current tree path to compare against when checking whether to load another video or not
+				_currentTreePath = treePath;
 			}
-			
-			LoadVideo(currentVideo);
 		}
 		
 		return false;

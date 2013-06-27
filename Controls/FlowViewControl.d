@@ -24,8 +24,8 @@ module KhanAcademyViewer.Controls.FlowViewControl;
 
 debug alias std.stdio.writeln output;
 
-import std.conv;
-import std.string;
+import std.conv:to;
+import std.string:split;
 
 import gtk.ScrolledWindow;
 import gtk.ButtonBox;
@@ -55,7 +55,7 @@ public final class FlowViewControl : ViewControl
 	private int _breadCrumbAvailableWidth;
 	private BreadCrumb[] _breadCrumbs;
 
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library) loadVideoMethod)
+	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library, string) loadVideoMethod)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -74,6 +74,67 @@ public final class FlowViewControl : ViewControl
 		_scrollParent.removeAll();
 		_scrollChild.removeAll();
 		_bboxBreadCrumbs.removeAll();
+	}
+
+	public override void PreloadCategory(string treePath)
+	{
+		debug output(__FUNCTION__);
+
+		//There's a variety of things that can go wrong while preloading - but none really matter
+		//So if something goes wrong abandon the preload
+		try
+		{
+			int childRowIndex;
+			string[] paths = split(treePath, ":");
+
+			_parentLibrary = _completeLibrary;
+
+			//Set the parent library(ies)
+			foreach(string path; paths[0 .. $ - 1])
+			{
+				childRowIndex = to!int(path);
+				_parentLibrary = _parentLibrary.Children[childRowIndex];
+
+				//Add the parent item breadcrumbs
+				BreadCrumb crumb = new BreadCrumb();
+
+				crumb.RowIndex = childRowIndex;
+				crumb.Title = _parentLibrary.Title;
+
+				_breadCrumbs ~= crumb;
+			}
+			
+			_tvParent.setModel(CreateModel(true));
+			
+			//Set child library to last breadcrumb item
+			childRowIndex = to!int(paths[$ - 1]);
+
+			//Set the child library
+			_childLibrary = _parentLibrary.Children[childRowIndex];
+
+			//Add the final item to the breadcrumbs
+			BreadCrumb crumb = new BreadCrumb();
+			
+			crumb.RowIndex = childRowIndex;
+			crumb.Title = _childLibrary.Title;
+			
+			_breadCrumbs ~= crumb;
+
+			//Load the child library model
+			_tvChild.setModel(CreateModel(false));
+			
+			//Pre-set the selected item in parent treeview
+			TreeSelection selection = _tvParent.getSelection();
+			selection.selectPath(new TreePath(childRowIndex));
+		}
+		//If anything goes wrong with the preloading just swallow the error and don't load breadcumbs (or preload)
+		catch
+		{
+			return;
+		}
+
+		//Refresh bread crumbs
+		LoadBreadCrumbs();
 	}
 	
 	private void BuildView()
@@ -167,16 +228,15 @@ public final class FlowViewControl : ViewControl
 				
 				crumb.RowIndex = cast(int)rowIndex;
 				crumb.Title = title;
-				
-				_breadCrumbs.length = 1;
-				_breadCrumbs[0] = crumb;
+
+				_breadCrumbs ~= crumb;
 			}
 			//But usually there will be some breadcrumbs, as this is a parent item there will already be a breadcrumb
 			//entry for it, so overwrite that entry
 			else
 			{
-				_breadCrumbs[_breadCrumbs.length - 1].RowIndex = cast(int)rowIndex;
-				_breadCrumbs[_breadCrumbs.length - 1].Title = title;
+				_breadCrumbs[$ - 1].RowIndex = cast(int)rowIndex;
+				_breadCrumbs[$ - 1].Title = title;
 			}
 			
 			//Parent library doesn't change, just set child library then reload child treeview
@@ -197,7 +257,7 @@ public final class FlowViewControl : ViewControl
 		
 		if (selectedItem)
 		{
-			size_t rowIndex = selectedItem.getValueInt(0);
+			int rowIndex = selectedItem.getValueInt(0);
 			string title = selectedItem.getValueString(1);
 			
 			//If this child has children then make this a parent and it's child the new child
@@ -206,11 +266,9 @@ public final class FlowViewControl : ViewControl
 			{
 				BreadCrumb crumb = new BreadCrumb();
 				
-				crumb.RowIndex = cast(int)rowIndex;
+				crumb.RowIndex = rowIndex;
 				crumb.Title = title;
-				
-				_breadCrumbs.length = _breadCrumbs.length + 1;
-				_breadCrumbs[_breadCrumbs.length - 1] = crumb;
+				_breadCrumbs ~= crumb;
 				
 				//Update parent and child libraries - this will move the current child library over to the parent position
 				//and set the new child to be the child's chlid library
@@ -224,7 +282,16 @@ public final class FlowViewControl : ViewControl
 			}
 			else
 			{
-				LoadVideo(_childLibrary.Children[rowIndex]);
+				//Generate equivalent of treepath.toString()
+				string path;
+
+				foreach(BreadCrumb breadCrumb; _breadCrumbs)
+				{
+					path ~= to!(string)(breadCrumb.RowIndex);
+					path ~= ":";
+				}
+
+				LoadVideo(_childLibrary.Children[rowIndex], path[0 .. $ - 1]);
 			}
 		}
 		
@@ -250,8 +317,7 @@ public final class FlowViewControl : ViewControl
 				
 				if (title.length > titleLength)
 				{
-					title.length = titleLength - 3;
-					title ~= "...";
+					title = title[0 .. titleLength - 3] ~ "...";
 				}
 				
 				Button breadButton = new Button(title, false);
@@ -278,15 +344,17 @@ public final class FlowViewControl : ViewControl
 		//Set parent library to 2nd to last breadcrumb item
 		_parentLibrary = _completeLibrary;
 		
-		foreach(size_t breadCrumbCounter; 0 .. _breadCrumbs.length - 1)
+		//foreach(size_t breadCrumbCounter; 0 .. _breadCrumbs.length - 1)
+		foreach(BreadCrumb crumb; _breadCrumbs[0 .. $ - 1])
 		{
-			_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
+			//_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
+			_parentLibrary = _parentLibrary.Children[crumb.RowIndex];
 		}
 		
 		_tvParent.setModel(CreateModel(true));
 		
 		//Set child library to last breadcrumb item
-		int childRowIndex = _breadCrumbs[_breadCrumbs.length - 1].RowIndex;
+		int childRowIndex = _breadCrumbs[$ - 1].RowIndex;
 		
 		_childLibrary = _parentLibrary.Children[childRowIndex];
 		_tvChild.setModel(CreateModel(false));

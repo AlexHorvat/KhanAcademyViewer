@@ -108,6 +108,15 @@ public final class Viewer
 		KillLoadingWindow();
 	}
 
+	private void PreloadCategory()
+	{
+		debug output(__FUNCTION__);
+		if (_settings && _settings.LastSelectedCategory != "")
+		{
+			_vcView.PreloadCategory(_settings.LastSelectedCategory);
+		}
+	}
+
 	private void LoadSettings()
 	{
 		debug output(__FUNCTION__);
@@ -220,6 +229,11 @@ public final class Viewer
 	private bool miOnline_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
+		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
+		//so the treepath stored here would be pointing to a different category
+		_settings.LastSelectedCategory = "";
+		SettingsWorker.SaveSettings(_settings);
+
 		_settings.IsOnline ? SetOffline() : SetOnline(true);
 
 		return false;
@@ -320,65 +334,71 @@ public final class Viewer
 		_loadingWindow = new Loading();
 		RefreshUI();
 
-		//Obviously don't try to download library if no internet connection
-		if (!_settings.IsOnline || !HasInternetConnection())
+		if (!_settings.IsOnline)
 		{
-			_settings.IsOnline = false;
+			//Set offline, don't bother checking library
+			return;
 		}
-		else
+
+		if (!HasInternetConnection())
 		{
-			//Async check if need to download library (async because sometimes it's really slow)
+			//No internet connection, don't download library, set to offline mode and clear last selected category
+			_settings.IsOnline = false;
+			_settings.LastSelectedCategory = "";
+			SettingsWorker.SaveSettings(_settings);
+		}
+
+		//Async check if need to download library (async because sometimes it's really slow)
+		onwards = false;
+		_loadingWindow.UpdateStatus("Checking for library updates");
+		spawn(&DownloadWorker.NeedToDownloadLibrary);
+
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(250),
+				(bool refreshNeeded)
+				{
+					needToDownLoadLibrary = refreshNeeded;
+					onwards = true;
+				});
+
+			RefreshUI();
+		}
+
+		//If library needs to downloaded do another async call to DownloadLibrary
+		//keep _loadingWindow updated with progress
+		if (needToDownLoadLibrary)
+		{
+			bool downloadSuccess;
 			onwards = false;
-			_loadingWindow.UpdateStatus("Checking for library updates");
-			spawn(&DownloadWorker.NeedToDownloadLibrary);
+			_loadingWindow.UpdateStatus("Downloading library");
+			_loadingWindow.DataDownloadedVisible = true;
+			spawn(&DownloadWorker.DownloadLibrary);
 
 			while (!onwards)
 			{
 				receiveTimeout(
 					dur!"msecs"(250),
-					(bool refreshNeeded)
+					(bool quit)
 					{
-						needToDownLoadLibrary = refreshNeeded;
+						//Download has finished
+						downloadSuccess = quit;
 						onwards = true;
+					},
+					(ulong amountDownloaded)
+					{
+						//Update the loading window with amount downloaded
+						_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
 					});
-
+				
 				RefreshUI();
 			}
 
-			//If library needs to downloaded do another async call to DownloadLibrary
-			//keep _loadingWindow updated with progress
-			if (needToDownLoadLibrary)
+			if (!downloadSuccess)
 			{
-				bool downloadSuccess;
-				onwards = false;
-				_loadingWindow.UpdateStatus("Downloading library");
-				_loadingWindow.DataDownloadedVisible = true;
-				spawn(&DownloadWorker.DownloadLibrary);
-
-				while (!onwards)
-				{
-					receiveTimeout(
-						dur!"msecs"(250),
-						(bool quit)
-						{
-							//Download has finished
-							downloadSuccess = quit;
-							onwards = true;
-						},
-						(ulong amountDownloaded)
-						{
-							//Update the loading window with amount downloaded
-							_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
-						});
-					
-					RefreshUI();
-				}
-
-				if (!downloadSuccess)
-				{
-					output("Could not download library");
-					exit(1);
-				}
+				output("Could not download library");
+				exit(1);
 			}
 		}
 	}
@@ -406,13 +426,27 @@ public final class Viewer
 		_completeLibrary = LibraryWorker.LoadLibrary();
 	}
 
+	private void ClearVideo()
+	{
+		debug output(__FUNCTION__);
+
+		//Reset all video details
+		_lblVideoTitle.setText("");
+		_lblVideoDescription.setText("");
+		_lblTotalTime.setText("");
+		_lblCurrentTime.setText("");
+
+		//And the video itself
+		_videoWorker.ResetVideo();
+	}
+
 	private void LoadNavigation()
 	{
 		debug output(__FUNCTION__);
 		//Stop any playing video
 		if (_videoWorker)
 		{
-			_videoWorker.ResetVideo();
+			ClearVideo();
 		}
 
 		if (_vcView)
@@ -432,6 +466,8 @@ public final class Viewer
 				_vcView = new TreeViewControl(_scrollParent, _scrollChild, _completeLibrary, &LoadVideo);
 				break;
 		}
+
+		PreloadCategory();
 	}
 
 	private void KillLoadingWindow()
@@ -440,7 +476,7 @@ public final class Viewer
 		_loadingWindow.destroy();
 	}
 	
-	private void LoadVideo(Library currentVideo)
+	private void LoadVideo(Library currentVideo, string path)
 	{
 		debug output(__FUNCTION__);
 		assert(currentVideo.MP4 != "", "No video data! There should be as this item is at the end of the tree");
@@ -472,6 +508,10 @@ public final class Viewer
 
 		//Start playing the video
 		_videoWorker.PlayVideo(currentVideo.MP4);
+
+		//Save current treepath to settings
+		_settings.LastSelectedCategory = path;
+		SettingsWorker.SaveSettings(_settings);
 	}
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
@@ -502,7 +542,7 @@ public final class Viewer
 		//Stop any playing videos as it's possible to delete a video that's playing
 		if (_videoWorker)
 		{
-			_videoWorker.ResetVideo();
+			ClearVideo();
 		}
 
 		DownloadManager downloadManager = new DownloadManager();
