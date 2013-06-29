@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
-  <object class="GtkImage" id="imgConnected">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-connect</property>
-  </object>
   <object class="GtkWindow" id="wdwViewer">
     <property name="can_focus">False</property>
     <property name="window_position">center</property>
@@ -19,21 +14,10 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
-              <object class="GtkImageMenuItem" id="miOnline">
+              <object class="GtkMenuItem" id="miOptions">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="tooltip_text" translatable="yes">Working Online</property>
-                <property name="use_underline">True</property>
-                <property name="image">imgConnected</property>
-                <property name="use_stock">False</property>
-                <property name="always_show_image">True</property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkMenuItem" id="miView">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="label" translatable="yes">_View</property>
+                <property name="label" translatable="yes">_Options</property>
                 <property name="use_underline">True</property>
                 <child type="submenu">
                   <object class="GtkMenu" id="mView">
@@ -43,7 +27,7 @@
                       <object class="GtkRadioMenuItem" id="imiFlow">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Flow</property>
+                        <property name="label" translatable="yes">Flow View</property>
                         <property name="draw_as_radio">True</property>
                       </object>
                     </child>
@@ -51,8 +35,47 @@
                       <object class="GtkRadioMenuItem" id="imiTree">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Tree</property>
+                        <property name="label" translatable="yes">Tree View</property>
                         <property name="draw_as_radio">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem" id="imiSeparator1">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem" id="imiOffline">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="tooltip_text" translatable="yes">Go to offline mode, you can only play videos you have downloaded</property>
+                        <property name="label" translatable="yes">Offline Mode</property>
+                        <property name="use_underline">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem" id="imiSeparator2">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem" id="imiKeepPosition">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="tooltip_text" translatable="yes">Start showing the last category you watched a video in</property>
+                        <property name="label" translatable="yes">Keep Position</property>
+                        <property name="use_underline">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkCheckMenuItem" id="imiContinuousPlay">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="tooltip_text" translatable="yes">Play all videos in a category automatically</property>
+                        <property name="label" translatable="yes">Continuous Play</property>
+                        <property name="use_underline">True</property>
                       </object>
                     </child>
                   </object>

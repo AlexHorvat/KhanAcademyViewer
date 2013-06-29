@@ -45,6 +45,11 @@ import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.BreadCrumb;
 
+//TODO
+//Continuous play works but could use some tidying up
+//Clean up code and can probably merge some of it with the normal
+//video loading code
+
 public final class FlowViewControl : ViewControl
 {
 	private ButtonBox _bboxBreadCrumbs;
@@ -79,7 +84,6 @@ public final class FlowViewControl : ViewControl
 	public override void PreloadCategory(string treePath)
 	{
 		debug output(__FUNCTION__);
-
 		//There's a variety of things that can go wrong while preloading - but none really matter
 		//So if something goes wrong abandon the preload
 		try
@@ -135,6 +139,44 @@ public final class FlowViewControl : ViewControl
 
 		//Refresh bread crumbs
 		LoadBreadCrumbs();
+	}
+
+	public override bool GetNextVideo(out Library returnVideo, out string returnPath)
+	{
+		debug output(__FUNCTION__);
+		//Get current path and set path to next node
+		TreeIter selectedItem = _tvChild.getSelectedIter();
+		TreePath treePath = selectedItem.getTreePath();
+		treePath.next;
+		
+		//Set tvTree to next node if possible - if this is the end of the current category
+		//then tvTree doesn't change
+		_tvChild.getSelection().selectPath(treePath);
+		
+		//Check if next node was actually selected
+		if (treePath.compare(_tvChild.getSelectedIter().getTreePath()) == 0)
+		{
+			//Generate equivalent of treepath.toString()
+			foreach(BreadCrumb breadCrumb; _breadCrumbs)
+			{
+				returnPath ~= to!(string)(breadCrumb.RowIndex);
+				returnPath ~= ":";
+			}
+
+			returnPath = returnPath[0 .. $ - 1];
+
+			int rowIndex = _tvChild.getSelectedIter().getValueInt(0);
+			returnVideo = _childLibrary.Children[rowIndex];
+			
+			//Both the new video library and path have been set by here, so return true to tell the video player to keep
+			//going with the next video
+			return true;
+		}
+		else
+		{
+			//No next video so return false to tell the video player to stop
+			return false;
+		}
 	}
 	
 	private void BuildView()

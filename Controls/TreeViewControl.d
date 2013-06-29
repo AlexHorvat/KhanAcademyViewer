@@ -43,6 +43,11 @@ import gdk.Event;
 import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.DataStructures.Library;
 
+//TODO
+//Continuous play works but could use some tidying up
+//Clean up code and can probably merge some of it with the normal
+//video loading code
+
 public final class TreeViewControl : ViewControl
 {
 	private TreeView _tvTree;
@@ -71,6 +76,52 @@ public final class TreeViewControl : ViewControl
 	{
 		debug output(__FUNCTION__);
 		_tvTree.expandToPath(new TreePath(treePath));
+	}
+
+	public override bool GetNextVideo(out Library returnVideo, out string returnPath)
+	{
+		debug output(__FUNCTION__);
+		//Get current path and set path to next node
+		TreeIter selectedItem = _tvTree.getSelectedIter();
+		TreePath treePath = selectedItem.getTreePath();
+		treePath.next;
+
+		//Set tvTree to next node if possible - if this is the end of the current category
+		//then tvTree doesn't change
+		_tvTree.getSelection().selectPath(treePath);
+
+		//Check if next node was actually selected
+		if (treePath.compare(_tvTree.getSelectedIter().getTreePath()) == 0)
+		{
+			//New node has been selected, so set the library and path
+			//Get the new nodes path
+			string treePathString = treePath.toString();
+
+			//Set current tree path to compare against when checking whether to load another video or not in button release method
+			_currentTreePath = treePathString;
+
+			//Iterate other the library to get the corrent video using the new treepath
+			string[] paths = split(treePathString, ":");
+
+			returnVideo = _completeLibrary;
+
+			foreach (string path; paths)
+			{
+				returnVideo = returnVideo.Children[to!size_t(path)];
+			}
+
+			//Set returnPath to current treepath minus last item as this is used for the category not the video itself
+			returnPath = treePathString[0 .. treePathString.lastIndexOf(":")];
+
+			//Both the new video library and path have been set by here, so return true to tell the video player to keep
+			//going with the next video
+			return true;
+		}
+		else
+		{
+			//No next video so return false to tell the video player to stop
+			return false;
+		}
 	}
 	
 	private void BuildView()
@@ -157,9 +208,8 @@ public final class TreeViewControl : ViewControl
 			if (_currentTreePath != treePath)
 			{
 				//Use TreePath to iterate over library to get the selected value, can then get video details from this
-				Library currentVideo = _completeLibrary;
-				//string treePath = selectedItem.getTreePath().toString();
 				string[] paths = split(treePath, ":");
+				Library currentVideo = _completeLibrary;
 				
 				foreach (string path; paths)
 				{

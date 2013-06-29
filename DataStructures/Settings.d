@@ -32,15 +32,27 @@ public final class Settings
 		void ViewModeSetting(ViewMode new_ViewMode) { _viewMode = new_ViewMode; }
 	}
 
-	private bool _isOnline = true;
+	private bool _isOffline = false;
 	public @property {
-		bool IsOnline() { return _isOnline; }
-		void IsOnline(bool new_IsOnline) { _isOnline = new_IsOnline; }
+		bool IsOffline() { return _isOffline; }
+		void IsOffline(bool new_IsOffline) { _isOffline = new_IsOffline; }
+	}
+
+	private bool _keepPosition = false;
+	public @property {
+		bool KeepPosition() { return _keepPosition; }
+		void KeepPosition(bool new_KeepPosition) { _keepPosition = new_KeepPosition; }
 	}
 
 	private string _lastSelectedCategory;
 	public @property {
 		string LastSelectedCategory() { return _lastSelectedCategory; }
 		void LastSelectedCategory(string new_LastSelectedCategory) { _lastSelectedCategory = new_LastSelectedCategory; }
+	}
+
+	private bool _continuousPlay = false;
+	public @property {
+		bool ContinuousPlay() { return _continuousPlay; }
+		void ContinuousPlay(bool new_ContinuousPlay) { _continuousPlay = new_ContinuousPlay; }
 	}
 }

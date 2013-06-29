@@ -40,14 +40,15 @@ public final class Fullscreen
 	private DrawingArea _originalDrawingArea;
 	
 	private void delegate(DrawingArea) ChangeOverlay;
-
 	private void delegate() PlayPause;
+	private void delegate() ExitFullscreen;
 	
-	public this(DrawingArea originalDrawingArea, void delegate(DrawingArea) changeOverlay, void delegate() playPause)
+	public this(DrawingArea originalDrawingArea, void delegate(DrawingArea) changeOverlay, void delegate() playPause, void delegate() exitFullscreen)
 	{
 		debug output(__FUNCTION__);
 		_originalDrawingArea = originalDrawingArea;
 		ChangeOverlay = changeOverlay;
+		ExitFullscreen = exitFullscreen;
 		PlayPause = playPause;
 
 		SetupWindow();
@@ -76,7 +77,6 @@ public final class Fullscreen
 		_wdwFullscreen.showAll();
 
 		//Move the video onto the fullscreen drawing area
-		//_videoWorker.ChangeOverlay(_drawVideo);
 		ChangeOverlay(_drawVideo);
 	}
 
@@ -98,6 +98,7 @@ public final class Fullscreen
 		if (key == GdkKeysyms.GDK_Escape)
 		{
 			//The destructor switches the video back to the original drawing area
+			ExitFullscreen();
 			this.destroy();
 		}
 

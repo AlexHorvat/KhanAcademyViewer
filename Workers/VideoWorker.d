@@ -58,6 +58,11 @@ import KhanAcademyViewer.Workers.DownloadWorker;
 import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Windows.Fullscreen;
 
+//TODO
+//The continuous play fullscreen works, but is a bit clunky
+//Maybe check on video load if the fullscreen is open and if so, send the
+//video to that instead of the small window
+
 public final class VideoWorker
 {
 	private Element _videoSink;
@@ -75,6 +80,11 @@ public final class VideoWorker
 	private Fixed _fixedVideo;
 	private bool _isPlaying;
 	private double _maxRange;
+	private bool _continuousPlay;
+	private Fullscreen _fullScreen;
+	private bool _isFullscreen;
+
+	private void delegate() PlayNextVideo;
 
 	public this(Fixed fixedVideo, DrawingArea drawVideo, Button btnPlay, Button btnFullscreen, Scale sclPosition, Label lblCurrentTime, Label lblTotalTime)
 	{
@@ -112,20 +122,37 @@ public final class VideoWorker
 		_overlay.destroy();
 	}
 
-	public void PlayVideo(string fileName)
+	public void StartContinuousPlayMode(void delegate() playNextVideoMethod)
+	{
+		debug output(__FUNCTION__);
+		_continuousPlay = true;
+		PlayNextVideo = playNextVideoMethod;
+	}
+
+	public void StopContinuousPlayMode()
+	{
+		debug output(__FUNCTION__);
+		_continuousPlay = false;
+		PlayNextVideo = null;
+	}
+
+	public void LoadVideo(string fileName)
 	{
 		debug output(__FUNCTION__);
 		//Always clear and reset current video before playing a new video
 		//Otherwise can end up with two videos playing at once
 		ResetVideo();
 		ShowSpinner();
-		StartVideo(fileName);
+		BufferVideo(fileName);
 		HideSpinner();
 	}
 
 	public void ResetVideo()
 	{
 		debug output(__FUNCTION__);
+		//Get rid of the fullscreen if it's open
+		_fullScreen.destroy();
+
 		if (_source)
 		{
 			HideSpinner();
@@ -143,7 +170,22 @@ public final class VideoWorker
 	private void btnFullscreen_Clicked(Button sender)
 	{
 		debug output(__FUNCTION__);
-		Fullscreen fullScreen = new Fullscreen(_drawVideo, &ChangeOverlay, &PlayPause);
+		GoFullscreen();
+	}
+
+	private void GoFullscreen()
+	{
+		debug output(__FUNCTION__);
+		_isFullscreen = true;
+		_fullScreen = new Fullscreen(_drawVideo, &ChangeOverlay, &PlayPause, &ExitFullscreen);
+	}
+
+	private void ExitFullscreen()
+	{
+		debug output(__FUNCTION__);
+		//Used for continuous mode, but if user manually exits fullscreen don't automatically put
+		//back into fullscreen mode.
+		_isFullscreen = false;
 	}
 
 	private void ShowSpinner()
@@ -202,7 +244,7 @@ public final class VideoWorker
 		_source.setProperty("video-sink", cast(ulong)_videoSink.getElementStruct());
 	}
 
-	private void StartVideo(string fileName)
+	private void BufferVideo(string fileName)
 	{
 		debug output(__FUNCTION__);
 		GstState current;
@@ -264,12 +306,18 @@ public final class VideoWorker
 		_drawVideo.setVisible(true);
 	}
 	
-	private void Play()
+	public void Play()
 	{
 		debug output(__FUNCTION__);
 		if (_source.setState(GstState.PLAYING) == GstStateChangeReturn.FAILURE)
 		{
 			return;
+		}
+
+		//Keep in fullscreen when playing in continuous mode
+		if (_continuousPlay && _isFullscreen)
+		{
+			GoFullscreen();
 		}
 
 		Bus bus = _source.getBus();
@@ -295,6 +343,12 @@ public final class VideoWorker
 						Pause();
 						//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
 						SeekTo(0);
+
+						if (_continuousPlay)
+						{
+							PlayNextVideo();
+						}
+
 						break;
 
 					case GstMessageType.ERROR:

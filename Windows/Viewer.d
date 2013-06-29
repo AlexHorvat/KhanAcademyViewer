@@ -43,7 +43,7 @@ import gtk.Main;
 import gtk.Fixed;
 import gtk.EventBox;
 import gtk.RadioMenuItem;
-import gtk.ImageMenuItem;
+import gtk.CheckMenuItem;
 
 import gdk.RGBA;
 import gdk.Event;
@@ -62,6 +62,9 @@ import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Controls.TreeViewControl;
 import KhanAcademyViewer.Controls.FlowViewControl;
 import KhanAcademyViewer.Controls.ViewControl;
+
+//TODO
+//Only save settings on program exit, otherwise work with the variable
 
 public final class Viewer
 {
@@ -92,7 +95,9 @@ public final class Viewer
 	private Loading _loadingWindow;
 	private RadioMenuItem _imiFlow;
 	private RadioMenuItem _imiTree;
-	private ImageMenuItem _miOnline;
+	private CheckMenuItem _imiOffline;
+	private CheckMenuItem _imiKeepPosition;
+	private CheckMenuItem _imiContinuousPlay;
 	private ViewControl _vcView;
 	private DownloadManager _downloadManager;
 	private About _about;
@@ -111,7 +116,7 @@ public final class Viewer
 	private void PreloadCategory()
 	{
 		debug output(__FUNCTION__);
-		if (_settings && _settings.LastSelectedCategory != "")
+		if (_settings && _settings.KeepPosition && _settings.LastSelectedCategory != "")
 		{
 			_vcView.PreloadCategory(_settings.LastSelectedCategory);
 		}
@@ -121,6 +126,11 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		_settings = SettingsWorker.LoadSettings();
+
+		//Set menu items
+		_imiOffline.setActive(_settings.IsOffline);
+		_imiKeepPosition.setActive(_settings.KeepPosition);
+		_imiContinuousPlay.setActive(_settings.ContinuousPlay);
 	}
 
 	private bool HasInternetConnection()
@@ -202,8 +212,14 @@ public final class Viewer
 		//Link imiFlow and imiTree together so that they work like radio buttons
 		_imiTree.setGroup(_imiFlow.getGroup());
 
-		_miOnline = cast(ImageMenuItem)windowBuilder.getObject("miOnline");
-		_miOnline.addOnButtonRelease(&miOnline_ButtonRelease);
+		_imiOffline = cast(CheckMenuItem)windowBuilder.getObject("imiOffline");
+		_imiOffline.addOnButtonRelease(&imiOffline_ButtonRelease);
+
+		_imiKeepPosition = cast(CheckMenuItem)windowBuilder.getObject("imiKeepPosition");
+		_imiKeepPosition.addOnButtonRelease(&imiKeepPosition_ButtonRelease);
+
+		_imiContinuousPlay = cast(CheckMenuItem)windowBuilder.getObject("imiContinuousPlay");
+		_imiContinuousPlay.addOnButtonRelease(&imiContinuousPlay_ButtonRelease);
 
 		_miDownloadManager = cast(MenuItem)windowBuilder.getObject("miDownloadManager");
 		_miDownloadManager.addOnButtonRelease(&miDownloadManager_ButtonRelease);
@@ -223,10 +239,49 @@ public final class Viewer
 		debug output(__FUNCTION__);
 		//This is only called from the constructor - which also checks for internet connection when loading
 		//so no need to double check
-		_settings.IsOnline ? SetOnline(false) : SetOffline();
+		_settings.IsOffline ? SetOffline : SetOnline(false);
 	}
 
-	private bool miOnline_ButtonRelease(Event e, Widget sender)
+	private bool imiKeepPosition_ButtonRelease(Event e, Widget sender)
+	{
+		debug output(__FUNCTION__);
+		_settings.KeepPosition = !cast(bool)_imiKeepPosition.getActive();
+		SettingsWorker.SaveSettings(_settings);
+
+		return false;
+	}
+
+	private bool imiContinuousPlay_ButtonRelease(Event e, Widget sender)
+	{
+		debug output(__FUNCTION__);
+		//_settings.ContinuousPlay = !cast(bool)_imiContinuousPlay.getActive();
+		//SettingsWorker.SaveSettings(_settings);
+
+		if(_imiContinuousPlay.getActive())
+		{
+			_settings.ContinuousPlay = false;
+
+			if (_videoWorker)
+			{
+				_videoWorker.StopContinuousPlayMode();
+			}
+		}
+		else
+		{
+			_settings.ContinuousPlay = true;
+
+			if (_videoWorker)
+			{
+				_videoWorker.StartContinuousPlayMode(&PlayNextVideo);
+			}
+		}
+
+		SettingsWorker.SaveSettings(_settings);
+
+		return false;
+	}
+
+	private bool imiOffline_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
 		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
@@ -234,7 +289,7 @@ public final class Viewer
 		_settings.LastSelectedCategory = "";
 		SettingsWorker.SaveSettings(_settings);
 
-		_settings.IsOnline ? SetOffline() : SetOnline(true);
+		_imiOffline.getActive() ? SetOnline(true) : SetOffline();
 
 		return false;
 	}
@@ -252,17 +307,15 @@ public final class Viewer
 
 			if (!HasInternetConnection())
 			{
+				_imiOffline.setActive(true);
 				return;
 			}
 		}
 
-		Image imgOnline = new Image(StockID.CONNECT, GtkIconSize.BUTTON);
-
-		_settings.IsOnline = true;
+		_settings.IsOffline = false;
 		SettingsWorker.SaveSettings(_settings);
 
-		_miOnline.setImage(imgOnline);
-		_miOnline.setTooltipText("Working Online");
+		_imiOffline.setActive(false);
 
 		_miDownloadManager.setSensitive(true);
 
@@ -274,14 +327,12 @@ public final class Viewer
 	private void SetOffline()
 	{
 		debug output(__FUNCTION__);
-		Image imgOffline = new Image(StockID.DISCONNECT, GtkIconSize.BUTTON);
 		bool onwards = false;
 
-		_settings.IsOnline = false;
-		SettingsWorker.SaveSettings(_settings);
+		_imiOffline.setActive(true);
 
-		_miOnline.setImage(imgOffline);
-		_miOnline.setTooltipText("Working Offline");
+		_settings.IsOffline = true;
+		SettingsWorker.SaveSettings(_settings);
 
 		_miDownloadManager.setSensitive(false);
 
@@ -334,7 +385,7 @@ public final class Viewer
 		_loadingWindow = new Loading();
 		RefreshUI();
 
-		if (!_settings.IsOnline)
+		if (_settings.IsOffline)
 		{
 			//Set offline, don't bother checking library
 			return;
@@ -343,7 +394,7 @@ public final class Viewer
 		if (!HasInternetConnection())
 		{
 			//No internet connection, don't download library, set to offline mode and clear last selected category
-			_settings.IsOnline = false;
+			_settings.IsOffline = true;
 			_settings.LastSelectedCategory = "";
 			SettingsWorker.SaveSettings(_settings);
 		}
@@ -506,12 +557,36 @@ public final class Viewer
 			_videoWorker = new VideoWorker(_fixedVideo, _drawVideo, _btnPlay, _btnFullscreen, _sclPosition, _lblCurrentTime, _lblTotalTime);
 		}
 
-		//Start playing the video
-		_videoWorker.PlayVideo(currentVideo.MP4);
+		//Continuous play?
+		if (_settings && _settings.ContinuousPlay)
+		{
+			_videoWorker.StartContinuousPlayMode(&PlayNextVideo);
+		}
+		else
+		{
+			_videoWorker.StopContinuousPlayMode();
+		}
+
+		_videoWorker.LoadVideo(currentVideo.MP4);
 
 		//Save current treepath to settings
 		_settings.LastSelectedCategory = path;
 		SettingsWorker.SaveSettings(_settings);
+	}
+
+	private void PlayNextVideo()
+	{
+		debug output(__FUNCTION__);
+		string path;
+		Library nextVideo;
+
+		//If there is a next video start playing it
+		//Otherwise just do nothing to end the playlist
+		if (_vcView.GetNextVideo(nextVideo, path))
+		{
+			LoadVideo(nextVideo, path);
+			_videoWorker.Play();
+		}
 	}
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
