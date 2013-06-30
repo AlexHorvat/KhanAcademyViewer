@@ -235,7 +235,7 @@ public final class VideoWorker
 
 		_sclPosition.addOnChangeValue(&sclPosition_ChangeValue);
 
-		_videoSink = ElementFactory.make("xvimagesink", "videosink");
+		_videoSink = ElementFactory.make("ximagesink", "videosink");
 
 		_overlay = new VideoOverlay(_videoSink);
 
