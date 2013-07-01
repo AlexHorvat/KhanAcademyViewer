@@ -1,6 +1,15 @@
-KhanAcademyViewer
+Khan Academy Viewer
 =================
 
-Play Khan Academy videos from your desktop - if your desktop is gnome 3 that is.
+A Gnome 3 desktop player for Khan Academy videos.
 
-This is very much work in progress currently, it's possible to browse and play videos, but that's about it.
+<i>Why choose this over the website?</i>
+<ul>
+<li>Download videos and watch them offline</li>
+<li>Bookmark where you were up to</li>
+<li>Continuous play of the entire subject</li>
+<li>Easier to browse to a subject (in my opinion at least)</li>
+</ul>
+
+
+
