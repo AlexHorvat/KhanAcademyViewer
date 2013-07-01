@@ -52,7 +52,7 @@ Khan Academy Viewer
 	./KhanAcademyViewer<br/>
 </code>
 <br/>
-<strong>Somethings gone wrong!</strong>
+<strong>Something's gone wrong!</strong>
 <br/>
 <br/>
 <i>I only get sound while playing a video?</i>
