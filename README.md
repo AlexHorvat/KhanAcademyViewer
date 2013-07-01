@@ -7,7 +7,7 @@ Khan Academy Viewer
 <ul>
 	<li>Download videos and watch them offline</li>
 	<li>Bookmark where you were up to</li>
-	<li>Continuous play of the entire subject</li>
+	<li>Continuous play of an entire subject</li>
 	<li>Easier to browse to a subject (in my opinion at least)</li>
 </ul>
 <br/>
