@@ -1,9 +1,9 @@
 Khan Academy Viewer
 =================
 
-A Gnome 3 desktop player for the Khan Academy.
+<h3>A Gnome 3 desktop player for the Khan Academy</h3>
 
-<i>Why choose this over using the website?</i>
+<strong>Why choose this over using the website?</strong>
 <ul>
 	<li>Download videos and watch them offline</li>
 	<li>Bookmark where you were up to</li>
@@ -11,20 +11,21 @@ A Gnome 3 desktop player for the Khan Academy.
 	<li>Easier to browse to a subject (in my opinion at least)</li>
 </ul>
 
-<i>How to build from source:</i>
-<strong>Prerequisites</strong>
+<strong>How to build from source:</strong>
+<br/>
+<i>Prerequisites</i>
 <ul>
 	<li>Recent version of Gnome 3 (tested on GTK 3.6+)</li>
 	<li>GStreamer 1.0+, with it's basic plugins and codecs</li>
 	<li>Your system needs to be able to play h264 videos</li>
 	<li>Video driver compatible with xvimagesink</li>
 	<li>Git</li>
-	<li>Dmd 2 <a href="http://dlang.org/download.html">Download here</a></li>
+	<li>Dmd 2 <a href="http://dlang.org/download.html" target="_blank">Download here</a></li>
 	<li>libcurl.so (in Fedora this is in the libcurl-devel package)</li>
 	<li>This means nothing to you? If you've got a fairly recent linux distribution, running the gnome desktop and can watch any video you come across, you should be fine</li>
 </ul>
-	
-<strong>Getting the source code</strong>
+
+<i>Getting the source code</i>
 <ul>
 	<li>Create a new directory, I've called it Development, you can call it whatever you want</li>
 	<li>In this directory run git clone https://github.com/gtkd-developers/GtkD.git to get the latest GtkD source</li>
@@ -35,26 +36,30 @@ A Gnome 3 desktop player for the Khan Academy.
 	<li>Done, now run ./KhanAcademyViewer to get the viewer going</li>
 </ul>
 
-<strong>Or if you like command line stuff</strong>
+<i>Or if you like command line stuff</i>
 <code>
-	mkdir Development
-	cd Development
-	git clone https://github.com/gtkd-developers/GtkD.git
-	git clone https://github.com/AlexHorvat/KhanAcademyViewer.git
-	cd GtkD
-	make -f GNUmakefile all
-	cd ..
-	cd KhanAcademyViewer
-	make
-	./KhanAcademyViewer
+	mkdir Development<br/>
+	cd Development<br/>
+	git clone https://github.com/gtkd-developers/GtkD.git<br/>
+	git clone https://github.com/AlexHorvat/KhanAcademyViewer.git<br/>
+	cd GtkD<br/>
+	make -f GNUmakefile all<br/>
+	cd ..<br/>
+	cd KhanAcademyViewer<br/>
+	make<br/>
+	./KhanAcademyViewer<br/>
 </code>
 
-<i>Somethings gone wrong!</i>
-<strong>Only get sound while playing a video?</strong>
-In fedora you need to setup <a href="http://rpmfusion.org/Configuration"</a>RPM Fusion</a>. Install RPM Fusion Free, then go into your package manager and install GStreamer 1.0 libav-based plug-ins.
+<strong>Somethings gone wrong!</strong>
+<br/>
+<i>Only get sound while playing a video?</i>
+<br/>
+In fedora you need to setup <a href="http://rpmfusion.org/Configuration" target="_blank">RPM Fusion</a>. Install RPM Fusion Free, then go into your package manager and install GStreamer 1.0 libav-based plug-ins.
 
-<strong>The video never starts, I just get the spinner forever!</strong>
+<i>The video never starts, I just get the spinner forever!</i>
+<br/>
 This could be because your computer doesn't support xvimagesink, the only time I've seen this happen is in a virtual machine without 3d acceleration, edit the file VideoWorker.d, replace the string "xvimagesink" with "ximagesink" but this will do strange things to fullscreen mode.
 
-<strong>Something else is wrong!</strong>
+<i>Something else is wrong!</i>
+<br/>
 Rebuild Khan Academy Viewer using <code>make debug</code> instead of just <code>make</code>, now run the application from a console and file a bug report along with the output from the console.
