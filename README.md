@@ -1,7 +1,7 @@
 Khan Academy Viewer
 =================
 
-<h3>A Gnome 3 desktop player for the Khan Academy</h3>
+<h4>A Gnome 3 desktop player for the Khan Academy</h4>
 
 <strong>Why choose this over using the website?</strong>
 <ul>
@@ -10,8 +10,9 @@ Khan Academy Viewer
 	<li>Continuous play of the entire subject</li>
 	<li>Easier to browse to a subject (in my opinion at least)</li>
 </ul>
-
+<br/>
 <strong>How to build from source:</strong>
+<br/>
 <br/>
 <i>Prerequisites</i>
 <ul>
@@ -24,7 +25,7 @@ Khan Academy Viewer
 	<li>libcurl.so (in Fedora this is in the libcurl-devel package)</li>
 	<li>This means nothing to you? If you've got a fairly recent linux distribution, running the gnome desktop and can watch any video you come across, you should be fine</li>
 </ul>
-
+<br/>
 <i>Getting the source code</i>
 <ul>
 	<li>Create a new directory, I've called it Development, you can call it whatever you want</li>
@@ -35,8 +36,9 @@ Khan Academy Viewer
 	<li>Run command make</li>
 	<li>Done, now run ./KhanAcademyViewer to get the viewer going</li>
 </ul>
-
+<br/>
 <i>Or if you like command line stuff</i>
+<br/>
 <code>
 	mkdir Development<br/>
 	cd Development<br/>
@@ -49,10 +51,11 @@ Khan Academy Viewer
 	make<br/>
 	./KhanAcademyViewer<br/>
 </code>
-
+<br/>
 <strong>Somethings gone wrong!</strong>
 <br/>
-<i>Only get sound while playing a video?</i>
+<br/>
+<i>I only get sound while playing a video?</i>
 <br/>
 In fedora you need to setup <a href="http://rpmfusion.org/Configuration" target="_blank">RPM Fusion</a>. Install RPM Fusion Free, then go into your package manager and install GStreamer 1.0 libav-based plug-ins.
 
