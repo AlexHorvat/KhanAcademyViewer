@@ -23,7 +23,7 @@ Khan Academy Viewer
 	<li>Git</li>
 	<li>Dmd 2 <a href="http://dlang.org/download.html" target="_blank">Download here</a></li>
 	<li>libcurl.so (in Fedora this is in the libcurl-devel package)</li>
-	<li>This means nothing to you? If you've got a fairly recent linux distribution, running the gnome desktop and can watch any video you come across, you should be fine</li>
+	<li>This means nothing to you? If you've got a fairly recent linux distribution, running the gnome desktop and can watch any video you come across, you should be fine (at least once you've figured out how to get the curl development files)</li>
 </ul>
 <br/>
 <i>Getting the source code</i>
@@ -31,9 +31,8 @@ Khan Academy Viewer
 	<li>Create a new directory, I've called it Development, you can call it whatever you want</li>
 	<li>In this directory run git clone https://github.com/gtkd-developers/GtkD.git to get the latest GtkD source</li>
 	<li>Then, still in the same directory run git clone https://github.com/AlexHorvat/KhanAcademyViewer.git to get the Khan Academy Viewer source</li>
-	<li>Go into the Gtkd directory and run the command make -f GNUmakefile all (this might take a while)</li>
-	<li>Back up to Development directory, then go into KhanAcademyViewer directory</li>
-	<li>Run command make</li>
+	<li>Go into KhanAcademyViewer directory</li>
+	<li>Run command make, might take a minute or two</li>
 	<li>Done, now run ./KhanAcademyViewer to get the viewer going</li>
 </ul>
 <br/>
@@ -44,9 +43,6 @@ Khan Academy Viewer
 	cd Development<br/>
 	git clone https://github.com/gtkd-developers/GtkD.git<br/>
 	git clone https://github.com/AlexHorvat/KhanAcademyViewer.git<br/>
-	cd GtkD<br/>
-	make -f GNUmakefile all<br/>
-	cd ..<br/>
 	cd KhanAcademyViewer<br/>
 	make<br/>
 	./KhanAcademyViewer<br/>

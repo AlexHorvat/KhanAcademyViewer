@@ -21,6 +21,12 @@
     <Target>Executable</Target>
     <OutputName>KhanAcademyViewer</OutputName>
     <Externalconsole>true</Externalconsole>
+    <Libs>
+      <Libs>
+        <Lib>/home/alex/Development/GtkD/libgtkd-2.a</Lib>
+        <Lib>/home/alex/Development/GtkD/libgstreamerd-2.a</Lib>
+      </Libs>
+    </Libs>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release</OutputPath>
@@ -86,9 +92,9 @@
     <None Include="Windows\DownloadManager.glade">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="dmd.conf" />
     <None Include="makefile" />
     <None Include="README.md" />
+    <None Include="dmd.conf" />
   </ItemGroup>
   <ProjectExtensions>
     <MonoDevelop>

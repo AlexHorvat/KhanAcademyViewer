@@ -1,13 +1,13 @@
 compiler = dmd
 release = -O -release -noboundscheck
-debug = -debug
+debug = -debug -v
 target = ./KhanAcademyViewer
 
 all:
-	$(compiler) $(release) ./KhanAcademyViewer.d ./Windows/*.d ./DataStructures/*.d ./Include/*.d ./Workers/*.d ./Controls/*.d
+	$(compiler) $(release) ./KhanAcademyViewer.d ./*/*.d ../GtkD/src/*/*.d ../GtkD/srcgstreamer/*/*.d
 	
 debug:
-	$(compiler) $(debug) ./KhanAcademyViewer.d ./Windows/*.d ./DataStructures/*.d ./Include/*.d ./Workers/*.d ./Controls/*.d
+	$(compiler) $(debug) ./KhanAcademyViewer.d ./*/*.d ../GtkD/src/*/*.d ../GtkD/srcgstreamer/*/*.d
 
 clean:
 	$(RM) $(target) *.o
