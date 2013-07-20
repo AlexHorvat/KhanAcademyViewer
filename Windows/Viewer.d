@@ -59,6 +59,7 @@ import KhanAcademyViewer.Controls.VideoControl;
 //Only save settings on program exit, otherwise work with the variable
 //Remove glade everywhere
 //Make play icon on video screen hide itself after a few seconds
+//Label for video when in fullscreen
 
 public final class Viewer
 {

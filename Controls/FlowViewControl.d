@@ -184,14 +184,14 @@ public final class FlowViewControl : ViewControl
 
 		_tvParent.setHeadersVisible(false);
 		_tvParent.setEnableSearch(false);
-		_tvParent.setVisible(true);
+		_tvParent.show();
 		_tvParent.addEvents(GdkEventMask.BUTTON_RELEASE_MASK);
 
 		_tvChild = new TreeView();
 
 		_tvChild.setHeadersVisible(false);
 		_tvChild.setEnableSearch(false);
-		_tvChild.setVisible(true);
+		_tvChild.show();
 		_tvChild.addEvents(GdkEventMask.BUTTON_RELEASE_MASK);
 
 		//Setup flow mode
@@ -366,7 +366,7 @@ public final class FlowViewControl : ViewControl
 				breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].Title);
 				breadButton.setAlignment(0.0, 0.5);
 				breadButton.setSizeRequest(breadCrumbWidth, -1);
-				breadButton.setVisible(true);
+				breadButton.show();
 				breadButton.addOnClicked(&breadButton_Clicked);
 				
 				_bboxBreadCrumbs.add(breadButton);

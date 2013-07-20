@@ -60,7 +60,8 @@ public final class VideoControl : Grid
 	public static bool IsPlaying = false;
 
 	private double _maxRange;
-	private bool _isContinuousPlay;
+	private bool _isContinuousPlay = false;
+	private bool _isFullscreen = false;
 
 	private Label _lblTitle;
 	private EventBox _ebVideo;
@@ -181,9 +182,9 @@ public final class VideoControl : Grid
 		//TODO create a setting to switch image sink
 		Element elVideoSink = ElementFactory.make("ximagesink", "videosink");
 		
-		//Setup the video overlay, but don't link to the VideoScreen.d drawing area yet as it's not ready
-		//and the program will crash
+		//Setup the video overlay
 		_voOverlay = new VideoOverlay(elVideoSink);
+		_voOverlay.setWindowHandle(_vsScreen.GetDrawingWindowID());
 		
 		//Create playbin element and link to videosink
 		_elSource = ElementFactory.make("playbin", "playBin");
@@ -194,22 +195,9 @@ public final class VideoControl : Grid
 		string localFileName = GetLocalFileName(currentVideo.MP4);
 		string totalTime;
 
-		//Need to reset the overlay window everytime starting a new video
-		//Otherwise video opens in it's own window
-//		if (IsFullscreen)
-//		{
-//			//TODO fullscreen...
-//			//ChangeOverlay(_fullScreen.GetDrawingArea());
-//		}
-//		else
-//		{
-			ChangeOverlay(_vsScreen.GetDrawingWindowID());
-		//}
-
 		//If file is saved locally then load it, otherwise stream it
 		if (exists(localFileName))
 		{
-			debug output("After load details", localFileName);
 			_elSource.setProperty("uri", "file://" ~ localFileName);
 		}
 		else
@@ -259,9 +247,6 @@ public final class VideoControl : Grid
 		debug output(__FUNCTION__);
 		if (_elSource)
 		{
-			//Make sure spinner is hidden in case video is changing before the previous one finished loading
-			_vsScreen.HideSpinner();
-
 			//Stop the video
 			_elSource.setState(GstState.NULL);
 			IsPlaying = false;
@@ -311,6 +296,7 @@ public final class VideoControl : Grid
 	{
 		debug output(__FUNCTION__);
 		Fullscreen fullScreen = new Fullscreen(_vsScreen, &ExitFullscreen);
+		_isFullscreen = true;
 	}
 
 	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range range)
@@ -351,18 +337,20 @@ public final class VideoControl : Grid
 		
 		//Add authors and date added to description
 		_lblDescription.setText(currentVideo.Description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.DateAdded.date.toString());
-	}
-	
-	private void ChangeOverlay(ulong windowID)
-	{
-		debug output(__FUNCTION__);
-		_voOverlay.setWindowHandle(windowID);
+
+		//If in fullscreen mode show the video title
+		if (_isFullscreen)
+		{
+			_vsScreen.ShowTitle(currentVideo.Title);
+		}
 	}
 
 	private void ExitFullscreen()
 	{
 		debug output(__FUNCTION__);
+		_vsScreen.HideTitle();
 		_vsScreen.reparent(_ebVideo);
+		_isFullscreen = false;
 	}
 
 	private void PlayPause()

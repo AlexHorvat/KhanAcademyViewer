@@ -67,7 +67,7 @@ public final class TreeViewControl : ViewControl
 		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
 		_scrollParent.setSizeRequest(_scrollChild.getWidth(), -1);
-		_scrollChild.setVisible(true);
+		_scrollChild.show();
 	}
 
 	public override void PreloadCategory(string treePath)
@@ -129,13 +129,13 @@ public final class TreeViewControl : ViewControl
 
 		_tvTree.setHeadersVisible(false);
 		_tvTree.setEnableSearch(false);
-		_tvTree.setVisible(true);
+		_tvTree.show();
 		_tvTree.addEvents(GdkEventMask.BUTTON_RELEASE_MASK);
 
 		CreateColumns(_tvTree);
 		_tvTree.addOnButtonRelease(&tvTree_ButtonRelease);
 
-		_scrollChild.setVisible(false);
+		_scrollChild.hide();
 		_scrollParent.setSizeRequest(_scrollChild.getWidth() * 2, -1);
 
 		_scrollParent.add(_tvTree);

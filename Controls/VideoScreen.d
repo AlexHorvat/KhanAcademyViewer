@@ -25,6 +25,8 @@ module KhanAcademyViewer.Controls.VideoScreen;
 
 debug alias std.stdio.writeln output;
 
+import core.thread;
+
 import gtk.Widget;
 import gtk.Overlay;
 import gtk.DrawingArea;
@@ -37,6 +39,7 @@ import gdk.Event;
 import gdk.X11;
 
 import KhanAcademyViewer.Controls.VideoControl;
+import KhanAcademyViewer.Include.Functions;
 
 public final class VideoScreen : Overlay
 {
@@ -45,7 +48,13 @@ public final class VideoScreen : Overlay
 	private EventBox _ebLoading;
 	private EventBox _ebPlay;
 	private EventBox _ebPause;
+	private EventBox _ebTitle;
 	private DrawingArea _daVideoArea;
+
+	private Thread _pauseHider;
+	private Thread _titleHider;
+
+	TickDuration _hidePauseTime = TickDuration.zero();
 
 	public this(void delegate() playPauseMethod)
 	{
@@ -53,51 +62,59 @@ public final class VideoScreen : Overlay
 		PlayPause = playPauseMethod;
 
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.DIALOG);
-		imgPlay.setVisible(true);
+		imgPlay.show();
 
 		_ebPlay = new EventBox();
 		_ebPlay.setSizeRequest(50, 50);
 		_ebPlay.setHalign(GtkAlign.CENTER);
 		_ebPlay.setValign(GtkAlign.CENTER);
-		_ebPlay.setVisible(false);
+		_ebPlay.hide();
 		_ebPlay.add(imgPlay);
 
 		Image imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.DIALOG);
-		imgPause.setVisible(true);
+		imgPause.show();
 
 		_ebPause = new EventBox();
 		_ebPause.setSizeRequest(50, 50);
 		_ebPause.setHalign(GtkAlign.CENTER);
 		_ebPause.setValign(GtkAlign.CENTER);
-		_ebPause.setVisible(false);
+		_ebPause.hide();
 		_ebPause.add(imgPause);
 
-		//TODO sort out how the label will work - might need an event box too
 		_lblTitle = new Label("", false);
-		_lblTitle.setVisible(false);
+		_lblTitle.modifyFont("", 24);
+		_lblTitle.setMarginBottom(50);
+		_lblTitle.show();
+
+		_ebTitle = new EventBox();
+		_ebTitle.setSizeRequest(300, 50);
+		_ebTitle.setHalign(GtkAlign.CENTER);
+		_ebTitle.setValign(GtkAlign.END);
+		_ebTitle.hide();
+		_ebTitle.add(_lblTitle);
 
 		_spinLoading = new Spinner();
-		_spinLoading.setVisible(true);
+		_spinLoading.show();
 		_spinLoading.setSizeRequest(200, 200);
 
 		_ebLoading = new EventBox();
 		_ebLoading.setSizeRequest(200, 200);
 		_ebLoading.setHalign(GtkAlign.CENTER);
 		_ebLoading.setValign(GtkAlign.CENTER);
-		_ebLoading.setVisible(false);
+		_ebLoading.hide();
 		_ebLoading.add(_spinLoading);
 
 		_daVideoArea = new DrawingArea();
 		//For some reason BUTTON_PRESS_MASK is needed to get the button release event going (not BUTTON_RELEASE MASK)
 		_daVideoArea.addEvents(GdkEventMask.BUTTON_PRESS_MASK);
-		_daVideoArea.setVisible(true);
+		_daVideoArea.show();
 
 		super.add(_daVideoArea);
 		super.addOverlay(_ebLoading);
 		super.addOverlay(_ebPlay);
 		super.addOverlay(_ebPause);
-		//super.addOverlay(_lblTitle);
-		super.setVisible(true);
+		super.addOverlay(_ebTitle);
+		super.show();
 	}
 
 	//Simply setting setSensitive to false greys out everything, I want it to stay black, but the user to not be able to interact
@@ -113,6 +130,12 @@ public final class VideoScreen : Overlay
 		}
 		else
 		{
+			HideSpinner();
+
+			_ebTitle.hide();
+			_ebPlay.hide();
+			_ebPause.hide();
+
 			_ebPlay.onButtonReleaseListeners.destroy();
 			_ebPause.onButtonPressListeners.destroy();
 			_daVideoArea.onButtonReleaseListeners.destroy();
@@ -129,7 +152,7 @@ public final class VideoScreen : Overlay
 	public void ShowSpinner()
 	{
 		debug output(__FUNCTION__);
-		_ebLoading.setVisible(true);
+		_ebLoading.show();
 		_spinLoading.start();
 	}
 
@@ -137,28 +160,49 @@ public final class VideoScreen : Overlay
 	{
 		debug output(__FUNCTION__);
 		_spinLoading.stop();
-		_ebLoading.setVisible(false);
+		_ebLoading.hide();
 	}
 
 	public void ShowTitle(string title)
 	{
 		debug output(__FUNCTION__);
 		_lblTitle.setText(title);
-		_lblTitle.setVisible(true);
+		_ebTitle.show();
 
-		//TODO Start timer which will hide the title in a few seconds
+		//Spawn a new thread to hide the title
+		if (_titleHider)
+		{
+			_titleHider = null;
+		}
+
+		_titleHider = new Thread(&DelayedHideTitle);
+		_titleHider.start();
+	}
+	
+	public void HideTitle()
+	{
+		_ebTitle.hide();
 	}
 
 	public void ShowPlayButton()
 	{
 		debug output(__FUNCTION__);
-		_ebPlay.setVisible(true);
+		_ebPlay.show();
 	}
 
 	public void HidePlayButton()
 	{
 		debug output(__FUNCTION__);
-		_ebPlay.setVisible(false);
+		_ebPlay.hide();
+	}
+
+	private void DelayedHideTitle()
+	{
+		debug output(__FUNCTION__);
+		Thread.sleep(dur!"seconds"(3));
+		_ebTitle.hide();
+
+		_titleHider = null;
 	}
 
 	private void delegate() PlayPause;
@@ -168,27 +212,38 @@ public final class VideoScreen : Overlay
 		debug output(__FUNCTION__);
 		if (VideoControl.IsPlaying)
 		{
-			_ebPause.setVisible(false);
-			_ebPlay.setVisible(true);
+			_ebPause.hide();
+			_ebPlay.show();
 		}
 		else
 		{
-			_ebPlay.setVisible(false);
+			_ebPlay.hide();
 		}
 
 		PlayPause();
 		return false;
 	}
 
+	private void DelayedHidePause()
+	{
+		debug output(__FUNCTION__);
+		Thread.sleep(dur!"seconds"(3));
+		_ebPause.hide();
+
+		_pauseHider = null;
+	}
+
 	private bool daVideoArea_MotionNotify(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		if (VideoControl.IsPlaying)
+		//Spawn a thread, if already exists do nothing
+		if (VideoControl.IsPlaying && !_pauseHider)
 		{
-			debug output("Is playing");
-			_ebPause.setVisible(true);
+			debug output("showing pause");
+			_ebPause.show();
 
-			//TODO hide pause image after a few seconds, also hide mouse pointer if fullscreen
+			_pauseHider = new Thread(&DelayedHidePause);
+			_pauseHider.start();
 		}
 
 		return false;
