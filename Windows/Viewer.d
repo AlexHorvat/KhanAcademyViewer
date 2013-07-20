@@ -33,19 +33,11 @@ import gtk.Widget;
 import gtk.Window;
 import gtk.MenuItem;
 import gtk.ScrolledWindow;
-import gtk.Label;
-import gtk.DrawingArea;
-import gtk.Button;
-import gtk.Image;
-import gtk.Scale;
 import gtk.ButtonBox;
-import gtk.Main;
-import gtk.Fixed;
-import gtk.EventBox;
 import gtk.RadioMenuItem;
 import gtk.CheckMenuItem;
+import gtk.Grid;
 
-import gdk.RGBA;
 import gdk.Event;
 
 import KhanAcademyViewer.DataStructures.Library;
@@ -53,7 +45,6 @@ import KhanAcademyViewer.DataStructures.Settings;
 import KhanAcademyViewer.Include.Enums;
 import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Workers.DownloadWorker;
-import KhanAcademyViewer.Workers.VideoWorker;
 import KhanAcademyViewer.Workers.SettingsWorker;
 import KhanAcademyViewer.Windows.Loading;
 import KhanAcademyViewer.Windows.DownloadManager;
@@ -62,14 +53,17 @@ import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Controls.TreeViewControl;
 import KhanAcademyViewer.Controls.FlowViewControl;
 import KhanAcademyViewer.Controls.ViewControl;
+import KhanAcademyViewer.Controls.VideoControl;
 
 //TODO
 //Only save settings on program exit, otherwise work with the variable
+//Remove glade everywhere
+//Make play icon on video screen hide itself after a few seconds
 
 public final class Viewer
 {
 	private immutable string _gladeFile = "./Windows/Viewer.glade";
-	
+
 	private Library _completeLibrary;
 	private Settings _settings;
 
@@ -77,20 +71,9 @@ public final class Viewer
 	private Window _wdwViewer;
 	private ScrolledWindow _scrollParent;
 	private ScrolledWindow _scrollChild;
-	private MenuItem _miAbout;
+	private MenuItem _miAbout;//TODO This can probably be made immutable as it won't change at runtime
 	private MenuItem _miDownloadManager;
-	private MenuItem _miExit;
-	private Label _lblVideoTitle;
-	private Label _lblVideoDescription;
-	private EventBox _eventVideo;
-	private Fixed _fixedVideo;
-	private DrawingArea _drawVideo;
-	private Label _lblCurrentTime;
-	private Label _lblTotalTime;
-	private VideoWorker _videoWorker;
-	private Button _btnPlay;
-	private Button _btnFullscreen;
-	private Scale _sclPosition;
+	private MenuItem _miExit;//TODO This can probably be made immutable as it won't change at runtime
 	private ButtonBox _bboxBreadCrumbs;
 	private Loading _loadingWindow;
 	private RadioMenuItem _imiFlow;
@@ -100,7 +83,8 @@ public final class Viewer
 	private CheckMenuItem _imiContinuousPlay;
 	private ViewControl _vcView;
 	private DownloadManager _downloadManager;
-	private About _about;
+	private About _about; //TODO This can probably be made immutable as it won't change at runtime
+	private VideoControl _vcVideo;
 
 	public this()
 	{
@@ -163,8 +147,6 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		Builder windowBuilder = new Builder();
-		RGBA rgbaBlack = new RGBA(0,0,0);
-		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
 
 		windowBuilder.addFromFile(_gladeFile);
 
@@ -176,31 +158,6 @@ public final class Viewer
 		_scrollParent = cast(ScrolledWindow)windowBuilder.getObject("scrollParent");
 
 		_scrollChild = cast(ScrolledWindow)windowBuilder.getObject("scrollChild");
-
-		_lblVideoTitle = cast(Label)windowBuilder.getObject("lblVideoTitle");
-		_lblVideoTitle.setLineWrap(true);
-
-		_lblVideoDescription = cast(Label)windowBuilder.getObject("lblVideoDescription");
-		_lblVideoDescription.setLineWrap(true);
-
-		_eventVideo = cast(EventBox)windowBuilder.getObject("eventVideo");
-		_eventVideo.overrideBackgroundColor(GtkStateFlags.NORMAL, rgbaBlack);
-
-		_fixedVideo = cast(Fixed)windowBuilder.getObject("fixedVideo");
-		_fixedVideo.addOnSizeAllocate(&fixedVideo_SizeAllocate);
-
-		_drawVideo = cast(DrawingArea)windowBuilder.getObject("drawVideo");
-
-		_btnPlay = cast(Button)windowBuilder.getObject("btnPlay");
-		_btnPlay.setImage(imgPlay);
-
-		_btnFullscreen = cast(Button)windowBuilder.getObject("btnFullscreen");
-
-		_sclPosition = cast(Scale)windowBuilder.getObject("sclPosition");
-
-		_lblCurrentTime = cast(Label)windowBuilder.getObject("lblCurrentTime");
-
-		_lblTotalTime = cast(Label)windowBuilder.getObject("lblTotalTime");
 
 		_bboxBreadCrumbs = cast(ButtonBox)windowBuilder.getObject("bboxBreadCrumbs");
 
@@ -231,6 +188,15 @@ public final class Viewer
 		_miExit.addOnButtonRelease(&miExit_ButtonRelease);
 
 		_wdwViewer.showAll();
+
+		//TODO redo the showing of controls once glade removed from this file
+		//Don't load the custom controls until after showAll has been called as they take care of their own hiding/showing
+		Grid grdBody = cast(Grid)windowBuilder.getObject("grdBody");
+		grdBody.insertColumn(1);
+
+		_vcVideo = new VideoControl();
+		grdBody.attach(_vcVideo, 1, 0, 1, 1);
+
 		RefreshUI();
 	}
 
@@ -254,26 +220,18 @@ public final class Viewer
 	private bool imiContinuousPlay_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		//_settings.ContinuousPlay = !cast(bool)_imiContinuousPlay.getActive();
-		//SettingsWorker.SaveSettings(_settings);
+		_settings.ContinuousPlay = !cast(bool)_imiContinuousPlay.getActive();
+		SettingsWorker.SaveSettings(_settings);
 
 		if(_imiContinuousPlay.getActive())
 		{
 			_settings.ContinuousPlay = false;
-
-			if (_videoWorker)
-			{
-				_videoWorker.StopContinuousPlayMode();
-			}
+			_vcVideo.StopContinuousPlayMode();
 		}
 		else
 		{
 			_settings.ContinuousPlay = true;
-
-			if (_videoWorker)
-			{
-				_videoWorker.StartContinuousPlayMode(&PlayNextVideo);
-			}
+			_vcVideo.StartContinuousPlayMode(&_vcView.PlayNextVideo);
 		}
 
 		SettingsWorker.SaveSettings(_settings);
@@ -477,28 +435,11 @@ public final class Viewer
 		_completeLibrary = LibraryWorker.LoadLibrary();
 	}
 
-	private void ClearVideo()
-	{
-		debug output(__FUNCTION__);
-
-		//Reset all video details
-		_lblVideoTitle.setText("");
-		_lblVideoDescription.setText("");
-		_lblTotalTime.setText("");
-		_lblCurrentTime.setText("");
-
-		//And the video itself
-		_videoWorker.ResetVideo();
-	}
-
 	private void LoadNavigation()
 	{
 		debug output(__FUNCTION__);
 		//Stop any playing video
-		if (_videoWorker)
-		{
-			ClearVideo();
-		}
+		_vcVideo.UnloadVideo();
 
 		if (_vcView)
 		{
@@ -509,12 +450,12 @@ public final class Viewer
 		{
 			case ViewMode.Flow:
 				_imiFlow.setActive(true);
-				_vcView = new FlowViewControl(_scrollParent, _scrollChild, _bboxBreadCrumbs, _completeLibrary, &LoadVideo);
+				_vcView = new FlowViewControl(_scrollParent, _scrollChild, _bboxBreadCrumbs, _completeLibrary, _vcVideo, _settings);
 				break;
 
 			case ViewMode.Tree:
 				_imiTree.setActive(true);
-				_vcView = new TreeViewControl(_scrollParent, _scrollChild, _completeLibrary, &LoadVideo);
+				_vcView = new TreeViewControl(_scrollParent, _scrollChild, _completeLibrary, _vcVideo, _settings);
 				break;
 		}
 
@@ -525,68 +466,6 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		_loadingWindow.destroy();
-	}
-	
-	private void LoadVideo(Library currentVideo, string path)
-	{
-		debug output(__FUNCTION__);
-		assert(currentVideo.MP4 != "", "No video data! There should be as this item is at the end of the tree");
-
-		//Get the authors (if there are any)
-		string authors;
-
-		if (currentVideo.AuthorNames.length > 0)
-		{
-			foreach (string author; currentVideo.AuthorNames)
-			{
-				authors ~= author;
-				authors ~= ", ";
-			}
-			//Cut off trailing ", "
-			authors.length = authors.length - 2;
-		}
-
-		_lblVideoTitle.setText(currentVideo.Title);
-
-		//Add authors and date added to description
-		_lblVideoDescription.setText(currentVideo.Description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.DateAdded.date.toString());
-
-		//Create a new video worker if needed
-		if (!_videoWorker)
-		{
-			_videoWorker = new VideoWorker(_fixedVideo, _drawVideo, _btnPlay, _btnFullscreen, _sclPosition, _lblCurrentTime, _lblTotalTime);
-		}
-
-		//Continuous play?
-		if (_settings && _settings.ContinuousPlay)
-		{
-			_videoWorker.StartContinuousPlayMode(&PlayNextVideo);
-		}
-		else
-		{
-			_videoWorker.StopContinuousPlayMode();
-		}
-
-		_videoWorker.LoadVideo(currentVideo.MP4);
-
-		//Save current treepath to settings
-		_settings.LastSelectedCategory = path;
-		SettingsWorker.SaveSettings(_settings);
-	}
-
-	private void PlayNextVideo()
-	{
-		debug output(__FUNCTION__);
-		string path;
-		Library nextVideo;
-
-		//If there is a next video start playing it
-		//Otherwise just do nothing to end the playlist
-		if (_vcView.GetNextVideo(nextVideo, path))
-		{
-			LoadVideo(nextVideo, path);
-			_videoWorker.Play();
-		}
 	}
 
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
@@ -615,10 +494,7 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		//Stop any playing videos as it's possible to delete a video that's playing
-		if (_videoWorker)
-		{
-			ClearVideo();
-		}
+		_vcVideo.UnloadVideo();
 
 		DownloadManager downloadManager = new DownloadManager();
 		return true;
@@ -630,15 +506,7 @@ public final class Viewer
 		exit(0);
 		return true;
 	}
-
-	private void fixedVideo_SizeAllocate(GdkRectangle* newSize, Widget sender)
-	{
-		debug output(__FUNCTION__);
-		//Need to keep drawVideo the same size as it's parent - the fixed widget
-		//this has to be done manually
-		_drawVideo.setSizeRequest(newSize.width, newSize.height);
-	}
-
+	
 	private void wdwViewer_Destroy(Widget sender)
 	{
 		debug output(__FUNCTION__);

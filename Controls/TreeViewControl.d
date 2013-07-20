@@ -41,25 +41,23 @@ import gtk.CellRendererText;
 import gdk.Event;
 
 import KhanAcademyViewer.Controls.ViewControl;
+import KhanAcademyViewer.Controls.VideoControl;
 import KhanAcademyViewer.DataStructures.Library;
-
-//TODO
-//Continuous play works but could use some tidying up
-//Clean up code and can probably merge some of it with the normal
-//video loading code
+import KhanAcademyViewer.DataStructures.Settings;
 
 public final class TreeViewControl : ViewControl
 {
 	private TreeView _tvTree;
 	private string _currentTreePath;
 
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, void delegate(Library, string) loadVideoMethod)
+	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, VideoControl videoControl, Settings settings)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
 		_scrollChild = scrollChild;
 		_completeLibrary = completeLibrary;
-		LoadVideo = loadVideoMethod;
+		_vcVideo = videoControl;
+		_settings = settings;
 
 		BuildView();
 	}
@@ -217,7 +215,7 @@ public final class TreeViewControl : ViewControl
 				}
 
 				//Pass in current treepath minus last item as this is used for the category not the video itself
-				LoadVideo(currentVideo, treePath[0 .. treePath.lastIndexOf(":")]);
+				LoadVideo(currentVideo, treePath[0 .. treePath.lastIndexOf(":")], false);
 
 				//Set current tree path to compare against when checking whether to load another video or not
 				_currentTreePath = treePath;

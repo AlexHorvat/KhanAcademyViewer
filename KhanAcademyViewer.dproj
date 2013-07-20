@@ -54,7 +54,6 @@
     <Compile Include="DataStructures\Library.d" />
     <Compile Include="DataStructures\BreadCrumb.d" />
     <Compile Include="Include\msgpack.d" />
-    <Compile Include="Workers\VideoWorker.d" />
     <Compile Include="Windows\Fullscreen.d" />
     <Compile Include="Windows\Loading.d" />
     <Compile Include="Workers\DownloadWorker.d" />
@@ -68,6 +67,8 @@
     <Compile Include="Controls\FlowViewControl.d" />
     <Compile Include="Controls\ViewControl.d" />
     <Compile Include="Windows\DownloadManager.d" />
+    <Compile Include="Controls\VideoControl.d" />
+    <Compile Include="Controls\VideoScreen.d" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Windows\" />
@@ -78,9 +79,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Windows\Viewer.glade">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Windows\Fullscreen.glade">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Windows\Loading.glade">

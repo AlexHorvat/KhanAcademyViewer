@@ -25,6 +25,9 @@ module KhanAcademyViewer.Controls.ViewControl;
 import gtk.ScrolledWindow;
 
 import KhanAcademyViewer.DataStructures.Library;
+import KhanAcademyViewer.Controls.VideoControl;
+import KhanAcademyViewer.Workers.SettingsWorker;
+import KhanAcademyViewer.DataStructures.Settings;
 
 protected abstract class ViewControl
 {
@@ -33,5 +36,42 @@ protected abstract class ViewControl
 	protected ScrolledWindow _scrollParent;
 	protected ScrolledWindow _scrollChild;
 	protected Library _completeLibrary;
-	protected void delegate(Library, string) LoadVideo;
+	protected VideoControl _vcVideo;
+	protected Settings _settings;
+
+	protected void LoadVideo(Library currentVideo, string path, bool startPlaying)
+	{
+		debug output(__FUNCTION__);
+		assert(currentVideo.MP4 != "", "No video data! There should be as this item is at the end of the tree");
+		
+		_vcVideo.LoadVideo(currentVideo, startPlaying);
+
+		//Continuous play?
+		if (_settings && _settings.ContinuousPlay)
+		{
+			_vcVideo.StartContinuousPlayMode(&PlayNextVideo);
+		}
+		else
+		{
+			_vcVideo.StopContinuousPlayMode();
+		}
+
+		//Save current treepath to settings
+		_settings.LastSelectedCategory = path;
+		SettingsWorker.SaveSettings(_settings);
+	}
+
+	protected void PlayNextVideo()
+	{
+		debug output(__FUNCTION__);
+		string path;
+		Library nextVideo;
+		
+		//If there is a next video start playing it
+		//Otherwise just do nothing to end the playlist
+		if (GetNextVideo(nextVideo, path))
+		{
+			LoadVideo(nextVideo, path, true);
+		}
+	}
 }

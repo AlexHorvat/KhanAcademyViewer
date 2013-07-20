@@ -42,13 +42,10 @@ import gtk.Button;
 import gdk.Event;
 
 import KhanAcademyViewer.Controls.ViewControl;
+import KhanAcademyViewer.Controls.VideoControl;
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.BreadCrumb;
-
-//TODO
-//Continuous play works but could use some tidying up
-//Clean up code and can probably merge some of it with the normal
-//video loading code
+import KhanAcademyViewer.DataStructures.Settings;
 
 public final class FlowViewControl : ViewControl
 {
@@ -59,8 +56,8 @@ public final class FlowViewControl : ViewControl
 	private TreeView _tvChild;
 	private int _breadCrumbAvailableWidth;
 	private BreadCrumb[] _breadCrumbs;
-
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, void delegate(Library, string) loadVideoMethod)
+	
+	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, VideoControl videoControl, Settings settings)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -68,7 +65,8 @@ public final class FlowViewControl : ViewControl
 		_bboxBreadCrumbs = bboxBreadCrumbs;
 		_completeLibrary = completeLibrary;
 		_parentLibrary = completeLibrary;
-		LoadVideo = loadVideoMethod;
+		_vcVideo = videoControl;
+		_settings = settings;
 
 		BuildView();
 	}
@@ -333,7 +331,7 @@ public final class FlowViewControl : ViewControl
 					path ~= ":";
 				}
 
-				LoadVideo(_childLibrary.Children[rowIndex], path[0 .. $ - 1]);
+				LoadVideo(_childLibrary.Children[rowIndex], path[0 .. $ - 1], false);
 			}
 		}
 		

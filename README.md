@@ -55,9 +55,9 @@ Khan Academy Viewer
 <br/>
 In fedora you need to setup <a href="http://rpmfusion.org/Configuration" target="_blank">RPM Fusion</a>. Install RPM Fusion Free, then go into your package manager and install GStreamer 1.0 libav-based plug-ins.
 
-<i>The video never starts, I just get the spinner forever!</i>
+<i>Going to fullscreen and back makes weird things happen!</i>
 <br/>
-This could be because your computer doesn't support xvimagesink, the only time I've seen this happen is in a virtual machine without 3d acceleration, edit the file VideoWorker.d, replace the string "xvimagesink" with "ximagesink" but this will do strange things to fullscreen mode.
+Currently this program uses ximagesink for displaying the video - this is what works best on my computer, however, xvimagesink may work better for you, to enable it go into VideoControl.d and replace the "ximagesink" string with "xvimagesink".
 
 <i>Something else is wrong!</i>
 <br/>

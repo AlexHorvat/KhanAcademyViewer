@@ -23,71 +23,38 @@ module KhanAcademyViewer.Windows.Fullscreen;
 
 debug alias std.stdio.writeln output;
 
-import gtk.Builder;
 import gtk.Window;
-import gtk.DrawingArea;
 import gtk.Widget;
 
 import gdk.Event;
 import gdk.Keysyms;
 
+import KhanAcademyViewer.Controls.VideoScreen;
+
 public final class Fullscreen
 {
-	private immutable string _gladeFile = "./Windows/Fullscreen.glade";
-
 	private Window _wdwFullscreen;
-	private DrawingArea _drawVideo;
-	private DrawingArea _originalDrawingArea;
-	
-	private void delegate(DrawingArea) ChangeOverlay;
-	private void delegate() PlayPause;
-	private void delegate() ExitFullscreen;
-	
-	public this(DrawingArea originalDrawingArea, void delegate(DrawingArea) changeOverlay, void delegate() playPause, void delegate() exitFullscreen)
-	{
-		debug output(__FUNCTION__);
-		_originalDrawingArea = originalDrawingArea;
-		ChangeOverlay = changeOverlay;
-		ExitFullscreen = exitFullscreen;
-		PlayPause = playPause;
 
-		SetupWindow();
+	public this(VideoScreen screen, void delegate() exitFullscreen)
+	{
+		ExitFullscreen = exitFullscreen;
+
+		_wdwFullscreen = new Window(GtkWindowType.TOPLEVEL);
+		_wdwFullscreen.addOnKeyPress(&wdwFullscreen_KeyPress);
+		_wdwFullscreen.fullscreen();
+		_wdwFullscreen.show();
+
+		screen.reparent(_wdwFullscreen);
 	}
-	
+
 	public ~this()
 	{
-		debug output(__FUNCTION__);
-		ChangeOverlay(_originalDrawingArea);
+		ExitFullscreen();
 		_wdwFullscreen.destroy();
 	}
 
-	private void SetupWindow()
-	{
-		debug output(__FUNCTION__);
-		Builder windowBuilder = new Builder();
-		
-		windowBuilder.addFromFile(_gladeFile);
-
-		_drawVideo = cast(DrawingArea)windowBuilder.getObject("drawVideo");
-
-		_wdwFullscreen = cast(Window)windowBuilder.getObject("wdwFullscreen");
-		_wdwFullscreen.addOnKeyPress(&wdwFullscreen_KeyPress);
-		_wdwFullscreen.addOnButtonRelease(&wdwFullscreen_ButtonRelease);
-		_wdwFullscreen.fullscreen();
-		_wdwFullscreen.showAll();
-
-		//Move the video onto the fullscreen drawing area
-		ChangeOverlay(_drawVideo);
-	}
-
-	private bool wdwFullscreen_ButtonRelease(Event e, Widget sender)
-	{
-		debug output(__FUNCTION__);
-		PlayPause();
-
-		return false;
-	}
-
+	private void delegate() ExitFullscreen;
+	
 	private bool wdwFullscreen_KeyPress(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
@@ -98,7 +65,6 @@ public final class Fullscreen
 		if (key == GdkKeysyms.GDK_Escape)
 		{
 			//The destructor switches the video back to the original drawing area
-			ExitFullscreen();
 			this.destroy();
 		}
 
