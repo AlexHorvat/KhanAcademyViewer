@@ -37,6 +37,7 @@ import gtk.EventBox;
 
 import gdk.Event;
 import gdk.X11;
+import gdk.Cursor;
 
 import KhanAcademyViewer.Controls.VideoControl;
 import KhanAcademyViewer.Include.Functions;
@@ -52,14 +53,14 @@ public final class VideoScreen : Overlay
 	private DrawingArea _daVideoArea;
 
 	private Thread _pauseHider;
-	private Thread _titleHider;
-
-	TickDuration _hidePauseTime = TickDuration.zero();
+	private Cursor _blankCursor;
 
 	public this(void delegate() playPauseMethod)
 	{
 		debug output(__FUNCTION__);
 		PlayPause = playPauseMethod;
+
+		_blankCursor = new Cursor(GdkCursorType.BLANK_CURSOR);
 
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.DIALOG);
 		imgPlay.show();
@@ -170,13 +171,8 @@ public final class VideoScreen : Overlay
 		_ebTitle.show();
 
 		//Spawn a new thread to hide the title
-		if (_titleHider)
-		{
-			_titleHider = null;
-		}
-
-		_titleHider = new Thread(&DelayedHideTitle);
-		_titleHider.start();
+		Thread TitleHider = new Thread(&DelayedHideTitle);
+		TitleHider.start();
 	}
 	
 	public void HideTitle()
@@ -202,7 +198,11 @@ public final class VideoScreen : Overlay
 		Thread.sleep(dur!"seconds"(3));
 		_ebTitle.hide();
 
-		_titleHider = null;
+		//Hide the cursor too
+		if (VideoControl.IsFullscreen)
+		{
+			_daVideoArea.setCursor(_blankCursor);
+		}
 	}
 
 	private void delegate() PlayPause;
@@ -230,20 +230,29 @@ public final class VideoScreen : Overlay
 		Thread.sleep(dur!"seconds"(3));
 		_ebPause.hide();
 
+		//Hide the cursor too
+		if (VideoControl.IsFullscreen)
+		{
+			_daVideoArea.setCursor(_blankCursor);
+		}
+
 		_pauseHider = null;
 	}
 
 	private bool daVideoArea_MotionNotify(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		//Spawn a thread, if already exists do nothing
+		//Spawn a thread, if already exists do nothing to stop from creating huge amount of timer threads and crashing
 		if (VideoControl.IsPlaying && !_pauseHider)
 		{
-			debug output("showing pause");
 			_ebPause.show();
 
 			_pauseHider = new Thread(&DelayedHidePause);
 			_pauseHider.start();
+		}
+		else
+		{
+			_daVideoArea.resetCursor();
 		}
 
 		return false;

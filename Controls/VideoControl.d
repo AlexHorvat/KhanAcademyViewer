@@ -58,10 +58,10 @@ import KhanAcademyViewer.Windows.Fullscreen;
 public final class VideoControl : Grid
 {
 	public static bool IsPlaying = false;
+	public shared static bool IsFullscreen = false; //Is shared with HidePause and HideTitle threads in VideoScreen
 
 	private double _maxRange;
 	private bool _isContinuousPlay = false;
-	private bool _isFullscreen = false;
 
 	private Label _lblTitle;
 	private EventBox _ebVideo;
@@ -296,7 +296,7 @@ public final class VideoControl : Grid
 	{
 		debug output(__FUNCTION__);
 		Fullscreen fullScreen = new Fullscreen(_vsScreen, &ExitFullscreen);
-		_isFullscreen = true;
+		IsFullscreen = true;
 	}
 
 	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range range)
@@ -339,7 +339,7 @@ public final class VideoControl : Grid
 		_lblDescription.setText(currentVideo.Description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.DateAdded.date.toString());
 
 		//If in fullscreen mode show the video title
-		if (_isFullscreen)
+		if (IsFullscreen)
 		{
 			_vsScreen.ShowTitle(currentVideo.Title);
 		}
@@ -350,7 +350,7 @@ public final class VideoControl : Grid
 		debug output(__FUNCTION__);
 		_vsScreen.HideTitle();
 		_vsScreen.reparent(_ebVideo);
-		_isFullscreen = false;
+		IsFullscreen = false;
 	}
 
 	private void PlayPause()

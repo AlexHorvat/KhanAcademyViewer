@@ -42,8 +42,6 @@ protected abstract class ViewControl
 	protected void LoadVideo(Library currentVideo, string path, bool startPlaying)
 	{
 		debug output(__FUNCTION__);
-		assert(currentVideo.MP4 != "", "No video data! There should be as this item is at the end of the tree");
-		
 		_vcVideo.LoadVideo(currentVideo, startPlaying);
 
 		//Continuous play?
