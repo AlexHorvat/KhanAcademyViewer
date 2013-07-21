@@ -78,9 +78,6 @@
     <Folder Include="Controls\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Windows\Loading.glade">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="Windows\About.glade">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

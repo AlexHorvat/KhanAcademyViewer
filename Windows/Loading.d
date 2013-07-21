@@ -27,14 +27,12 @@ debug alias std.stdio.writeln output;
 
 import std.string:format;
 
-import gtk.Builder;
 import gtk.Window;
+import gtk.Fixed;
 import gtk.Label;
 
 public final class Loading
 {
-	private immutable string _gladeFile = "./Windows/Loading.glade";
-	
 	private Window _wdwLoading;
 	private Label _lblStatus;
 	private Label _lblDataDownloaded;
@@ -42,7 +40,33 @@ public final class Loading
 	public this()
 	{
 		debug output(__FUNCTION__);
-		SetupWindow();
+		_wdwLoading = new Window("Loading...");
+		_wdwLoading.setModal(true);
+		_wdwLoading.setSizeRequest(280, 130);
+		_wdwLoading.setPosition(GtkWindowPosition.POS_CENTER_ON_PARENT);
+		_wdwLoading.setDestroyWithParent(true);
+		_wdwLoading.setTypeHint(GdkWindowTypeHint.DIALOG);
+		_wdwLoading.setSkipPagerHint(true);
+		_wdwLoading.setSkipTaskbarHint(true);
+
+		Fixed fixLoading = new Fixed();
+		_wdwLoading.add(fixLoading);
+		
+		_lblStatus = new Label("Checking for library updates", false);
+		_lblStatus.setSizeRequest(-1, 30);
+		_lblStatus.setHalign(GtkAlign.START);
+		_lblStatus.setHexpand(true);
+		fixLoading.put(_lblStatus, 25, 30);
+		
+		_lblDataDownloaded = new Label("0 KB", false);
+		_lblDataDownloaded.setSizeRequest(-1, 30);
+		_lblDataDownloaded.setHalign(GtkAlign.START);
+		_lblDataDownloaded.setHexpand(true);
+		fixLoading.put(_lblDataDownloaded, 25, 75);
+		
+		_wdwLoading.showAll();
+
+		_lblDataDownloaded.hide();
 	}
 
 	public ~this()
@@ -57,29 +81,14 @@ public final class Loading
 		_lblStatus.setText(newStatus);
 	}
 	
-	public @property {
-		void DataDownloadedVisible(bool visible) { _lblDataDownloaded.setVisible(visible); }
+	public void SetDataDownloadedVisible(bool isVisible)
+	{
+		_lblDataDownloaded.setVisible(isVisible);
 	}
 
 	public void UpdateAmountDownloaded(long amountDownloaded)
 	{
 		debug output(__FUNCTION__);
 		_lblDataDownloaded.setText(format("%s KB", amountDownloaded / 1024));
-	}
-	
-	private void SetupWindow()
-	{
-		debug output(__FUNCTION__);
-		Builder windowBuilder = new Builder();
-				
-		windowBuilder.addFromFile(_gladeFile);
-
-		_wdwLoading = cast(Window)windowBuilder.getObject("wdwLoading");
-
-		_lblStatus = cast(Label)windowBuilder.getObject("lblStatus");
-
-		_lblDataDownloaded = cast(Label)windowBuilder.getObject("lblDataDownloaded");
-
-		_wdwLoading.showAll();
 	}
 }

@@ -64,11 +64,11 @@ import KhanAcademyViewer.Controls.VideoControl;
 //Remove glade everywhere
 //There's a crash when in continuous play mode - once one video finshes and the next is playing if you change
 //view mode the program crashes
+//Going online/offline using the option menu item is buggy, revise code to make it right all the time
+//Checking for internet connection seems to lock the UI, check this, maybe make it async
 
 public final class Viewer
 {
-	//private immutable string _gladeFile = "./Windows/Viewer.glade";
-
 	private Library _completeLibrary;
 	private Settings _settings;
 
@@ -235,7 +235,7 @@ public final class Viewer
 		bool hasInternetConnection;
 
 		_loadingWindow.UpdateStatus("Checking for internet connection");
-		_loadingWindow.DataDownloadedVisible = false;
+		_loadingWindow.SetDataDownloadedVisible(false);
 		spawn(&DownloadWorker.HasInternetConnection);
 		
 		while (!onwards)
@@ -428,7 +428,7 @@ public final class Viewer
 			bool downloadSuccess;
 			onwards = false;
 			_loadingWindow.UpdateStatus("Downloading library");
-			_loadingWindow.DataDownloadedVisible = true;
+			_loadingWindow.SetDataDownloadedVisible(true);
 			spawn(&DownloadWorker.DownloadLibrary);
 
 			while (!onwards)
@@ -467,7 +467,7 @@ public final class Viewer
 		//And if passed as a shared variable it is always null in this thread
 		//even after being set on the loading thread
 		_loadingWindow.UpdateStatus("Processing library");
-		_loadingWindow.DataDownloadedVisible = false;
+		_loadingWindow.SetDataDownloadedVisible(false);
 
 		//The library takes a few seconds to write to disc after being downloaded
 		//loop and wait until it shows up, otherwise cannot load library and program
