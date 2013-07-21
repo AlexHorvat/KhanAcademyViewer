@@ -108,6 +108,9 @@ public final class VideoControl : Grid
 		_ebVideo.setVexpand(true);
 		_ebVideo.setHexpand(true);
 		super.attach(_ebVideo, 0, 1, 4, 1);
+
+		_vsScreen = new VideoScreen(&PlayPause);
+		_ebVideo.add(_vsScreen);
 		
 		_btnPlay = new Button();
 		_btnPlay.setHalign(GtkAlign.START);
@@ -149,12 +152,11 @@ public final class VideoControl : Grid
 		ScrolledWindow swDescription = new ScrolledWindow(vpDescription);
 		swDescription.setSizeRequest(-1, 150);
 		super.attach(swDescription, 0, 4, 4, 1);
-		
-		super.showAll();
-		
-		//Adding the screen needs to be after super.showAll() as screen handles it's own showing and hiding of objects
-		_vsScreen = new VideoScreen(&PlayPause);
-		_ebVideo.add(_vsScreen);
+	}
+
+	public void AddOverlays()
+	{
+		_vsScreen.AddOverlays();
 	}
 
 	public void LoadVideo(Library currentVideo, bool startPlaying)

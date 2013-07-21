@@ -62,42 +62,52 @@ public final class VideoScreen : Overlay
 
 		_blankCursor = new Cursor(GdkCursorType.BLANK_CURSOR);
 
+		_daVideoArea = new DrawingArea();
+		//For some reason BUTTON_PRESS_MASK is needed to get the button release event going (not BUTTON_RELEASE MASK)
+		_daVideoArea.addEvents(GdkEventMask.BUTTON_PRESS_MASK);
+
+		super.add(_daVideoArea);
+	}
+
+	//Only add the overlays after all the other widgets have 'shown' otherwise they end up displayed
+	public void AddOverlays()
+	{
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.DIALOG);
 		imgPlay.show();
-
+		
 		_ebPlay = new EventBox();
 		_ebPlay.setSizeRequest(50, 50);
 		_ebPlay.setHalign(GtkAlign.CENTER);
 		_ebPlay.setValign(GtkAlign.CENTER);
 		_ebPlay.hide();
 		_ebPlay.add(imgPlay);
-
+		
 		Image imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.DIALOG);
 		imgPause.show();
-
+		
 		_ebPause = new EventBox();
 		_ebPause.setSizeRequest(50, 50);
 		_ebPause.setHalign(GtkAlign.CENTER);
 		_ebPause.setValign(GtkAlign.CENTER);
 		_ebPause.hide();
 		_ebPause.add(imgPause);
-
+		
 		_lblTitle = new Label("", false);
 		_lblTitle.modifyFont("", 24);
 		_lblTitle.setMarginBottom(50);
 		_lblTitle.show();
-
+		
 		_ebTitle = new EventBox();
 		_ebTitle.setSizeRequest(300, 50);
 		_ebTitle.setHalign(GtkAlign.CENTER);
 		_ebTitle.setValign(GtkAlign.END);
 		_ebTitle.hide();
 		_ebTitle.add(_lblTitle);
-
+		
 		_spinLoading = new Spinner();
 		_spinLoading.show();
 		_spinLoading.setSizeRequest(200, 200);
-
+		
 		_ebLoading = new EventBox();
 		_ebLoading.setSizeRequest(200, 200);
 		_ebLoading.setHalign(GtkAlign.CENTER);
@@ -105,17 +115,10 @@ public final class VideoScreen : Overlay
 		_ebLoading.hide();
 		_ebLoading.add(_spinLoading);
 
-		_daVideoArea = new DrawingArea();
-		//For some reason BUTTON_PRESS_MASK is needed to get the button release event going (not BUTTON_RELEASE MASK)
-		_daVideoArea.addEvents(GdkEventMask.BUTTON_PRESS_MASK);
-		_daVideoArea.show();
-
-		super.add(_daVideoArea);
 		super.addOverlay(_ebLoading);
 		super.addOverlay(_ebPlay);
 		super.addOverlay(_ebPause);
 		super.addOverlay(_ebTitle);
-		super.show();
 	}
 
 	//Simply setting setSensitive to false greys out everything, I want it to stay black, but the user to not be able to interact

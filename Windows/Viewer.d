@@ -28,7 +28,6 @@ import std.concurrency;
 
 import core.thread;
 
-import gtk.Builder;
 import gtk.Widget;
 import gtk.Window;
 import gtk.MenuItem;
@@ -36,9 +35,14 @@ import gtk.ScrolledWindow;
 import gtk.ButtonBox;
 import gtk.RadioMenuItem;
 import gtk.CheckMenuItem;
+import gtk.SeparatorMenuItem;
 import gtk.Grid;
+import gtk.Menu;
+import gtk.MenuBar;
 
 import gdk.Event;
+
+import glib.ListSG;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.DataStructures.Settings;
@@ -58,29 +62,28 @@ import KhanAcademyViewer.Controls.VideoControl;
 //TODO
 //Only save settings on program exit, otherwise work with the variable
 //Remove glade everywhere
-//Hide mouse pointer at the same time as pause button in fullscreen mode
+//There's a crash when in continuous play mode - once one video finshes and the next is playing if you change
+//view mode the program crashes
 
 public final class Viewer
 {
-	private immutable string _gladeFile = "./Windows/Viewer.glade";
+	//private immutable string _gladeFile = "./Windows/Viewer.glade";
 
 	private Library _completeLibrary;
 	private Settings _settings;
 
 	//UI controls
 	private Window _wdwViewer;
-	private ScrolledWindow _scrollParent;
-	private ScrolledWindow _scrollChild;
-	private MenuItem _miAbout;//TODO This can probably be made immutable as it won't change at runtime
+	private ScrolledWindow _swParent;
+	private ScrolledWindow _swChild;
 	private MenuItem _miDownloadManager;
-	private MenuItem _miExit;//TODO This can probably be made immutable as it won't change at runtime
 	private ButtonBox _bboxBreadCrumbs;
 	private Loading _loadingWindow;
-	private RadioMenuItem _imiFlow;
-	private RadioMenuItem _imiTree;
-	private CheckMenuItem _imiOffline;
-	private CheckMenuItem _imiKeepPosition;
-	private CheckMenuItem _imiContinuousPlay;
+	private RadioMenuItem _rmiFlow;
+	private RadioMenuItem _rmiTree;
+	private CheckMenuItem _cmiOffline;
+	private CheckMenuItem _cmiKeepPosition;
+	private CheckMenuItem _cmiContinuousPlay;
 	private ViewControl _vcView;
 	private DownloadManager _downloadManager;
 	private About _about; //TODO This can probably be made immutable as it won't change at runtime
@@ -93,8 +96,116 @@ public final class Viewer
 		LoadSettings();
 		DownloadLibrary();
 		LoadLibraryFromStorage();
-		SetOnlineOrOffline();
+		_settings.IsOffline ? SetOffline : SetOnline(false); //No need to double check for internet connection
 		KillLoadingWindow();
+	}
+
+	private void SetupWindow()
+	{
+		debug output(__FUNCTION__);
+		//Create the window
+		_wdwViewer = new Window("Khan Academy Viewer");
+		_wdwViewer.setPosition(GtkWindowPosition.POS_CENTER);
+		_wdwViewer.addOnDestroy(&wdwViewer_Destroy);
+
+		//Main body grid
+		Grid grdMain = new Grid();
+		grdMain.insertColumn(0);
+		grdMain.insertRow(0);
+		grdMain.insertRow(0);
+		_wdwViewer.add(grdMain);
+
+		//Menu
+		MenuBar mbMain = new MenuBar();
+		grdMain.attach(mbMain, 0, 0, 1, 1);
+
+		MenuItem miOptions = new MenuItem("_Options", true);
+		mbMain.add(miOptions);
+
+		Menu mSubOptions = new Menu();
+		miOptions.setSubmenu(mSubOptions);
+
+		ListSG lsgViewMode;
+		_rmiFlow = new RadioMenuItem(lsgViewMode, "Flow View", false);
+		_rmiFlow.addOnButtonRelease(&rmiFlow_ButtonRelease);
+		mSubOptions.add(_rmiFlow);
+				
+		_rmiTree = new RadioMenuItem(_rmiFlow, "Tree View", false);
+		_rmiTree.addOnButtonRelease(&rmiTree_ButtonRelease);
+		mSubOptions.add(_rmiTree);
+
+		SeparatorMenuItem smi1 = new SeparatorMenuItem();
+		mSubOptions.add(smi1);
+
+		_cmiOffline = new CheckMenuItem("Offline Mode", false);
+		_cmiOffline.setTooltipText("Go to offline mode, you can only play videos you have downloaded.");
+		_cmiOffline.addOnButtonRelease(&cmiOffline_ButtonRelease);
+		mSubOptions.add(_cmiOffline);
+
+		SeparatorMenuItem smi2 = new SeparatorMenuItem();
+		mSubOptions.add(smi2);
+
+		_cmiKeepPosition = new CheckMenuItem("Keep Position", false);
+		_cmiKeepPosition.setTooltipText("Start showing the last category you watched a video in.");
+		_cmiKeepPosition.addOnButtonRelease(&cmiKeepPosition_ButtonRelease);
+		mSubOptions.add(_cmiKeepPosition);
+
+		_cmiContinuousPlay = new CheckMenuItem("Continuous Play", false);
+		_cmiContinuousPlay.setTooltipText("Play all videos in a category automatically.");
+		_cmiContinuousPlay.addOnButtonRelease(&cmiContinuousPlay_ButtonRelease);
+		mSubOptions.add(_cmiContinuousPlay);
+				
+		_miDownloadManager = new MenuItem("_Download Manager", true);
+		_miDownloadManager.addOnButtonRelease(&miDownloadManager_ButtonRelease);
+		mbMain.add(_miDownloadManager);
+				
+		MenuItem miAbout = new MenuItem("_About", true);
+		miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
+		mbMain.add(miAbout);
+
+		MenuItem miExit = new MenuItem("_Exit", true);
+		miExit.addOnButtonRelease(&miExit_ButtonRelease);
+		mbMain.add(miExit);
+
+		//Video selection grid
+		Grid grdBody = new Grid();
+		grdBody.insertColumn(0);
+		grdBody.insertColumn(0);
+		grdBody.insertRow(0);
+		grdMain.attach(grdBody, 0, 1, 1, 1);
+
+		Grid grdSelection = new Grid();
+		grdSelection.insertColumn(0);
+		grdSelection.insertColumn(0);
+		grdSelection.insertRow(0);
+		grdSelection.insertRow(0);
+		grdBody.attach(grdSelection, 0, 0, 1, 1);
+
+		_bboxBreadCrumbs = new ButtonBox(GtkOrientation.HORIZONTAL);
+		_bboxBreadCrumbs.setLayout(GtkButtonBoxStyle.START);
+		_bboxBreadCrumbs.setSizeRequest(-1, 33);
+		grdSelection.attach(_bboxBreadCrumbs, 0, 0, 2, 1);
+		
+		_swParent = new ScrolledWindow();
+		_swParent.setSizeRequest(300, 650);
+		_swParent.setVexpand(true);
+		grdSelection.attach(_swParent, 0, 1, 1, 1);
+		
+		_swChild = new ScrolledWindow();
+		_swChild.setSizeRequest(300, 650);
+		_swChild.setVexpand(true);
+		grdSelection.attach(_swChild, 1, 1, 1, 1);
+
+		//Video player widgets
+		_vcVideo = new VideoControl();
+		grdBody.attach(_vcVideo, 1, 0, 1, 1);
+
+		_wdwViewer.showAll();
+
+		//Widgets shown, now add the video overlays
+		_vcVideo.AddOverlays();
+		
+		//RefreshUI();
 	}
 
 	private void PreloadCategory()
@@ -112,9 +223,9 @@ public final class Viewer
 		_settings = SettingsWorker.LoadSettings();
 
 		//Set menu items
-		_imiOffline.setActive(_settings.IsOffline);
-		_imiKeepPosition.setActive(_settings.KeepPosition);
-		_imiContinuousPlay.setActive(_settings.ContinuousPlay);
+		_cmiOffline.setActive(_settings.IsOffline);
+		_cmiKeepPosition.setActive(_settings.KeepPosition);
+		_cmiContinuousPlay.setActive(_settings.ContinuousPlay);
 	}
 
 	private bool HasInternetConnection()
@@ -143,87 +254,22 @@ public final class Viewer
 		return hasInternetConnection;
 	}
 
-	private void SetupWindow()
+	private bool cmiKeepPosition_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		Builder windowBuilder = new Builder();
-
-		windowBuilder.addFromFile(_gladeFile);
-
-		//Load all controls from glade file, link to class level variables
-		_wdwViewer = cast(Window)windowBuilder.getObject("wdwViewer");
-		_wdwViewer.setTitle("Khan Academy Viewer");
-		_wdwViewer.addOnDestroy(&wdwViewer_Destroy);
-
-		_scrollParent = cast(ScrolledWindow)windowBuilder.getObject("scrollParent");
-
-		_scrollChild = cast(ScrolledWindow)windowBuilder.getObject("scrollChild");
-
-		_bboxBreadCrumbs = cast(ButtonBox)windowBuilder.getObject("bboxBreadCrumbs");
-
-		_imiFlow = cast(RadioMenuItem)windowBuilder.getObject("imiFlow");
-		_imiFlow.addOnButtonRelease(&imiFlow_ButtonRelease);
-
-		_imiTree = cast(RadioMenuItem)windowBuilder.getObject("imiTree");
-		_imiTree.addOnButtonRelease(&imiTree_ButtonRelease);
-		//Link imiFlow and imiTree together so that they work like radio buttons
-		_imiTree.setGroup(_imiFlow.getGroup());
-
-		_imiOffline = cast(CheckMenuItem)windowBuilder.getObject("imiOffline");
-		_imiOffline.addOnButtonRelease(&imiOffline_ButtonRelease);
-
-		_imiKeepPosition = cast(CheckMenuItem)windowBuilder.getObject("imiKeepPosition");
-		_imiKeepPosition.addOnButtonRelease(&imiKeepPosition_ButtonRelease);
-
-		_imiContinuousPlay = cast(CheckMenuItem)windowBuilder.getObject("imiContinuousPlay");
-		_imiContinuousPlay.addOnButtonRelease(&imiContinuousPlay_ButtonRelease);
-
-		_miDownloadManager = cast(MenuItem)windowBuilder.getObject("miDownloadManager");
-		_miDownloadManager.addOnButtonRelease(&miDownloadManager_ButtonRelease);
-
-		_miAbout = cast(MenuItem)windowBuilder.getObject("miAbout");
-		_miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
-
-		_miExit = cast(MenuItem)windowBuilder.getObject("miExit");
-		_miExit.addOnButtonRelease(&miExit_ButtonRelease);
-
-		_wdwViewer.showAll();
-
-		//TODO redo the showing of controls once glade removed from this file
-		//Don't load the custom controls until after showAll has been called as they take care of their own hiding/showing
-		Grid grdBody = cast(Grid)windowBuilder.getObject("grdBody");
-		grdBody.insertColumn(1);
-
-		_vcVideo = new VideoControl();
-		grdBody.attach(_vcVideo, 1, 0, 1, 1);
-
-		RefreshUI();
-	}
-
-	private void SetOnlineOrOffline()
-	{
-		debug output(__FUNCTION__);
-		//This is only called from the constructor - which also checks for internet connection when loading
-		//so no need to double check
-		_settings.IsOffline ? SetOffline : SetOnline(false);
-	}
-
-	private bool imiKeepPosition_ButtonRelease(Event e, Widget sender)
-	{
-		debug output(__FUNCTION__);
-		_settings.KeepPosition = !cast(bool)_imiKeepPosition.getActive();
+		_settings.KeepPosition = !cast(bool)_cmiKeepPosition.getActive();
 		SettingsWorker.SaveSettings(_settings);
 
 		return false;
 	}
 
-	private bool imiContinuousPlay_ButtonRelease(Event e, Widget sender)
+	private bool cmiContinuousPlay_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-		_settings.ContinuousPlay = !cast(bool)_imiContinuousPlay.getActive();
+		_settings.ContinuousPlay = !cast(bool)_cmiContinuousPlay.getActive();
 		SettingsWorker.SaveSettings(_settings);
 
-		if(_imiContinuousPlay.getActive())
+		if(_cmiContinuousPlay.getActive())
 		{
 			_settings.ContinuousPlay = false;
 			_vcVideo.StopContinuousPlayMode();
@@ -239,7 +285,7 @@ public final class Viewer
 		return false;
 	}
 
-	private bool imiOffline_ButtonRelease(Event e, Widget sender)
+	private bool cmiOffline_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
 		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
@@ -247,7 +293,7 @@ public final class Viewer
 		_settings.LastSelectedCategory = "";
 		SettingsWorker.SaveSettings(_settings);
 
-		_imiOffline.getActive() ? SetOnline(true) : SetOffline();
+		_cmiOffline.getActive() ? SetOnline(true) : SetOffline();
 
 		return false;
 	}
@@ -265,7 +311,7 @@ public final class Viewer
 
 			if (!HasInternetConnection())
 			{
-				_imiOffline.setActive(true);
+				_cmiOffline.setActive(true);
 				return;
 			}
 		}
@@ -273,7 +319,7 @@ public final class Viewer
 		_settings.IsOffline = false;
 		SettingsWorker.SaveSettings(_settings);
 
-		_imiOffline.setActive(false);
+		//_cmiOffline.setActive(false);
 
 		_miDownloadManager.setSensitive(true);
 
@@ -287,7 +333,7 @@ public final class Viewer
 		debug output(__FUNCTION__);
 		bool onwards = false;
 
-		_imiOffline.setActive(true);
+		//_cmiOffline.setActive(true);
 
 		_settings.IsOffline = true;
 		SettingsWorker.SaveSettings(_settings);
@@ -314,7 +360,7 @@ public final class Viewer
 		LoadNavigation();
 	}
 
-	private bool imiFlow_ButtonRelease(Event e, Widget sender)
+	private bool rmiFlow_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Flow;
@@ -324,7 +370,7 @@ public final class Viewer
 		return false;
 	}
 
-	private bool imiTree_ButtonRelease(Event e, Widget sender)
+	private bool rmiTree_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Tree;
@@ -449,13 +495,13 @@ public final class Viewer
 		final switch (_settings.ViewModeSetting)
 		{
 			case ViewMode.Flow:
-				_imiFlow.setActive(true);
-				_vcView = new FlowViewControl(_scrollParent, _scrollChild, _bboxBreadCrumbs, _completeLibrary, _vcVideo, _settings);
+				_rmiFlow.setActive(true);
+				_vcView = new FlowViewControl(_swParent, _swChild, _bboxBreadCrumbs, _completeLibrary, _vcVideo, _settings);
 				break;
 
 			case ViewMode.Tree:
-				_imiTree.setActive(true);
-				_vcView = new TreeViewControl(_scrollParent, _scrollChild, _completeLibrary, _vcVideo, _settings);
+				_rmiTree.setActive(true);
+				_vcView = new TreeViewControl(_swParent, _swChild, _completeLibrary, _vcVideo, _settings);
 				break;
 		}
 
