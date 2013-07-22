@@ -126,10 +126,9 @@ public final class VideoControl : Grid
 		_sclPosition.addOnChangeValue(&sclPosition_ChangeValue);
 		super.attach(_sclPosition, 1, 2, 2, 1);
 		
-		_btnFullscreen = new Button("Fullscreen", false);
+		_btnFullscreen = new Button("Fullscreen", &btnFullscreen_Clicked, false);
 		_btnFullscreen.setHalign(GtkAlign.END);
 		_btnFullscreen.setSensitive(false);
-		_btnFullscreen.addOnClicked(&btnFullscreen_Clicked);
 		super.attach(_btnFullscreen, 3, 2, 1, 2);
 		
 		_lblCurrentTime = new Label("", false);

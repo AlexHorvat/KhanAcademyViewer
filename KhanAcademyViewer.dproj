@@ -78,9 +78,6 @@
     <Folder Include="Controls\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Windows\DownloadManager.glade">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="makefile" />
     <None Include="README.md" />
     <None Include="dmd.conf" />

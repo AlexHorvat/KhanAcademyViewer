@@ -45,6 +45,7 @@ public final class About
 		_wdwAbout.setLicenseType(GtkLicense.GPL_3_0);
 		_wdwAbout.setAuthors(["Alex Horvat"]);
 		_wdwAbout.addOnResponse(&wdwAbout_Response);
+		_wdwAbout.setDestroyWithParent(true);
 		_wdwAbout.showAll();
 	}
 

@@ -26,13 +26,12 @@ debug alias std.stdio.writeln output;
 
 import std.file;
 import std.path:expandTilde;
-import std.string;
+import std.string:format;
 import std.concurrency;
 
 import core.time;
 
 import gtk.Window;
-import gtk.Builder;
 import gtk.Button;
 import gtk.Statusbar;
 import gtk.TreeView;
@@ -44,6 +43,9 @@ import gtk.CellRendererText;
 import gtk.CellRendererPixbuf;
 import gtk.Image;
 import gtk.Widget;
+import gtk.Grid;
+import gtk.ScrolledWindow;
+import gtk.Fixed;
 
 import gdk.Pixbuf;
 import gdk.Event;
@@ -58,7 +60,6 @@ import KhanAcademyViewer.Workers.DownloadWorker;
 
 public final class DownloadManager
 {
-	private immutable string _gladeFile = "./Windows/DownloadManager.glade";
 	private immutable string _imageColumnName = "ImageColumn";
 	
 	private Library _completeLibrary;
@@ -90,7 +91,6 @@ public final class DownloadManager
 	private void SetupWindow()
 	{
 		debug output(__FUNCTION__);
-		Builder windowBuilder = new Builder();
 		Image imageSetter = new Image();
 
 		_downloadImage = imageSetter.renderIconPixbuf("gtk-save", GtkIconSize.MENU);
@@ -98,17 +98,42 @@ public final class DownloadManager
 		_deleteImage = imageSetter.renderIconPixbuf("gtk-delete", GtkIconSize.MENU);
 
 		_stopImage = imageSetter.renderIconPixbuf("gtk-stop", GtkIconSize.MENU);
-		
-		windowBuilder.addFromFile(_gladeFile);
-		
-		_wdwDownloadManager = cast(Window)windowBuilder.getObject("wdwDownloadManager");
 
-		_statusDownloads = cast(Statusbar)windowBuilder.getObject("statusDownloads");
+		_wdwDownloadManager = new Window("Download Videos");
+		_wdwDownloadManager.setModal(true);
+		_wdwDownloadManager.setDestroyWithParent(true);
+		_wdwDownloadManager.setTypeHint(GdkWindowTypeHint.DIALOG);
+		_wdwDownloadManager.setSizeRequest(800, 600);
 
-		_tvVideos = cast(TreeView)windowBuilder.getObject("tvVideos");
+		Grid grdDownloadManager = new Grid();
+		grdDownloadManager.insertColumn(0);
+		grdDownloadManager.insertColumn(0);
+		grdDownloadManager.insertRow(0);
+		grdDownloadManager.insertRow(0);
+		_wdwDownloadManager.add(grdDownloadManager);
+
+		_statusDownloads = new Statusbar();
+		_statusDownloads.setMarginLeft(5);
+		grdDownloadManager.attach(_statusDownloads, 0, 1, 1, 1);
+
+		ScrolledWindow swVideos = new ScrolledWindow();
+		swVideos.setHexpand(true);
+		swVideos.setVexpand(true);
+		grdDownloadManager.attach(swVideos, 0, 0, 2,  1);
+
+		_tvVideos = new TreeView();
+		_tvVideos.setHeadersVisible(false);
+		_tvVideos.setEnableSearch(false);
+		swVideos.add(_tvVideos);
+
+		Fixed fixDone = new Fixed();
+		fixDone.setSizeRequest(105, 50);
+		fixDone.setHalign(GtkAlign.END);
+		grdDownloadManager.attach(fixDone, 1, 1, 1, 1);
 		
-		_btnDone = cast(Button)windowBuilder.getObject("btnDone");
-		_btnDone.addOnClicked(&btnDone_Clicked);
+		_btnDone = new Button("Done", &btnDone_Clicked, false);
+		_btnDone.setSizeRequest(100, 40);
+		fixDone.put(_btnDone, 0, 5);
 		
 		_wdwDownloadManager.showAll();
 	}
@@ -177,14 +202,6 @@ public final class DownloadManager
 		//Get the treestore back out of the treeview
 		//TODO In theory TreeStore store = cast(TreeStore)_tvVideos.GetModel(); should give the TreeStore, but is just returning null. BUG???
 		TreeStore store = new TreeStore(cast(GtkTreeStore*)selectedItem.gtkTreeModel);
-		//TreeStore store = cast(TreeStore)_tvVideos.getModel();
-		//TreeStore store = cast(TreeStore)cast(void*)_tvVideos.getModel();
-
-		debug
-		{
-			output("store");
-			output(store);
-		}
 
 		//Get video url
 		string url = selectedItem.getValueString(0);
