@@ -243,12 +243,12 @@ private:
 		const base = chunks_[index_].used;                     // start index
 		auto  data = chunks_[index_].data[base..base + size];  // chunk to write
 		
-		data[] = value;
+		data[] = value[];
 		chunks_[index_].used += size;
 		
 		// Optimization for avoiding iovec allocation.
 		if (vecList_.length && data.ptr == (vecList_[$ - 1].iov_base +
-		                                    vecList_[$ - 1].iov_len))
+		vecList_[$ - 1].iov_len))
 			vecList_[$ - 1].iov_len += size;
 		else
 			putRef(data);
@@ -291,6 +291,28 @@ class MessagePackException : Exception
 	{
 		super(message);
 	}
+}
+
+
+/**
+ * Attribute for specifying non pack/unpack field.
+ * This is an alternative approach of MessagePackable mixin.
+ *
+ * Example:
+ * -----
+ * struct S
+ * {
+ *     int num;
+ *     // Packer/Unpacker ignores this field;
+ *     @nonPacked string str;
+ * }
+ * -----
+ */
+struct nonPacked {}
+
+template isPackedField(alias field)
+{
+	enum isPackedField = staticIndexOf!(nonPacked, __traits(getAttributes, field)) == -1;
 }
 
 
@@ -800,12 +822,16 @@ public:
 				Class obj = cast(Class)object;
 				if (withFieldName_) {
 					foreach (i, f ; obj.tupleof) {
-						pack(getFieldName!(Class, i));
-						pack(f);
+						if (isPackedField!(Class.tupleof[i])) {
+							pack(getFieldName!(Class, i));
+							pack(f);
+						}
 					}
 				} else {
-					foreach (f ; obj.tupleof)
-						pack(f);
+					foreach (i, f ; obj.tupleof) {
+						if (isPackedField!(Class.tupleof[i]))
+							pack(f);
+					}
 				}
 			}
 		}
@@ -831,7 +857,7 @@ public:
 			foreach (f; object.field)
 				pack(f);
 		} else {  // simple struct
-			immutable memberNum = object.tupleof.length;
+			immutable memberNum = SerializingMemberNumbers!(T);
 			if (withFieldName_)
 				beginMap(memberNum);
 			else
@@ -839,12 +865,16 @@ public:
 			
 			if (withFieldName_) {
 				foreach (i, f; object.tupleof) {
-					pack(getFieldName!(T, i));
-					pack(f);
+					if (isPackedField!(T.tupleof[i])) {
+						pack(getFieldName!(T, i));
+						pack(f);
+					}
 				}
 			} else {
-				foreach (f; object.tupleof)
-					pack(f);
+				foreach (i, f; object.tupleof) {
+					if (isPackedField!(T.tupleof[i]))
+						pack(f);
+				}
 			}
 		}
 		
@@ -1018,11 +1048,11 @@ unittest
 	enum : ulong { A = ubyte.max, B = ushort.max, C = uint.max, D = ulong.max }
 		
 		static UTest[][] tests = [
-		                          [{Format.UINT8, A}], 
-		                          [{Format.UINT8, A}, {Format.UINT16, B}],
-		                          [{Format.UINT8, A}, {Format.UINT16, B}, {Format.UINT32, C}],
-		                          [{Format.UINT8, A}, {Format.UINT16, B}, {Format.UINT32, C}, {Format.UINT64, D}],
-		                          ];
+			[{Format.UINT8, A}], 
+			[{Format.UINT8, A}, {Format.UINT16, B}],
+			[{Format.UINT8, A}, {Format.UINT16, B}, {Format.UINT32, C}],
+			[{Format.UINT8, A}, {Format.UINT16, B}, {Format.UINT32, C}, {Format.UINT64, D}],
+		];
 		
 		foreach (I, T; TypeTuple!(ubyte, ushort, uint, ulong)) {
 			foreach (i, test; tests[I]) {
@@ -1057,11 +1087,11 @@ unittest
 	enum : long { A = byte.min, B = short.min, C = int.min, D = long.min }
 		
 		static STest[][] tests = [
-		                          [{Format.INT8, A}], 
-		                          [{Format.INT8, A}, {Format.INT16, B}],
-		                          [{Format.INT8, A}, {Format.INT16, B}, {Format.INT32, C}],
-		                          [{Format.INT8, A}, {Format.INT16, B}, {Format.INT32, C}, {Format.INT64, D}],
-		                          ];
+			[{Format.INT8, A}], 
+			[{Format.INT8, A}, {Format.INT16, B}],
+			[{Format.INT8, A}, {Format.INT16, B}, {Format.INT32, C}],
+			[{Format.INT8, A}, {Format.INT16, B}, {Format.INT32, C}, {Format.INT64, D}],
+		];
 		
 		foreach (I, T; TypeTuple!(byte, short, int, long)) {
 			foreach (i, test; tests[I]) {
@@ -1097,10 +1127,10 @@ unittest
 			static struct FTest { ubyte format; double value; }
 			
 			static FTest[] tests = [
-			                        {Format.FLOAT,  float.min_normal},
-			                        {Format.DOUBLE, double.max},
-			                        {Format.DOUBLE, double.max},
-			                        ];
+				{Format.FLOAT,  float.min_normal},
+				{Format.DOUBLE, double.max},
+				{Format.DOUBLE, double.max},
+			];
 		}
 		else
 		{
@@ -1108,10 +1138,10 @@ unittest
 			static struct FTest { ubyte format; real value; }
 			
 			static FTest[] tests = [
-			                        {Format.FLOAT,  float.min_normal},
-			                        {Format.DOUBLE, double.max},
-			                        {Format.REAL,   real.max},
-			                        ];
+				{Format.FLOAT,  float.min_normal},
+				{Format.DOUBLE, double.max},
+				{Format.REAL,   real.max},
+			];
 		}
 		
 		foreach (I, T; FloatingTypes) {
@@ -1205,9 +1235,9 @@ unittest
 	enum : ulong { A = 16 / 2, B = ushort.max, C = uint.max }
 		
 		static Test[][] tests = [
-		                         [{Format.ARRAY | A, Format.ARRAY | A}, {Format.ARRAY16, B}, {Format.ARRAY32, C}],
-		                         [{Format.MAP   | A, Format.MAP   | A}, {Format.MAP16,   B}, {Format.MAP32,   C}],
-		                         ];
+			[{Format.ARRAY | A, Format.ARRAY | A}, {Format.ARRAY16, B}, {Format.ARRAY32, C}],
+			[{Format.MAP   | A, Format.MAP   | A}, {Format.MAP16,   B}, {Format.MAP32,   C}],
+		];
 		
 		foreach (I, Name; TypeTuple!("Array", "Map")) {
 			auto test = tests[I];
@@ -1288,13 +1318,28 @@ unittest
 				uint num = uint.max;
 			}
 			
-			mixin DefinePacker; Simple test;
+			static struct SimpleWithNonPacked1
+			{
+				uint num = uint.max;
+				@nonPacked string str = "ignored";
+			}
 			
-			packer.pack(test);
+			static struct SimpleWithNonPacked2
+			{
+				@nonPacked string str = "ignored";
+				uint num = uint.max;
+			}
 			
-			assert(buffer.data[0] == (Format.ARRAY | 1));
-			assert(buffer.data[1] ==  Format.UINT32);
-			assert(memcmp(&buffer.data[2], &test.num, uint.sizeof) == 0);
+			foreach (Type; TypeTuple!(Simple, SimpleWithNonPacked1, SimpleWithNonPacked2)) {
+				mixin DefinePacker;
+				
+				Type test;
+				packer.pack(test);
+				
+				assert(buffer.data[0] == (Format.ARRAY | 1));
+				assert(buffer.data[1] ==  Format.UINT32);
+				assert(memcmp(&buffer.data[2], &test.num, uint.sizeof) == 0);
+			}
 		}
 		
 		static class SimpleA
@@ -1312,16 +1357,31 @@ unittest
 			uint num = uint.max;
 		}
 		
+		static class SimpleCWithNonPacked1 : SimpleB
+		{
+			uint num = uint.max;
+			@nonPacked string str = "ignored";
+		}
+		
+		static class SimpleCWithNonPacked2 : SimpleB
+		{
+			@nonPacked string str = "ignored";
+			uint num = uint.max;
+		}
+		
 		{  // from derived class
-			mixin DefinePacker; SimpleC test = new SimpleC();
-			
-			packer.pack(test);
-			
-			assert(buffer.data[0] == (Format.ARRAY | 3));
-			assert(buffer.data[1] ==  Format.TRUE);
-			assert(buffer.data[2] ==  100);
-			assert(buffer.data[3] ==  Format.UINT32);
-			assert(memcmp(&buffer.data[4], &test.num, uint.sizeof) == 0);
+			foreach (Type; TypeTuple!(SimpleC, SimpleCWithNonPacked1, SimpleCWithNonPacked2)) {
+				mixin DefinePacker;
+				
+				Type test = new Type();
+				packer.pack(test);
+				
+				assert(buffer.data[0] == (Format.ARRAY | 3));
+				assert(buffer.data[1] ==  Format.TRUE);
+				assert(buffer.data[2] ==  100);
+				assert(buffer.data[3] ==  Format.UINT32);
+				assert(memcmp(&buffer.data[4], &test.num, uint.sizeof) == 0);
+			}
 		}
 		{  // from base class
 			mixin DefinePacker; SimpleB test = new SimpleC();
@@ -1509,7 +1569,7 @@ else
 					unparsed  = area.overlap(unparsed) ? unparsed.dup : unparsed;
 				}
 				
-				buffer_[0..unparsedSize] = unparsed;
+				buffer_[0..unparsedSize] = unparsed[];
 				used_   = unparsedSize;
 				offset_ = 0;
 			}
@@ -1520,7 +1580,7 @@ else
 			if (buffer_.length - used_ < size)
 				expandBuffer(size);
 			
-			buffer_[used_..used_ + size] = target;
+			buffer_[used_..used_ + size] = target[];
 			used_ += size;
 		}
 		
@@ -1571,7 +1631,7 @@ else
 			
 			buffer_ = new ubyte[](size > bufferSize ? size : bufferSize); 
 			used_   = size;
-			buffer_[0..size] = target;
+			buffer_[0..size] = target[];
 		}
 	}
 }
@@ -1968,8 +2028,13 @@ public:
 		}
 		
 		
-		if (checkNil())
-			return unpackNil(array);
+		if (checkNil()) {
+			static if (isStaticArray!T) {
+				onInvalidType();
+			} else {
+				return unpackNil(array);
+			}
+		}
 		
 		// Raw bytes
 		static if (isByte!U || isSomeChar!U) {
@@ -1985,7 +2050,7 @@ public:
 			
 			canRead(length, offset + Offset);
 			static if (isStaticArray!T) {
-				array = (cast(U[])read(length))[0 .. T.length];
+				array[] = (cast(U[])read(length))[0 .. T.length];
 			} else {
 				array = cast(T)read(length);
 			}
@@ -2085,8 +2150,10 @@ public:
 			
 			foreach (Class; Classes) {
 				Class obj = cast(Class)object;
-				foreach (i, member; obj.tupleof)
-					unpack(obj.tupleof[i]);
+				foreach (i, member; obj.tupleof) {
+					if (isPackedField!(Class.tupleof[i]))
+						unpack(obj.tupleof[i]);
+				}
 			}
 		}
 		
@@ -2116,11 +2183,14 @@ public:
 				foreach (i, Type; T.Types)
 					unpack(object.field[i]);
 			} else {  // simple struct
-				if (length != object.tupleof.length)
+				//if (length != object.tupleof.length)
+				if (length != SerializingMemberNumbers!(T))
 					rollback(calculateSize(length));
 				
-				foreach (i, member; object.tupleof)
-					unpack(object.tupleof[i]);
+				foreach (i, member; object.tupleof) {
+					if (isPackedField!(T.tupleof[i]))
+						unpack(object.tupleof[i]);
+				}
 			}
 		}
 		
@@ -2573,16 +2643,28 @@ unittest
 			static struct Simple
 			{
 				uint num;
+				@nonPacked string str;
 			}
 			
-			mixin DefinePacker; Simple result, test = Simple(uint.max);
+			static struct Simple2
+			{
+				@nonPacked string str;
+				uint num;
+			}
 			
-			packer.pack(test);
-			
-			auto unpacker = Unpacker(packer.stream.data);
-			unpacker.unpack(result);
-			
-			assert(test.num == result.num);
+			foreach (Type; TypeTuple!(Simple, Simple2)) {
+				mixin DefinePacker;
+				Type result, test;
+				test.num = uint.max;
+				test.str = "ignored";
+				
+				packer.pack(test);
+				auto unpacker = Unpacker(packer.stream.data);
+				unpacker.unpack(result);
+				
+				assert(test.num == result.num);
+				assert(test.str != result.str);
+			}
 		}
 		
 		static class SimpleA
@@ -2598,23 +2680,33 @@ unittest
 		static class SimpleC : SimpleB
 		{
 			uint num = uint.max;
+			@nonPacked string str;
+		}
+		
+		static class SimpleC2 : SimpleB
+		{
+			@nonPacked string str;
+			uint num = uint.max;
 		}
 		
 		{ // from derived class
-			mixin DefinePacker; SimpleC result, test = new SimpleC();
-			
-			test.flag = false;
-			test.type = 99;
-			test.num  = uint.max / 2;
-			
-			packer.pack(test);
-			
-			auto unpacker = Unpacker(packer.stream.data);
-			unpacker.unpack(result);
-			
-			assert(test.flag == result.flag);
-			assert(test.type == result.type);
-			assert(test.num  == result.num);
+			foreach (Type; TypeTuple!(SimpleC, SimpleC2)) {
+				mixin DefinePacker;
+				Type result, test = new Type();
+				test.flag = false;
+				test.type = 99;
+				test.num  = uint.max / 2;
+				test.str  = "ignored";
+				
+				packer.pack(test);
+				auto unpacker = Unpacker(packer.stream.data);
+				unpacker.unpack(result);
+				
+				assert(test.flag == result.flag);
+				assert(test.type == result.type);
+				assert(test.num  == result.num);
+				assert(test.str  != result.str);
+			}
 		}
 		{ // from base class
 			mixin DefinePacker; SimpleC test = new SimpleC();
@@ -2960,8 +3052,10 @@ struct Value
 			size_t offset;
 			foreach (Class; Classes) {
 				Class obj = cast(Class)object;
-				foreach (i, member; obj.tupleof)
-					obj.tupleof[i] = via.array[offset++].as!(typeof(member));
+				foreach (i, member; obj.tupleof) {
+					if (isPackedField!(Class.tupleof[i]))
+						obj.tupleof[i] = via.array[offset++].as!(typeof(member));
+				}
 			}
 		}
 		
@@ -2990,11 +3084,14 @@ struct Value
 				foreach (i, Type; T.Types)
 					obj.field[i] = via.array[i].as!(Type);
 			} else {  // simple struct
-				if (via.array.length != obj.tupleof.length)
+				if (via.array.length != SerializingMemberNumbers!T)
 					throw new MessagePackException("The number of deserialized struct member is mismatched");
 				
-				foreach (i, member; obj.tupleof)
-					obj.tupleof[i] = via.array[i].as!(typeof(member));
+				size_t offset;
+				foreach (i, member; obj.tupleof) {
+					if (isPackedField!(T.tupleof[i]))
+						obj.tupleof[i] = via.array[offset++].as!(typeof(member));
+				}
 			}
 		}
 		
@@ -3272,11 +3369,13 @@ unittest
 	// struct
 	static struct Simple
 	{
+		@nonPacked int era;
 		double num;
 		string msg;
 	}
 	
 	Simple simple = value.as!(Simple);
+	assert(simple.era == int.init);
 	assert(simple.num == 0.5f);
 	assert(simple.msg == "Hi!");
 	
@@ -3305,6 +3404,7 @@ unittest
 	
 	static class SimpleC : SimpleB
 	{
+		@nonPacked string str;
 		uint num = uint.max;
 	}
 	
@@ -3314,6 +3414,7 @@ unittest
 	assert(sc.flag == false);
 	assert(sc.type == 99);
 	assert(sc.num  == uint.max / 2);
+	assert(sc.str.empty);
 	
 	// std.typecons.Tuple
 	value = Value([Value(true), Value(1UL), Value(cast(ubyte[])"Hi!")]);
@@ -4588,7 +4689,6 @@ template AsteriskOf(T)
 		enum AsteriskOf = "";
 }
 
-
 /**
  * Get the number of member to serialize.
  */
@@ -4597,9 +4697,8 @@ template SerializingMemberNumbers(Classes...)
 	static if (Classes.length == 0)
 		enum SerializingMemberNumbers = 0;
 	else
-		enum SerializingMemberNumbers = Classes[0].tupleof.length + SerializingMemberNumbers!(Classes[1..$]);
+		enum SerializingMemberNumbers = Filter!(isPackedField, Classes[0].tupleof).length + SerializingMemberNumbers!(Classes[1..$]);
 }
-
 
 /**
  * Get derived classes with serialization-order
