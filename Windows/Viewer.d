@@ -62,7 +62,7 @@ import KhanAcademyViewer.Controls.VideoControl;
 //TODO
 //Only save settings on program exit, otherwise work with the variable
 //Remove glade everywhere
-//There's a crash when in continuous play mode - once one video finshes and the next is playing if you change
+//There's a crash when in continuous play mode - once one video finishes and the next is playing if you change
 //view mode the program crashes
 //Going online/offline using the option menu item is buggy, revise code to make it right all the time
 //Checking for internet connection seems to lock the UI, check this, maybe make it async
@@ -86,7 +86,7 @@ public final class Viewer
 	private CheckMenuItem _cmiContinuousPlay;
 	private ViewControl _vcView;
 	private DownloadManager _downloadManager;
-	private About _about; //TODO This can probably be made immutable as it won't change at runtime
+	private About _about;
 	private VideoControl _vcVideo;
 
 	public this()
@@ -520,7 +520,7 @@ public final class Viewer
 	
 		if (_about)
 		{
-			_about.GetWindow().present();
+			_about.Show();
 		}
 		else
 		{

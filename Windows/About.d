@@ -24,49 +24,43 @@ module KhanAcademyViewer.Windows.About;
 
 debug alias std.stdio.writeln output;
 
-import gtk.Builder;
 import gtk.AboutDialog;
 import gtk.Dialog;
 
 public final class About
 {
-	private immutable string _gladeFile = "./Windows/About.glade";
-
 	private AboutDialog _wdwAbout;
-
-	private void delegate() Dispose;
 
 	public this(void delegate() disposeFunction)
 	{
 		debug output(__FUNCTION__);
 		Dispose = disposeFunction;
-		SetupWindow();
-	}
 
-	public AboutDialog GetWindow()
-	{
-		return _wdwAbout;
-	}
-
-	private void SetupWindow()
-	{
-		debug output(__FUNCTION__);
-		Builder windowBuilder = new Builder();
-		
-		windowBuilder.addFromFile(_gladeFile);
-
-		_wdwAbout = cast(AboutDialog)windowBuilder.getObject("wdwAbout");
+		_wdwAbout = new AboutDialog();
+		_wdwAbout.setTitle("About Khan Academy Viewer");
+		_wdwAbout.setProgramName("Khan Academy Viewer");
+		_wdwAbout.setVersion("0.3");
+		_wdwAbout.setCopyright("Copyright © 2013 Alex Horvat\nUses MessagePack by Masahiro Nakagawa");
+		_wdwAbout.setComments("The Khan Academy Viewer for the Gnome desktop");
+		_wdwAbout.setLicenseType(GtkLicense.GPL_3_0);
+		_wdwAbout.setAuthors(["Alex Horvat"]);
 		_wdwAbout.addOnResponse(&wdwAbout_Response);
-
 		_wdwAbout.showAll();
 	}
+
+	public void Show()
+	{
+		_wdwAbout.present();
+	}
+
+	private void delegate() Dispose;
 
 	private void wdwAbout_Response(int response, Dialog sender)
 	{
 		debug output(__FUNCTION__);
 		if (response == GtkResponseType.CANCEL)
 		{
-			sender.destroy();
+			_wdwAbout.destroy();
 			Dispose();
 		}
 	}
