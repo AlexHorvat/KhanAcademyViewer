@@ -61,11 +61,9 @@ import KhanAcademyViewer.Controls.VideoControl;
 
 //TODO
 //Only save settings on program exit, otherwise work with the variable
-//Remove glade everywhere
+
 //There's a crash when in continuous play mode - once one video finishes and the next is playing if you change
 //view mode the program crashes
-//Going online/offline using the option menu item is buggy, revise code to make it right all the time
-//Checking for internet connection seems to lock the UI, check this, maybe make it async
 
 public final class Viewer
 {
@@ -98,6 +96,7 @@ public final class Viewer
 		LoadLibraryFromStorage();
 		_settings.IsOffline ? SetOffline : SetOnline(false); //No need to double check for internet connection
 		KillLoadingWindow();
+		HookUpOptionHandlers();
 	}
 
 	private void SetupWindow()
@@ -127,11 +126,9 @@ public final class Viewer
 
 		ListSG lsgViewMode;
 		_rmiFlow = new RadioMenuItem(lsgViewMode, "Flow View", false);
-		_rmiFlow.addOnButtonRelease(&rmiFlow_ButtonRelease);
 		mSubOptions.add(_rmiFlow);
 				
 		_rmiTree = new RadioMenuItem(_rmiFlow, "Tree View", false);
-		_rmiTree.addOnButtonRelease(&rmiTree_ButtonRelease);
 		mSubOptions.add(_rmiTree);
 
 		SeparatorMenuItem smi1 = new SeparatorMenuItem();
@@ -139,7 +136,6 @@ public final class Viewer
 
 		_cmiOffline = new CheckMenuItem("Offline Mode", false);
 		_cmiOffline.setTooltipText("Go to offline mode, you can only play videos you have downloaded.");
-		_cmiOffline.addOnButtonRelease(&cmiOffline_ButtonRelease);
 		mSubOptions.add(_cmiOffline);
 
 		SeparatorMenuItem smi2 = new SeparatorMenuItem();
@@ -147,19 +143,19 @@ public final class Viewer
 
 		_cmiKeepPosition = new CheckMenuItem("Keep Position", false);
 		_cmiKeepPosition.setTooltipText("Start showing the last category you watched a video in.");
-		_cmiKeepPosition.addOnButtonRelease(&cmiKeepPosition_ButtonRelease);
 		mSubOptions.add(_cmiKeepPosition);
 
 		_cmiContinuousPlay = new CheckMenuItem("Continuous Play", false);
 		_cmiContinuousPlay.setTooltipText("Play all videos in a category automatically.");
-		_cmiContinuousPlay.addOnButtonRelease(&cmiContinuousPlay_ButtonRelease);
 		mSubOptions.add(_cmiContinuousPlay);
 				
 		_miDownloadManager = new MenuItem("_Download Manager", true);
+		_miDownloadManager.addOnButtonPress(&miDownloadManager_ButtonPress);
 		_miDownloadManager.addOnButtonRelease(&miDownloadManager_ButtonRelease);
 		mbMain.add(_miDownloadManager);
 				
 		MenuItem miAbout = new MenuItem("_About", true);
+		miAbout.addOnButtonPress(&miAbout_ButtonPress);
 		miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
 		mbMain.add(miAbout);
 
@@ -204,8 +200,19 @@ public final class Viewer
 
 		//Widgets shown, now add the video overlays
 		_vcVideo.AddOverlays();
-		
-		//RefreshUI();
+	}
+
+	private void HookUpOptionHandlers()
+	{
+		debug output(__FUNCTION__);
+		//The option handlers don't play nice when being set in LoadSettings() they fire when set to active
+		//and using GtkD there seems to be no way to temporarily disable the firing, so add the handlers after
+		//everything is loaded.
+		_rmiFlow.addOnActivate(&rmiFlow_Activate);
+		_rmiTree.addOnActivate(&rmiTree_Activate);
+		_cmiOffline.addOnActivate(&cmiOffline_Activate);
+		_cmiKeepPosition.addOnActivate(&cmiKeepPosition_Activate);
+		_cmiContinuousPlay.addOnActivate(&cmiContinuousPlay_Activate);
 	}
 
 	private void PreloadCategory()
@@ -223,6 +230,17 @@ public final class Viewer
 		_settings = SettingsWorker.LoadSettings();
 
 		//Set menu items
+		final switch (_settings.ViewModeSetting)
+		{
+			case ViewMode.Flow:
+				_rmiFlow.setActive(true);
+				break;
+				
+			case ViewMode.Tree:
+				_rmiTree.setActive(true);
+				break;
+		}
+
 		_cmiOffline.setActive(_settings.IsOffline);
 		_cmiKeepPosition.setActive(_settings.KeepPosition);
 		_cmiContinuousPlay.setActive(_settings.ContinuousPlay);
@@ -254,38 +272,30 @@ public final class Viewer
 		return hasInternetConnection;
 	}
 
-	private bool cmiKeepPosition_ButtonRelease(Event e, Widget sender)
+	private void cmiKeepPosition_Activate(MenuItem sender)
 	{
 		debug output(__FUNCTION__);
-		_settings.KeepPosition = !cast(bool)_cmiKeepPosition.getActive();
+		_settings.KeepPosition = cast(bool)_cmiKeepPosition.getActive();
 		SettingsWorker.SaveSettings(_settings);
-
-		return false;
 	}
 
-	private bool cmiContinuousPlay_ButtonRelease(Event e, Widget sender)
+	private void cmiContinuousPlay_Activate(MenuItem sender)
 	{
 		debug output(__FUNCTION__);
-		_settings.ContinuousPlay = !cast(bool)_cmiContinuousPlay.getActive();
+		_settings.ContinuousPlay = cast(bool)_cmiContinuousPlay.getActive();
 		SettingsWorker.SaveSettings(_settings);
 
-		if(_cmiContinuousPlay.getActive())
+		if(_settings.ContinuousPlay)
 		{
-			_settings.ContinuousPlay = false;
-			_vcVideo.StopContinuousPlayMode();
+			_vcVideo.StartContinuousPlayMode(&_vcView.PlayNextVideo);
 		}
 		else
 		{
-			_settings.ContinuousPlay = true;
-			_vcVideo.StartContinuousPlayMode(&_vcView.PlayNextVideo);
+			_vcVideo.StopContinuousPlayMode();
 		}
-
-		SettingsWorker.SaveSettings(_settings);
-
-		return false;
 	}
 
-	private bool cmiOffline_ButtonRelease(Event e, Widget sender)
+	private void cmiOffline_Activate(MenuItem sender)
 	{
 		debug output(__FUNCTION__);
 		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
@@ -293,9 +303,7 @@ public final class Viewer
 		_settings.LastSelectedCategory = "";
 		SettingsWorker.SaveSettings(_settings);
 
-		_cmiOffline.getActive() ? SetOnline(true) : SetOffline();
-
-		return false;
+		_cmiOffline.getActive() ? SetOffline() : SetOnline(true);
 	}
 
 	private void SetOnline(bool checkForInternetConnection)
@@ -311,15 +319,16 @@ public final class Viewer
 
 			if (!HasInternetConnection())
 			{
+				//Disable the listener before calling setActive or it will be fired
+				_cmiOffline.onActivateListeners.destroy();
 				_cmiOffline.setActive(true);
+				_cmiOffline.addOnActivate(&cmiOffline_Activate);
 				return;
 			}
 		}
 
 		_settings.IsOffline = false;
 		SettingsWorker.SaveSettings(_settings);
-
-		//_cmiOffline.setActive(false);
 
 		_miDownloadManager.setSensitive(true);
 
@@ -332,8 +341,6 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		bool onwards = false;
-
-		//_cmiOffline.setActive(true);
 
 		_settings.IsOffline = true;
 		SettingsWorker.SaveSettings(_settings);
@@ -360,24 +367,20 @@ public final class Viewer
 		LoadNavigation();
 	}
 
-	private bool rmiFlow_ButtonRelease(Event e, Widget sender)
+	private void rmiFlow_Activate(MenuItem sender)
 	{
 		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Flow;
 		SettingsWorker.SaveSettings(_settings);
 		LoadNavigation();
-
-		return false;
 	}
 
-	private bool rmiTree_ButtonRelease(Event e, Widget sender)
+	private void rmiTree_Activate(MenuItem sender)
 	{
 		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Tree;
 		SettingsWorker.SaveSettings(_settings);
 		LoadNavigation();
-
-		return false;
 	}
 
 	private void DownloadLibrary()
@@ -484,7 +487,7 @@ public final class Viewer
 	private void LoadNavigation()
 	{
 		debug output(__FUNCTION__);
-		//Stop any playing video
+		//Stop any loaded video
 		_vcVideo.UnloadVideo();
 
 		if (_vcView)
@@ -495,12 +498,10 @@ public final class Viewer
 		final switch (_settings.ViewModeSetting)
 		{
 			case ViewMode.Flow:
-				_rmiFlow.setActive(true);
 				_vcView = new FlowViewControl(_swParent, _swChild, _bboxBreadCrumbs, _completeLibrary, _vcVideo, _settings);
 				break;
 
 			case ViewMode.Tree:
-				_rmiTree.setActive(true);
 				_vcView = new TreeViewControl(_swParent, _swChild, _completeLibrary, _vcVideo, _settings);
 				break;
 		}
@@ -514,10 +515,17 @@ public final class Viewer
 		_loadingWindow.destroy();
 	}
 
+	private bool miAbout_ButtonPress(Event e, Widget sender)
+	{
+		debug output(__FUNCTION__);
+		//Don't know why this works but it does:
+		//Just so long as this handler is here and just returns true, then the about window is focused when created.
+		return true;
+	}
+
 	private bool miAbout_ButtonRelease(Event e, Widget sender)
 	{
 		debug output(__FUNCTION__);
-	
 		if (_about)
 		{
 			_about.Show();
@@ -527,13 +535,20 @@ public final class Viewer
 			_about = new About(&DisposeAbout);
 		}
 
-		return true;
+		return false;
 	}
 
 	private void DisposeAbout()
 	{
 		debug output(__FUNCTION__);
 		_about = null;
+	}
+
+	private bool miDownloadManager_ButtonPress(Event e, Widget sender)
+	{
+		debug output(__FUNCTION__);
+		//Again don't know why this works but it does put download manager into focus just so long as this handler exists and returns true
+		return true;
 	}
 
 	private bool miDownloadManager_ButtonRelease(Event e, Widget sender)

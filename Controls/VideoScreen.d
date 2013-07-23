@@ -176,6 +176,7 @@ public final class VideoScreen : Overlay
 		//Spawn a new thread to hide the title
 		Thread TitleHider = new Thread(&DelayedHideTitle);
 		TitleHider.start();
+		TitleHider = null;
 	}
 	
 	public void HideTitle()
