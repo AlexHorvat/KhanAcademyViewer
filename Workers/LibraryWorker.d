@@ -42,7 +42,7 @@ public static class LibraryWorker
 	public static bool LibraryFileExists()
 	{
 		debug output(__FUNCTION__);
-		string libraryFileName = expandTilde(G_LibraryFilePath);
+		string libraryFileName = expandTilde(LIBRARY_FILE_PATH);
 
 		return exists(libraryFileName);
 	}
@@ -51,7 +51,7 @@ public static class LibraryWorker
 	{
 		debug output(__FUNCTION__);
 		Library completeLibrary;
-		string libraryFileName = expandTilde(G_LibraryFilePath);
+		string libraryFileName = expandTilde(LIBRARY_FILE_PATH);
 		ubyte[] serialised = cast(ubyte[])read(libraryFileName);
 
 		//Convert the serialised library back into a Library object

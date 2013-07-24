@@ -25,44 +25,10 @@ import std.datetime;
 
 public final class Library
 {
-	private string _title;
-	public @property {
-		string Title() { return _title; }
-		void Title(string new_Title) { _title = new_Title; }
-	}
-
-	private Library[] _children;
-	public @property {
-		Library[] Children() { return _children; }
-		void Children(Library[] new_Children) { _children = new_Children; }
-	}
-
-	private string _description;
-	public @property {
-		string Description() { return _description; }
-		void Description(string new_Description) { _description = new_Description; }
-	}
-
-	private string[] _authorNames;
-	public @property {
-		string[] AuthorNames() { return _authorNames; }
-		void AuthorNames(string[] new_AuthorNames) { _authorNames = new_AuthorNames; }
-	}
-
-	public @property {
-		size_t AuthorNamesLength() { return _authorNames.length; }
-		void AuthorNamesLength(size_t new_Length) { _authorNames.length = new_Length; }
-	}
-
-	private DateTime _dateAdded;
-	public @property {
-		DateTime DateAdded() { return _dateAdded; }
-		void DateAdded(DateTime new_DateAdded) { _dateAdded = new_DateAdded; }
-	}
-
-	private string _mp4;
-	public @property {
-		string MP4() { return _mp4; }
-		void MP4(string new_MP4) { _mp4 = new_MP4; }
-	}
+	public string[] AuthorNames;
+	public Library[] Children;
+	public DateTime DateAdded;
+	public string Description;
+	public string MP4;
+	public string Title;
 }

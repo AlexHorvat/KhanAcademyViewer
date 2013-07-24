@@ -51,7 +51,7 @@ public static class SettingsWorker
 	public static void SaveSettings(Settings settings)
 	{
 		debug output(__FUNCTION__);
-		string settingsFileName = expandTilde(G_SettingsFilePath);
+		string settingsFileName = expandTilde(SETTINGS_FILE_PATH);
 		ubyte[] serialised = pack(settings);
 		
 		write(settingsFileName, serialised);
@@ -60,7 +60,7 @@ public static class SettingsWorker
 	private static bool SettingsFileExists()
 	{
 		debug output(__FUNCTION__);
-		string settingsFileName = expandTilde(G_SettingsFilePath);
+		string settingsFileName = expandTilde(SETTINGS_FILE_PATH);
 		
 		return exists(settingsFileName);
 	}
@@ -69,7 +69,7 @@ public static class SettingsWorker
 	{
 		debug output(__FUNCTION__);
 		Settings settings;
-		string settingsFileName = expandTilde(G_SettingsFilePath);
+		string settingsFileName = expandTilde(SETTINGS_FILE_PATH);
 		ubyte[] serialised = cast(ubyte[])read(settingsFileName);
 		
 		//Convert the serialised library back into a Library object

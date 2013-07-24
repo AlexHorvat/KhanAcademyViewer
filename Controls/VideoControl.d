@@ -287,20 +287,20 @@ public final class VideoControl : Grid
 
 	private void delegate() PlayNextVideo;
 
-	private void btnPlay_Clicked(Button sender)
+	private void btnPlay_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
 		PlayPause();
 	}
 
-	private void btnFullscreen_Clicked(Button sender)
+	private void btnFullscreen_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
 		Fullscreen fullScreen = new Fullscreen(_vsScreen, &ExitFullscreen);
 		IsFullscreen = true;
 	}
 
-	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range range)
+	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range)
 	{
 		debug output(__FUNCTION__);
 		if (scrollType == GtkScrollType.JUMP)

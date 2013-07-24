@@ -211,7 +211,7 @@ public final class VideoScreen : Overlay
 
 	private void delegate() PlayPause;
 
-	private bool DrawingAreaOrEventBox_ButtonRelease(Event e, Widget sender)
+	private bool DrawingAreaOrEventBox_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		if (VideoControl.IsPlaying)
@@ -243,7 +243,7 @@ public final class VideoScreen : Overlay
 		_pauseHider = null;
 	}
 
-	private bool daVideoArea_MotionNotify(Event e, Widget sender)
+	private bool daVideoArea_MotionNotify(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		//Spawn a thread, if already exists do nothing to stop from creating huge amount of timer threads and crashing

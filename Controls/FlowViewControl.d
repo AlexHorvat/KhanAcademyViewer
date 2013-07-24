@@ -251,7 +251,7 @@ public final class FlowViewControl : ViewControl
 		treeView.appendColumn(titleColumn);
 	}
 
-	private bool tvParent_ButtonRelease(Event e, Widget sender)
+	private bool tvParent_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvParent.getSelectedIter();
@@ -290,7 +290,7 @@ public final class FlowViewControl : ViewControl
 		return true;
 	}
 	
-	private bool tvChild_ButtonRelease(Event e, Widget sender)
+	private bool tvChild_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvChild.getSelectedIter();

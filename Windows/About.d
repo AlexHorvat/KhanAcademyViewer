@@ -56,7 +56,7 @@ public final class About
 
 	private void delegate() Dispose;
 
-	private void wdwAbout_Response(int response, Dialog sender)
+	private void wdwAbout_Response(int response, Dialog)
 	{
 		debug output(__FUNCTION__);
 		if (response == GtkResponseType.CANCEL)

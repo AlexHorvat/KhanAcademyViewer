@@ -26,33 +26,9 @@ import KhanAcademyViewer.Include.Enums;
 
 public final class Settings
 {
-	private ViewMode _viewMode = ViewMode.Flow;
-	public @property {
-		ViewMode ViewModeSetting() { return _viewMode; }
-		void ViewModeSetting(ViewMode new_ViewMode) { _viewMode = new_ViewMode; }
-	}
-
-	private bool _isOffline = false;
-	public @property {
-		bool IsOffline() { return _isOffline; }
-		void IsOffline(bool new_IsOffline) { _isOffline = new_IsOffline; }
-	}
-
-	private bool _keepPosition = false;
-	public @property {
-		bool KeepPosition() { return _keepPosition; }
-		void KeepPosition(bool new_KeepPosition) { _keepPosition = new_KeepPosition; }
-	}
-
-	private string _lastSelectedCategory;
-	public @property {
-		string LastSelectedCategory() { return _lastSelectedCategory; }
-		void LastSelectedCategory(string new_LastSelectedCategory) { _lastSelectedCategory = new_LastSelectedCategory; }
-	}
-
-	private bool _continuousPlay = false;
-	public @property {
-		bool ContinuousPlay() { return _continuousPlay; }
-		void ContinuousPlay(bool new_ContinuousPlay) { _continuousPlay = new_ContinuousPlay; }
-	}
+	public bool ContinuousPlay = false;
+	public bool IsOffline = false;
+	public bool KeepPosition = false;
+	public string LastSelectedCategory;
+	public ViewMode ViewModeSetting = ViewMode.Flow;
 }

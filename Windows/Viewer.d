@@ -272,14 +272,14 @@ public final class Viewer
 		return hasInternetConnection;
 	}
 
-	private void cmiKeepPosition_Activate(MenuItem sender)
+	private void cmiKeepPosition_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
 		_settings.KeepPosition = cast(bool)_cmiKeepPosition.getActive();
 		SettingsWorker.SaveSettings(_settings);
 	}
 
-	private void cmiContinuousPlay_Activate(MenuItem sender)
+	private void cmiContinuousPlay_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
 		_settings.ContinuousPlay = cast(bool)_cmiContinuousPlay.getActive();
@@ -295,7 +295,7 @@ public final class Viewer
 		}
 	}
 
-	private void cmiOffline_Activate(MenuItem sender)
+	private void cmiOffline_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
 		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
@@ -367,7 +367,7 @@ public final class Viewer
 		LoadNavigation();
 	}
 
-	private void rmiFlow_Activate(MenuItem sender)
+	private void rmiFlow_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Flow;
@@ -375,7 +375,7 @@ public final class Viewer
 		LoadNavigation();
 	}
 
-	private void rmiTree_Activate(MenuItem sender)
+	private void rmiTree_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
 		_settings.ViewModeSetting = ViewMode.Tree;
@@ -515,7 +515,7 @@ public final class Viewer
 		_loadingWindow.destroy();
 	}
 
-	private bool miAbout_ButtonPress(Event e, Widget sender)
+	private bool miAbout_ButtonPress(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		//Don't know why this works but it does:
@@ -523,7 +523,7 @@ public final class Viewer
 		return true;
 	}
 
-	private bool miAbout_ButtonRelease(Event e, Widget sender)
+	private bool miAbout_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		if (_about)
@@ -544,14 +544,14 @@ public final class Viewer
 		_about = null;
 	}
 
-	private bool miDownloadManager_ButtonPress(Event e, Widget sender)
+	private bool miDownloadManager_ButtonPress(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		//Again don't know why this works but it does put download manager into focus just so long as this handler exists and returns true
 		return true;
 	}
 
-	private bool miDownloadManager_ButtonRelease(Event e, Widget sender)
+	private bool miDownloadManager_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		//Stop any playing videos as it's possible to delete a video that's playing
@@ -561,14 +561,14 @@ public final class Viewer
 		return true;
 	}
 
-	private bool miExit_ButtonRelease(Event e, Widget sender)
+	private bool miExit_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		exit(0);
 		return true;
 	}
 	
-	private void wdwViewer_Destroy(Widget sender)
+	private void wdwViewer_Destroy(Widget)
 	{
 		debug output(__FUNCTION__);
 		exit(0);

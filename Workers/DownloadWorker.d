@@ -45,13 +45,13 @@ public static class DownloadWorker
 	public static void HasInternetConnection()
 	{
 		debug output(__FUNCTION__);
-		HTTP connection = HTTP(G_TopicTreeUrl);
+		HTTP connection = HTTP(TOPIC_TREE_URL);
 		scope(success)ownerTid.send(true);
 		scope(failure)ownerTid.send(false);
 		scope(exit)connection.destroy();
 
 		connection.method = HTTP.Method.head;
-		connection.connectTimeout(G_ConnectionTimeOut);
+		connection.connectTimeout(CONNECTION_TIME_OUT);
 		connection.perform();
 	}
 
@@ -63,7 +63,7 @@ public static class DownloadWorker
 		
 		if (LoadETagFromDisk(eTag) && LibraryExists())
 		{
-			HTTP connection = HTTP(G_TopicTreeUrl);
+			HTTP connection = HTTP(TOPIC_TREE_URL);
 			scope(exit)connection.destroy();
 
 			connection.method = HTTP.Method.head;
@@ -98,7 +98,7 @@ public static class DownloadWorker
 	private static bool LoadETagFromDisk(out string eTag)
 	{
 		debug output(__FUNCTION__);
-		string eTagFileName = expandTilde(G_ETagFilePath);
+		string eTagFileName = expandTilde(ETAG_FILE_PATH);
 		
 		if (exists(eTagFileName))
 		{
@@ -114,7 +114,7 @@ public static class DownloadWorker
 	private static bool LibraryExists()
 	{
 		debug output(__FUNCTION__);
-		string libraryFileName = expandTilde(G_LibraryFilePath);
+		string libraryFileName = expandTilde(LIBRARY_FILE_PATH);
 
 		return exists(libraryFileName);
 	}
@@ -145,14 +145,14 @@ public static class DownloadWorker
 			return 0;
 		};
 
-		jsonValues = cast(string)get!(HTTP, char)(G_TopicTreeUrl, connection);
+		jsonValues = cast(string)get!(HTTP, char)(TOPIC_TREE_URL, connection);
 		eTag = connection.responseHeaders["etag"];
 	}
 
 	private static void SaveETag(string eTag)
 	{	
 		debug output(__FUNCTION__);
-		string eTagFileName = expandTilde(G_ETagFilePath);
+		string eTagFileName = expandTilde(ETAG_FILE_PATH);
 		string filePath = dirName(eTagFileName);
 		
 		//Create directory if it doesn't exist
@@ -222,7 +222,7 @@ public static class DownloadWorker
 				if (jsonAuthorNames.length != 0)
 				{
 					//There are author_names, loop thru and add them to library
-					newLibrary.AuthorNamesLength = jsonAuthorNames.length;
+					newLibrary.AuthorNames = new string[jsonAuthorNames.length];
 					
 					foreach(size_t authorCounter; 0 .. jsonAuthorNames.length)
 					{
@@ -268,7 +268,7 @@ public static class DownloadWorker
 		//Use msgpack to serialise _completeLibrary
 		//Storing the raw json string takes 13.3mb and takes ~2s to load
 		//The msgpack file takes 2.2mb and a fraction of a second to load
-		string libraryFileName = expandTilde(G_LibraryFilePath);
+		string libraryFileName = expandTilde(LIBRARY_FILE_PATH);
 		ubyte[] serialised = pack(completeLibrary);
 
 		write(libraryFileName, serialised);

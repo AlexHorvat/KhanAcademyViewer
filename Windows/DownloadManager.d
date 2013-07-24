@@ -145,7 +145,7 @@ public final class DownloadManager
 		_tvVideos.addOnButtonRelease(&tvVideos_ButtonRelease);
 	}
 	
-	private bool tvVideos_ButtonRelease(Event e, Widget sender)
+	private bool tvVideos_ButtonRelease(Event e, Widget)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvVideos.getSelectedIter();
@@ -200,7 +200,7 @@ public final class DownloadManager
 		}
 
 		//Get the treestore back out of the treeview
-		//TODO In theory TreeStore store = cast(TreeStore)_tvVideos.GetModel(); should give the TreeStore, but is just returning null. BUG???
+		//HACK In theory TreeStore store = cast(TreeStore)_tvVideos.GetModel(); should give the TreeStore, but is just returning null. BUG???
 		TreeStore store = new TreeStore(cast(GtkTreeStore*)selectedItem.gtkTreeModel);
 
 		//Get video url
@@ -387,7 +387,7 @@ public final class DownloadManager
 		treeView.appendColumn(progressColumn);
 	}
 
-	private void btnDone_Clicked(Button sender)
+	private void btnDone_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
 
@@ -408,7 +408,7 @@ public final class DownloadManager
 	{
 		debug output(__FUNCTION__);
 		//Set item on status bar with total size of videos in download directory
-		string downloadDirectory = expandTilde(G_DownloadFilePath);
+		string downloadDirectory = expandTilde(DOWNLOAD_FILE_PATH);
 		ulong totalFileSize;
 
 		if (_statusBarContextID != 0)

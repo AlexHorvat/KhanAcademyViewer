@@ -25,9 +25,9 @@ module KhanAcademyViewer.Include.Config;
 
 import core.time;
 
-protected immutable string G_TopicTreeUrl = "http://www.khanacademy.org/api/v1/topictree";
-protected immutable string G_ETagFilePath = "~/.config/KhanAcademyViewer/ETag";
-protected immutable string G_LibraryFilePath = "~/.config/KhanAcademyViewer/Library";
-protected immutable string G_SettingsFilePath = "~/.config/KhanAcademyViewer/Settings";
-protected immutable string G_DownloadFilePath = "~/.config/KhanAcademyViewer";
-protected immutable Duration G_ConnectionTimeOut = dur!"seconds"(15);
+protected immutable Duration CONNECTION_TIME_OUT = dur!"seconds"(15);
+protected immutable string DOWNLOAD_FILE_PATH = "~/.config/KhanAcademyViewer";
+protected immutable string ETAG_FILE_PATH = "~/.config/KhanAcademyViewer/ETag";
+protected immutable string LIBRARY_FILE_PATH = "~/.config/KhanAcademyViewer/Library";
+protected immutable string SETTINGS_FILE_PATH = "~/.config/KhanAcademyViewer/Settings";
+protected immutable string TOPIC_TREE_URL = "http://www.khanacademy.org/api/v1/topictree";

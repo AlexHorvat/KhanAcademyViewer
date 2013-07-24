@@ -55,7 +55,7 @@ public final class Fullscreen
 
 	private void delegate() ExitFullscreen;
 	
-	private bool wdwFullscreen_KeyPress(Event e, Widget sender)
+	private bool wdwFullscreen_KeyPress(Event e, Widget)
 	{
 		debug output(__FUNCTION__);
 		uint key;

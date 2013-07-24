@@ -192,7 +192,7 @@ public final class TreeViewControl : ViewControl
 		treeView.appendColumn(titleColumn);
 	}
 
-	private bool tvTree_ButtonRelease(Event e, Widget sender)
+	private bool tvTree_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvTree.getSelectedIter();
