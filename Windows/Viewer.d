@@ -62,9 +62,6 @@ import KhanAcademyViewer.Controls.VideoControl;
 //TODO
 //Only save settings on program exit, otherwise work with the variable
 
-//There's a crash when in continuous play mode - once one video finishes and the next is playing if you change
-//view mode the program crashes
-
 public final class Viewer
 {
 	private Library _completeLibrary;
@@ -215,15 +212,6 @@ public final class Viewer
 		_cmiContinuousPlay.addOnActivate(&cmiContinuousPlay_Activate);
 	}
 
-	private void PreloadCategory()
-	{
-		debug output(__FUNCTION__);
-		if (_settings && _settings.KeepPosition && _settings.LastSelectedCategory != "")
-		{
-			_vcView.PreloadCategory(_settings.LastSelectedCategory);
-		}
-	}
-
 	private void LoadSettings()
 	{
 		debug output(__FUNCTION__);
@@ -276,6 +264,13 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		_settings.KeepPosition = cast(bool)_cmiKeepPosition.getActive();
+
+		if (!_cmiKeepPosition.getActive())
+		{
+			//Clear last selected when turning off keep position
+			_settings.LastSelectedCategory = "";
+		}
+
 		SettingsWorker.SaveSettings(_settings);
 	}
 
@@ -370,17 +365,23 @@ public final class Viewer
 	private void rmiFlow_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
-		_settings.ViewModeSetting = ViewMode.Flow;
-		SettingsWorker.SaveSettings(_settings);
-		LoadNavigation();
+		if (_rmiFlow.getActive()) //Activate handler includes de-activate so make sure it is actually activated
+		{
+			_settings.ViewModeSetting = ViewMode.Flow;
+			SettingsWorker.SaveSettings(_settings);
+			LoadNavigation();
+		}
 	}
 
 	private void rmiTree_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
-		_settings.ViewModeSetting = ViewMode.Tree;
-		SettingsWorker.SaveSettings(_settings);
-		LoadNavigation();
+		if (_rmiTree.getActive()) //Activate handler includes de-activate so make sure it is actually activated
+		{
+			_settings.ViewModeSetting = ViewMode.Tree;
+			SettingsWorker.SaveSettings(_settings);
+			LoadNavigation();
+		}
 	}
 
 	private void DownloadLibrary()
@@ -506,7 +507,7 @@ public final class Viewer
 				break;
 		}
 
-		PreloadCategory();
+		_vcView.PreloadCategory();
 	}
 
 	private void KillLoadingWindow()

@@ -70,10 +70,13 @@ public final class TreeViewControl : ViewControl
 		_scrollChild.show();
 	}
 
-	public override void PreloadCategory(string treePath)
+	public override void PreloadCategory()
 	{
 		debug output(__FUNCTION__);
-		_tvTree.expandToPath(new TreePath(treePath));
+		if (_settings && _settings.KeepPosition && _settings.LastSelectedCategory != "")
+		{
+			_tvTree.expandToPath(new TreePath(_settings.LastSelectedCategory));
+		}
 	}
 
 	public override bool GetNextVideo(out Library returnVideo, out string returnPath)
@@ -214,11 +217,11 @@ public final class TreeViewControl : ViewControl
 					currentVideo = currentVideo.Children[to!size_t(path)];
 				}
 
-				//Pass in current treepath minus last item as this is used for the category not the video itself
-				LoadVideo(currentVideo, treePath[0 .. treePath.lastIndexOf(":")], false);
-
 				//Set current tree path to compare against when checking whether to load another video or not
 				_currentTreePath = treePath;
+
+				//Pass in current treepath minus last item as this is used for the category not the video itself
+				LoadVideo(currentVideo, treePath[0 .. treePath.lastIndexOf(":")], false);
 			}
 		}
 		

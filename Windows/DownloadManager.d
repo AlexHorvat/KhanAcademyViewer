@@ -152,14 +152,12 @@ public final class DownloadManager
 
 		if (!selectedItem)
 		{
-			debug output("Selected item is null");
 			return false;
 		}
 
 		//If there is a selected item, and it's value in column 0 is true then get the video details
 		if (!selectedItem.getValueString(0))
 		{
-			debug output("Not a video node");
 			return false;
 		}
 
@@ -168,7 +166,6 @@ public final class DownloadManager
 		//If getting coords fails exit this method
 		if (!e.getCoords(xPos, yPos))
 		{
-			debug output("Failed getting coords");
 			return false;
 		}
 
@@ -179,14 +176,12 @@ public final class DownloadManager
 		//If getting column fails exit this method
 		if (!_tvVideos.getPathAtPos(cast(int)xPos, cast(int)yPos, path, column, xRelative, yRelative))
 		{
-			debug output("Failed getting path at pos");
 			return false;
 		}
 
 		//If user has not clicked on the third column exit this method
 		if (column.getTitle() != _imageColumnName)
 		{
-			debug output("Not image column");
 			return false;
 		}
 
@@ -195,7 +190,6 @@ public final class DownloadManager
 		//If user has clicked outside the download/delete icon exit this method
 		if (xRelative < columnMidPoint - 10 || xRelative > columnMidPoint + 10)
 		{
-			debug output("Not clicked in image bounds");
 			return false;
 		}
 

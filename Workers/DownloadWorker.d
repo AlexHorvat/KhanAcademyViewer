@@ -171,12 +171,10 @@ public static class DownloadWorker
 		//If the node still has children load the current title and recurse again
 		if ("children" in json && json["children"].type !is JSON_TYPE.NULL)
 		{
-			debug output("Found a node library");
 			Library newLibrary = new Library();
 			Appender!(Library[], Library) appendLibrary = appender!(Library[], Library);
 
 			//Every entry has a title, no need to null check
-			debug output("adding title ", json["title"].str);
 			newLibrary.Title = json["title"].str;
 
 			//Get all children of this library
@@ -206,11 +204,9 @@ public static class DownloadWorker
 		//If no children then check if there's download links, if there are then this is a video
 		else if ("download_urls" in json && json["download_urls"].type !is JSON_TYPE.NULL)
 		{
-			debug output("Found a video");
 			Library newLibrary = new Library();
 			
 			//Every entry has a title, no need to null check
-			debug output("adding title ", json["title"].str);
 			newLibrary.Title = json["title"].str;
 			
 			//Check if there is an author_names object at all
@@ -255,7 +251,6 @@ public static class DownloadWorker
 		//No children, but no video's as well, must be an exercice - don't load it
 		else
 		{
-			debug output("Found an exercise");
 			return null;
 		}
 	}

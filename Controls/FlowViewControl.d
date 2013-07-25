@@ -79,64 +79,67 @@ public final class FlowViewControl : ViewControl
 		_bboxBreadCrumbs.removeAll();
 	}
 
-	public override void PreloadCategory(string treePath)
+	public override void PreloadCategory()
 	{
 		debug output(__FUNCTION__);
-		//There's a variety of things that can go wrong while preloading - but none really matter
-		//So if something goes wrong abandon the preload
-		try
+		if (_settings && _settings.KeepPosition && _settings.LastSelectedCategory != "")
 		{
-			int childRowIndex;
-			string[] paths = split(treePath, ":");
-
-			_parentLibrary = _completeLibrary;
-
-			//Set the parent library(ies)
-			foreach(string path; paths[0 .. $ - 1])
+			//There's a variety of things that can go wrong while preloading - but none really matter
+			//So if something goes wrong abandon the preload
+			try
 			{
-				childRowIndex = to!int(path);
-				_parentLibrary = _parentLibrary.Children[childRowIndex];
+				int childRowIndex;
+				string[] paths = split(_settings.LastSelectedCategory, ":");
 
-				//Add the parent item breadcrumbs
+				_parentLibrary = _completeLibrary;
+
+				//Set the parent library(ies)
+				foreach(string path; paths[0 .. $ - 1])
+				{
+					childRowIndex = to!int(path);
+					_parentLibrary = _parentLibrary.Children[childRowIndex];
+
+					//Add the parent item breadcrumbs
+					BreadCrumb crumb = new BreadCrumb();
+
+					crumb.RowIndex = childRowIndex;
+					crumb.Title = _parentLibrary.Title;
+
+					_breadCrumbs ~= crumb;
+				}
+				
+				_tvParent.setModel(CreateModel(true));
+				
+				//Set child library to last breadcrumb item
+				childRowIndex = to!int(paths[$ - 1]);
+
+				//Set the child library
+				_childLibrary = _parentLibrary.Children[childRowIndex];
+
+				//Add the final item to the breadcrumbs
 				BreadCrumb crumb = new BreadCrumb();
-
+				
 				crumb.RowIndex = childRowIndex;
-				crumb.Title = _parentLibrary.Title;
-
+				crumb.Title = _childLibrary.Title;
+				
 				_breadCrumbs ~= crumb;
+
+				//Load the child library model
+				_tvChild.setModel(CreateModel(false));
+				
+				//Pre-set the selected item in parent treeview
+				TreeSelection selection = _tvParent.getSelection();
+				selection.selectPath(new TreePath(childRowIndex));
 			}
-			
-			_tvParent.setModel(CreateModel(true));
-			
-			//Set child library to last breadcrumb item
-			childRowIndex = to!int(paths[$ - 1]);
+			//If anything goes wrong with the preloading just swallow the error and don't load breadcumbs (or preload)
+			catch
+			{
+				return;
+			}
 
-			//Set the child library
-			_childLibrary = _parentLibrary.Children[childRowIndex];
-
-			//Add the final item to the breadcrumbs
-			BreadCrumb crumb = new BreadCrumb();
-			
-			crumb.RowIndex = childRowIndex;
-			crumb.Title = _childLibrary.Title;
-			
-			_breadCrumbs ~= crumb;
-
-			//Load the child library model
-			_tvChild.setModel(CreateModel(false));
-			
-			//Pre-set the selected item in parent treeview
-			TreeSelection selection = _tvParent.getSelection();
-			selection.selectPath(new TreePath(childRowIndex));
+			//Refresh bread crumbs
+			LoadBreadCrumbs();
 		}
-		//If anything goes wrong with the preloading just swallow the error and don't load breadcumbs (or preload)
-		catch
-		{
-			return;
-		}
-
-		//Refresh bread crumbs
-		LoadBreadCrumbs();
 	}
 
 	public override bool GetNextVideo(out Library returnVideo, out string returnPath)
@@ -165,7 +168,7 @@ public final class FlowViewControl : ViewControl
 
 			int rowIndex = _tvChild.getSelectedIter().getValueInt(0);
 			returnVideo = _childLibrary.Children[rowIndex];
-			
+						
 			//Both the new video library and path have been set by here, so return true to tell the video player to keep
 			//going with the next video
 			return true;

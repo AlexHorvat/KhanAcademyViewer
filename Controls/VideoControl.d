@@ -24,6 +24,8 @@ module KhanAcademyViewer.Controls.VideoControl;
 
 debug alias std.stdio.writeln output;
 
+import core.thread;
+
 import std.file:exists;
 import std.string:format;
 
@@ -57,7 +59,7 @@ import KhanAcademyViewer.Windows.Fullscreen;
 
 public final class VideoControl : Grid
 {
-	public static bool IsPlaying = false;
+	public shared static bool IsPlaying = false;
 	public shared static bool IsFullscreen = false; //Is shared with HidePause and HideTitle threads in VideoScreen
 
 	private double _maxRange;
@@ -77,6 +79,8 @@ public final class VideoControl : Grid
 
 	private VideoOverlay _voOverlay;
 	private Element _elSource;
+
+	private Thread _playThread;
 
 	public this()
 	{
@@ -239,7 +243,7 @@ public final class VideoControl : Grid
 
 		if (startPlaying)
 		{
-			Play();
+			PlayPause();
 		}
 	}
 
@@ -251,6 +255,13 @@ public final class VideoControl : Grid
 			//Stop the video
 			_elSource.setState(GstState.NULL);
 			IsPlaying = false;
+
+			//Make sure the Play thread has re-joined to the main thread, this stops weird side effects.
+			if (_playThread)
+			{
+				_playThread.join(true);
+				_playThread = null;
+			}
 
 			//Reset the UI
 			_btnPlay.setImage(_imgPlay);
@@ -357,7 +368,16 @@ public final class VideoControl : Grid
 	private void PlayPause()
 	{
 		debug output(__FUNCTION__);
-		IsPlaying ? Pause() : Play();
+		if (IsPlaying)
+		{
+			Pause();
+		}
+		else
+		{
+			//Spin Play off into it's own thread, this ensures that any code running after play starts gets completed.
+			_playThread = new Thread(&Play);
+			_playThread.start();
+		}
 	}
 
 	private void Play()
@@ -395,13 +415,17 @@ public final class VideoControl : Grid
 
 						if (_isContinuousPlay)
 						{
-							PlayNextVideo();
+							//Call next video from another thread - important to do this or this thread will deadlock when trying to join
+							//on video unlock.
+							Thread CallNextVideoThread = new Thread(&CallNextVideo);
+							CallNextVideoThread.start();
+							CallNextVideoThread = null;
 						}
 
 						break;
 						
 					case GstMessageType.ERROR:
-						this.destroy();
+						return;
 						break;
 						
 					default:
@@ -428,6 +452,13 @@ public final class VideoControl : Grid
 			
 			RefreshUI();
 		}
+	}
+
+	private void CallNextVideo()
+	{
+		debug output(__FUNCTION__);
+		//Need to call PlayNextVideo from a new thread, so that the Play thread can join back to main thread when unloading video.
+		PlayNextVideo();
 	}
 
 	private void Pause()

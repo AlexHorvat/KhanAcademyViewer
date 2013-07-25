@@ -31,7 +31,7 @@ import KhanAcademyViewer.DataStructures.Settings;
 
 protected abstract class ViewControl
 {
-	public void PreloadCategory(string);
+	public void PreloadCategory();
 	public bool GetNextVideo(out Library, out string);
 	protected ScrolledWindow _scrollParent;
 	protected ScrolledWindow _scrollChild;
@@ -42,8 +42,6 @@ protected abstract class ViewControl
 	protected void LoadVideo(Library currentVideo, string path, bool startPlaying)
 	{
 		debug output(__FUNCTION__);
-		_vcVideo.LoadVideo(currentVideo, startPlaying);
-
 		//Continuous play?
 		if (_settings && _settings.ContinuousPlay)
 		{
@@ -55,8 +53,13 @@ protected abstract class ViewControl
 		}
 
 		//Save current treepath to settings
-		_settings.LastSelectedCategory = path;
-		SettingsWorker.SaveSettings(_settings);
+		if(_settings && _settings.KeepPosition)
+		{
+			_settings.LastSelectedCategory = path;
+			SettingsWorker.SaveSettings(_settings);
+		}
+
+		_vcVideo.LoadVideo(currentVideo, startPlaying);
 	}
 
 	protected void PlayNextVideo()
