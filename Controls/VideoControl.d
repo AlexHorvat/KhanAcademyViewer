@@ -62,6 +62,9 @@ public final class VideoControl : Grid
 	public shared static bool IsPlaying = false;
 	public shared static bool IsFullscreen = false; //Is shared with HidePause and HideTitle threads in VideoScreen
 
+	private immutable uint _pointOneSecond = 100000000;
+	private immutable uint _oneSecond = 1000000000;
+
 	private double _maxRange;
 	private bool _isContinuousPlay = false;
 
@@ -79,8 +82,8 @@ public final class VideoControl : Grid
 
 	private VideoOverlay _voOverlay;
 	private Element _elSource;
-
-	private Thread _playThread;
+	
+	Thread _updateElapsedTimeThread;
 
 	public this()
 	{
@@ -195,6 +198,9 @@ public final class VideoControl : Grid
 		_elSource = ElementFactory.make("playbin", "playBin");
 		_elSource.setProperty("video-sink", cast(ulong)elVideoSink.getElementStruct());
 
+		//Add a message watch to the video
+		_elSource.getBus().addWatch(&elSource_Watch);
+
 		GstState current;
 		GstState pending;
 		string localFileName = GetLocalFileName(currentVideo.MP4);
@@ -212,18 +218,18 @@ public final class VideoControl : Grid
 
 		//Get the video buffered and ready to play
 		_elSource.setState(GstState.PAUSED);
-		_elSource.getState(current, pending, 100000000); //0.1 seconds
+		_elSource.getState(current, pending, _pointOneSecond);
 		
 		//While loading keep the UI going - refresh every 0.1 seconds until video reports it's ready
 		while (current != GstState.PAUSED)
 		{
 			RefreshUI();
-			_elSource.getState(current, pending, 100000000);
+			_elSource.getState(current, pending, _pointOneSecond);
 		}
 		
 		//Now that video is ready, can query the length and set the total time of the scale
 		//Return in seconds as that's way more managable
-		_maxRange = _elSource.queryDuration() / 1000000000;
+		_maxRange = _elSource.queryDuration() / _oneSecond;
 		 
 		_sclPosition.setRange(0, _maxRange);
 		
@@ -243,7 +249,7 @@ public final class VideoControl : Grid
 
 		if (startPlaying)
 		{
-			PlayPause();
+			Play();
 		}
 	}
 
@@ -256,11 +262,11 @@ public final class VideoControl : Grid
 			_elSource.setState(GstState.NULL);
 			IsPlaying = false;
 
-			//Make sure the Play thread has re-joined to the main thread, this stops weird side effects.
-			if (_playThread)
+			//Make sure the update elapsed time thread is dead
+			if (_updateElapsedTimeThread)
 			{
-				_playThread.join(true);
-				_playThread = null;
+				_updateElapsedTimeThread.join(false);
+				_updateElapsedTimeThread = null;
 			}
 
 			//Reset the UI
@@ -374,84 +380,86 @@ public final class VideoControl : Grid
 		}
 		else
 		{
-			//Spin Play off into it's own thread, this ensures that any code running after play starts gets completed.
-			_playThread = new Thread(&Play);
-			_playThread.start();
+			Play();
 		}
 	}
 
 	private void Play()
 	{
 		debug output(__FUNCTION__);
-		if (_elSource.setState(GstState.PLAYING) == GstStateChangeReturn.FAILURE)
-		{
-			return;
-		}
-		
-		Bus bus = _elSource.getBus();
-		Message message;
+		//Get the video playing
+		_elSource.setState(GstState.PLAYING);
+		_btnPlay.setImage(_imgPause);
+		IsPlaying = true;
+
+		//Add the loop to update the elapsed time on it's own thread
+		_updateElapsedTimeThread = new Thread(&UpdateElapsedTime);
+		_updateElapsedTimeThread.start();
+	}
+
+	private void UpdateElapsedTime()
+	{
+		debug output(__FUNCTION__);
+		//This thread will self destruct when IsPlaying is set to false
 		long position;
 		double positionInSeconds;
 		string currentTime;
-		
-		_btnPlay.setImage(_imgPause);
-		
-		IsPlaying = true;
-		
+
 		while(IsPlaying)
 		{
-			//Is a new message required every time?
-			message = bus.timedPopFiltered(100000000, GstMessageType.EOS | GstMessageType.ERROR);
-			
-			if (message)
+			//Swallow any queryPosition errors
+			if (_elSource.queryPosition(GstFormat.TIME, position))
 			{
-				//EOF or error happened
-				switch (message.type)
-				{
-					case GstMessageType.EOS:
-						Pause();
-						//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
-						SeekTo(0);
-
-						if (_isContinuousPlay)
-						{
-							//Call next video from another thread - important to do this or this thread will deadlock when trying to join
-							//on video unlock.
-							Thread CallNextVideoThread = new Thread(&CallNextVideo);
-							CallNextVideoThread.start();
-							CallNextVideoThread = null;
-						}
-
-						break;
-						
-					case GstMessageType.ERROR:
-						return;
-						break;
-						
-					default:
-						break;
-				}
+				//Get position in seconds for use in setting the scale position
+				positionInSeconds = position / _oneSecond;
+				
+				//Format the position into m:ss format (don't think there are any videos even near an hour long, so don't worry about hours for now)
+				currentTime = format("%s:%02s", cast(int)(positionInSeconds / 60) % 60, cast(int)positionInSeconds % 60);
+				
+				//Move the position indicator
+				_sclPosition.setValue(positionInSeconds);
+				
+				//Change the displayed time
+				_lblCurrentTime.setText(currentTime);
 			}
-			else
-			{
-				if (_elSource.queryPosition(GstFormat.TIME, position))
-				{
-					//Get position in seconds for use in setting the scale position
-					positionInSeconds = position / 1000000000;
-					
-					//Format the position into m:ss format (don't think there are any videos even near an hour long, so don't worry about hours for now)
-					currentTime = format("%s:%02s", cast(int)(positionInSeconds / 60) % 60, cast(int)positionInSeconds % 60);
-					
-					//Move the position indicator
-					_sclPosition.setValue(positionInSeconds);
-					
-					//Change the displayed time
-					_lblCurrentTime.setText(currentTime);
-				}
-			}
-			
-			RefreshUI();
+
+			//Time updated, now wait half a second to update it again
+			Thread.sleep(dur!("msecs")(500));
 		}
+	}
+
+	private bool elSource_Watch(Message message)
+	{
+		debug output(__FUNCTION__);
+		switch (message.type)
+		{
+			case GstMessageType.EOS: //End of video, either stop or load the next video depending on isContinuousPlay
+				Pause();
+
+				//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
+				SeekTo(0);
+				
+				if (_isContinuousPlay)
+				{
+					//Call next video from another thread, make sure this watch doesn't get kept going forever
+					Thread CallNextVideoThread = new Thread(&CallNextVideo);
+					CallNextVideoThread.start();
+					CallNextVideoThread = null;
+				}
+
+				return false;
+				break;
+				
+			case GstMessageType.ERROR:
+				IsPlaying = false;
+				return false;
+				break;
+				
+			default:
+				break;
+		}
+
+		return true;
 	}
 
 	private void CallNextVideo()
@@ -468,13 +476,17 @@ public final class VideoControl : Grid
 		_btnPlay.setImage(_imgPlay);
 		
 		IsPlaying = false;
+
+		_updateElapsedTimeThread.join();
+		_updateElapsedTimeThread = null;
 	}
 
 	private void SeekTo(double seconds)
 	{
 		debug output(__FUNCTION__);
-		long nanoSeconds = cast(long)seconds * 1000000000;
-
+		long nanoSeconds = cast(long)seconds * _oneSecond;
+		//Pause();
 		_elSource.seek(nanoSeconds);
+
 	}
 }
