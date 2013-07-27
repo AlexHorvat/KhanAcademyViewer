@@ -59,13 +59,18 @@ public static class LibraryWorker
 
 		return completeLibrary;
 	}
-
-	//public static Library offlineLibrary;
-	public static void LoadOfflineLibrary()
+	
+	public static void LoadOfflineLibraryAsync()
 	{
 		debug output(__FUNCTION__);
 		offlineLibrary = RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
 		ownerTid.send(cast(shared)offlineLibrary);
+	}
+
+	public static Library LoadOfflineLibrary()
+	{
+		debug output(__FUNCTION__);
+		return RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
 	}
 
 	private static Library RecurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)

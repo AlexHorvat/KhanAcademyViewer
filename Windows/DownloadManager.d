@@ -57,10 +57,12 @@ import KhanAcademyViewer.Workers.LibraryWorker;
 import KhanAcademyViewer.Include.Config;
 import KhanAcademyViewer.Include.Functions;
 import KhanAcademyViewer.Workers.DownloadWorker;
+import KhanAcademyViewer.DataStructures.Settings;
 
 public final class DownloadManager
 {
 	private immutable string _imageColumnName = "ImageColumn";
+	private immutable bool IsOffline;
 	
 	private Library _completeLibrary;
 	private Window _wdwDownloadManager;
@@ -73,11 +75,14 @@ public final class DownloadManager
 	private uint _statusBarContextID;
 	private TreeIter[string] _activeIters; //Keep track of which videos are downloading by tracking their TreeIter
 
-	public this()
+	public this(Settings settings, void delegate() onDownloadManager_Closed)
 	{
 		debug output(__FUNCTION__);
+		IsOffline = settings.IsOffline;
+		DownloadManager_Closed = onDownloadManager_Closed;
+
 		SetupWindow();
-		_completeLibrary = LibraryWorker.LoadLibrary();
+		_completeLibrary = IsOffline ? LibraryWorker.LoadOfflineLibrary() : LibraryWorker.LoadLibrary();
 		LoadTree();
 		DownloadedVideoSize();
 	}
@@ -85,8 +90,11 @@ public final class DownloadManager
 	public ~this()
 	{
 		debug output(__FUNCTION__);
+		DownloadManager_Closed();
 		_wdwDownloadManager.destroy();
 	}
+
+	private void delegate() DownloadManager_Closed;
 
 	private void SetupWindow()
 	{
@@ -292,10 +300,20 @@ public final class DownloadManager
 		else if (selectedImage == _deleteImage.getPixbufStruct())
 		{
 			//When the user clicks the delete image:
-			//Change the icon back to the download icon
+			//If online
+			//	Change the icon back to the download icon
+			//If offline
+			//	Remove the item from the tree
 			//Delete the file
 			//Recalc total video size on disk
-			store.setValue(selectedItem, 2, _downloadImage);
+			if (IsOffline)
+			{
+				store.remove(selectedItem);
+			}
+			else
+			{
+				store.setValue(selectedItem, 2, _downloadImage);
+			}
 
 			DownloadWorker.DeleteVideo(url);
 			DownloadedVideoSize();

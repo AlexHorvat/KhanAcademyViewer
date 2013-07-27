@@ -60,7 +60,13 @@ import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.Controls.VideoControl;
 
 //TODO
-//Only save settings on program exit, otherwise work with the variable
+//Only save settings on program exit, otherwise work with the variable - Load settings only once with viewer.ctor, save on viewer.dstor, don't load from file anywhere else
+
+//Show prompt if user closes download manager while downloading about how the downloads will be cut off
+
+//Merge LoadLibrary and setonline/setoffline, they do a lot of the same stuff. Make the loading window appear when setting online/offline.
+
+//Use loading window more when going online/offline (seems that going online doesn't update the message past checking for internet...)
 
 public final class Viewer
 {
@@ -91,7 +97,7 @@ public final class Viewer
 		LoadSettings();
 		DownloadLibrary();
 		LoadLibraryFromStorage();
-		_settings.IsOffline ? SetOffline : SetOnline(false); //No need to double check for internet connection
+		_settings.IsOffline ? SetOffline(false) : SetOnline(false, false); //No need to double check for internet connection
 		KillLoadingWindow();
 		HookUpOptionHandlers();
 	}
@@ -298,10 +304,10 @@ public final class Viewer
 		_settings.LastSelectedCategory = "";
 		SettingsWorker.SaveSettings(_settings);
 
-		_cmiOffline.getActive() ? SetOffline() : SetOnline(true);
+		_cmiOffline.getActive() ? SetOffline(true) : SetOnline(true, true);
 	}
 
-	private void SetOnline(bool checkForInternetConnection)
+	private void SetOnline(bool checkForInternetConnection, bool loadLibrary)
 	{
 		debug output(__FUNCTION__);
 
@@ -325,14 +331,17 @@ public final class Viewer
 		_settings.IsOffline = false;
 		SettingsWorker.SaveSettings(_settings);
 
-		_miDownloadManager.setSensitive(true);
+		//TODO clean this up
+		if (loadLibrary)
+		{
+			//Enable full library
+			_completeLibrary = LibraryWorker.LoadLibrary();
+		}
 
-		//Enable full library
-		_completeLibrary = LibraryWorker.LoadLibrary();
 		LoadNavigation();
 	}
 
-	private void SetOffline()
+	private void SetOffline(bool loadOfflineLibrary)
 	{
 		debug output(__FUNCTION__);
 		bool onwards = false;
@@ -340,23 +349,25 @@ public final class Viewer
 		_settings.IsOffline = true;
 		SettingsWorker.SaveSettings(_settings);
 
-		_miDownloadManager.setSensitive(false);
-
-		//Only show video's which are downloaded, need to change _completeLibrary to reflect this
-		//Make async as might be slow on older computers
-		spawn(&LibraryWorker.LoadOfflineLibrary);
-
-		while (!onwards)
+		//TODO clean this up
+		if (loadOfflineLibrary)
 		{
-			receiveTimeout(
-				dur!"msecs"(250),
-				(shared Library offlineLibrary)
-				{
-					_completeLibrary = cast(Library)offlineLibrary;
-					onwards = true;
-				});
-			
-			RefreshUI();
+			//Only show video's which are downloaded, need to change _completeLibrary to reflect this
+			//Make async as might be slow on older computers
+			spawn(&LibraryWorker.LoadOfflineLibraryAsync);
+
+			while (!onwards)
+			{
+				receiveTimeout(
+					dur!"msecs"(250),
+					(shared Library offlineLibrary)
+					{
+						_completeLibrary = cast(Library)offlineLibrary;
+						onwards = true;
+					});
+				
+				RefreshUI();
+			}
 		}
 
 		LoadNavigation();
@@ -462,6 +473,7 @@ public final class Viewer
 		}
 	}
 
+	//TODO merge with Online/Offline
 	private void LoadLibraryFromStorage()
 	{
 		debug output(__FUNCTION__);
@@ -482,7 +494,8 @@ public final class Viewer
 			Thread.sleep(dur!"msecs"(250));
 		}
 
-		_completeLibrary = LibraryWorker.LoadLibrary();
+		//Load the online or offline library based on whether currently on or offline...
+		_completeLibrary = _settings.IsOffline ? LibraryWorker.LoadOfflineLibrary() : LibraryWorker.LoadLibrary();
 	}
 
 	private void LoadNavigation()
@@ -558,8 +571,40 @@ public final class Viewer
 		//Stop any playing videos as it's possible to delete a video that's playing
 		_vcVideo.UnloadVideo();
 
-		DownloadManager downloadManager = new DownloadManager();
+		DownloadManager downloadManager = new DownloadManager(_settings, &OnDownloadManager_Closed);
 		return true;
+	}
+
+	private void OnDownloadManager_Closed()
+	{
+		debug output(__FUNCTION__);
+		//If offline need to refresh the views so that any videos which have been deleted are removed
+		if(_settings.IsOffline)
+		{
+			bool onwards = false;
+
+			_loadingWindow = new Loading();
+			scope(exit) _loadingWindow.destroy();
+
+			_loadingWindow.UpdateStatus("Refreshing library");
+
+			spawn(&LibraryWorker.LoadOfflineLibraryAsync);
+			
+			while (!onwards)
+			{
+				receiveTimeout(
+					dur!"msecs"(250),
+					(shared Library offlineLibrary)
+					{
+					_completeLibrary = cast(Library)offlineLibrary;
+					onwards = true;
+				});
+				
+				RefreshUI();
+			}
+
+			LoadNavigation();
+		}
 	}
 
 	private bool miExit_ButtonRelease(Event, Widget)

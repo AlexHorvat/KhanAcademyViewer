@@ -83,7 +83,7 @@ public final class VideoControl : Grid
 	private VideoOverlay _voOverlay;
 	private Element _elSource;
 	
-	Thread _updateElapsedTimeThread;
+	private Thread _updateElapsedTimeThread;
 
 	public this()
 	{
@@ -160,8 +160,29 @@ public final class VideoControl : Grid
 		super.attach(swDescription, 0, 4, 4, 1);
 	}
 
+	public ~this()
+	{
+		debug output(__FUNCTION__);
+		//Make sure everything closes in an orderly fashion.
+		//Stop the video
+		_elSource.setState(GstState.NULL);
+		IsPlaying = false;
+		
+		//Make sure the update elapsed time thread is dead
+		if (_updateElapsedTimeThread)
+		{
+			_updateElapsedTimeThread.join(false);
+			_updateElapsedTimeThread = null;
+		}
+
+		//Finally kill elSource
+		_elSource.destroy();
+		_elSource = null;
+	}
+
 	public void AddOverlays()
 	{
+		debug output(__FUNCTION__);
 		_vsScreen.AddOverlays();
 	}
 
