@@ -46,6 +46,7 @@ import gtk.Widget;
 import gtk.Grid;
 import gtk.ScrolledWindow;
 import gtk.Fixed;
+import gtk.Dialog;
 
 import gdk.Pixbuf;
 import gdk.Event;
@@ -402,9 +403,20 @@ public final class DownloadManager
 	private void btnDone_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
-
+		//Check if there are still videos downloading
 		if (_activeIters.length >  0)
 		{
+			//Prompt user to cancel downloads
+			Dialog cancelDownloads = new Dialog("Stop downloads?", _wdwDownloadManager, GtkDialogFlags.MODAL, [StockID.YES, StockID.NO], [ResponseType.YES, ResponseType.NO]);
+
+			int cancelResponse = cancelDownloads.run();
+			cancelDownloads.destroy();
+
+			if (cancelResponse == ResponseType.NO)
+			{
+				return;
+			}
+
 			//There are still downloads going, cancel them all
 			foreach( url; _activeIters.keys)
 			{

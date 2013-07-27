@@ -62,8 +62,6 @@ import KhanAcademyViewer.Controls.VideoControl;
 //TODO
 //Only save settings on program exit, otherwise work with the variable - Load settings only once with viewer.ctor, save on viewer.dstor, don't load from file anywhere else
 
-//Show prompt if user closes download manager while downloading about how the downloads will be cut off
-
 //Merge LoadLibrary and setonline/setoffline, they do a lot of the same stuff. Make the loading window appear when setting online/offline.
 
 //Use loading window more when going online/offline (seems that going online doesn't update the message past checking for internet...)
