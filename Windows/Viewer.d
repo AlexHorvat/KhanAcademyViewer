@@ -60,8 +60,6 @@ import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.Controls.VideoControl;
 
 //TODO
-//Only save settings on program exit, otherwise work with the variable - Load settings only once with viewer.ctor, save on viewer.dstor, don't load from file anywhere else
-
 //Merge LoadLibrary and setonline/setoffline, they do a lot of the same stuff. Make the loading window appear when setting online/offline.
 
 //Use loading window more when going online/offline (seems that going online doesn't update the message past checking for internet...)
@@ -274,15 +272,12 @@ public final class Viewer
 			//Clear last selected when turning off keep position
 			_settings.LastSelectedCategory = "";
 		}
-
-		SettingsWorker.SaveSettings(_settings);
 	}
 
 	private void cmiContinuousPlay_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
 		_settings.ContinuousPlay = cast(bool)_cmiContinuousPlay.getActive();
-		SettingsWorker.SaveSettings(_settings);
 
 		if(_settings.ContinuousPlay)
 		{
@@ -300,7 +295,6 @@ public final class Viewer
 		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
 		//so the treepath stored here would be pointing to a different category
 		_settings.LastSelectedCategory = "";
-		SettingsWorker.SaveSettings(_settings);
 
 		_cmiOffline.getActive() ? SetOffline(true) : SetOnline(true, true);
 	}
@@ -327,7 +321,6 @@ public final class Viewer
 		}
 
 		_settings.IsOffline = false;
-		SettingsWorker.SaveSettings(_settings);
 
 		//TODO clean this up
 		if (loadLibrary)
@@ -345,7 +338,6 @@ public final class Viewer
 		bool onwards = false;
 
 		_settings.IsOffline = true;
-		SettingsWorker.SaveSettings(_settings);
 
 		//TODO clean this up
 		if (loadOfflineLibrary)
@@ -377,7 +369,7 @@ public final class Viewer
 		if (_rmiFlow.getActive()) //Activate handler includes de-activate so make sure it is actually activated
 		{
 			_settings.ViewModeSetting = ViewMode.Flow;
-			SettingsWorker.SaveSettings(_settings);
+
 			LoadNavigation();
 		}
 	}
@@ -388,7 +380,7 @@ public final class Viewer
 		if (_rmiTree.getActive()) //Activate handler includes de-activate so make sure it is actually activated
 		{
 			_settings.ViewModeSetting = ViewMode.Tree;
-			SettingsWorker.SaveSettings(_settings);
+
 			LoadNavigation();
 		}
 	}
@@ -413,7 +405,6 @@ public final class Viewer
 			//No internet connection, don't download library, set to offline mode and clear last selected category
 			_settings.IsOffline = true;
 			_settings.LastSelectedCategory = "";
-			SettingsWorker.SaveSettings(_settings);
 		}
 
 		//Async check if need to download library (async because sometimes it's really slow)
@@ -608,6 +599,7 @@ public final class Viewer
 	private bool miExit_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
+		SettingsWorker.SaveSettings(_settings);
 		exit(0);
 		return true;
 	}
@@ -615,6 +607,7 @@ public final class Viewer
 	private void wdwViewer_Destroy(Widget)
 	{
 		debug output(__FUNCTION__);
+		SettingsWorker.SaveSettings(_settings);
 		exit(0);
 	}
 }

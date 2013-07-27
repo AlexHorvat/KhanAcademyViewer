@@ -26,7 +26,6 @@ import gtk.ScrolledWindow;
 
 import KhanAcademyViewer.DataStructures.Library;
 import KhanAcademyViewer.Controls.VideoControl;
-import KhanAcademyViewer.Workers.SettingsWorker;
 import KhanAcademyViewer.DataStructures.Settings;
 
 protected abstract class ViewControl
@@ -56,7 +55,6 @@ protected abstract class ViewControl
 		if(_settings && _settings.KeepPosition)
 		{
 			_settings.LastSelectedCategory = path;
-			SettingsWorker.SaveSettings(_settings);
 		}
 
 		_vcVideo.LoadVideo(currentVideo, startPlaying);
