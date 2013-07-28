@@ -62,7 +62,7 @@ import KhanAcademyViewer.Controls.VideoControl;
 //TODO
 //Why doesn't going offline message show in loading window (possibly just too fast)
 //Show error popup on no internet connection
-//Merge download library and go online? (Would eliminate the int connection check bool)
+//Why check for internet pins cpu?
 
 public final class Viewer
 {
@@ -90,10 +90,9 @@ public final class Viewer
 		SetupWindow();
 		LoadSettings();
 		CreateLoadingWindow();
-		DownloadLibrary();
-		_settings.IsOffline ? SetOffline() : SetOnline(false); //No need to double check for internet connection, already checked in DownloadLibrary()
-		KillLoadingWindow();
 		HookUpOptionHandlers();
+		_settings.IsOffline ? SetOffline() : SetOnline();
+		KillLoadingWindow();
 	}
 
 	private void SetupWindow()
@@ -300,28 +299,25 @@ public final class Viewer
 		_settings.LastSelectedCategory = "";
 
 		CreateLoadingWindow();
-		_cmiOffline.getActive() ? SetOffline() : SetOnline(true);
+		_cmiOffline.getActive() ? SetOffline() : SetOnline();
 		KillLoadingWindow();
 	}
 
-	private void SetOnline(bool checkForInternetConnection)
+	private void SetOnline()
 	{
 		debug output(__FUNCTION__);
-		//If we're checking for an internet connection (i.e. user clicked go online) and there isn't one then go back offline.
-		if (checkForInternetConnection && !HasInternetConnection())
+		_loadingWindow.UpdateStatus("Going online");
+
+		//If there's no internet connection go back offline
+		if (!HasInternetConnection())
 		{
-			//Disable the listener before calling setActive or it will be fired
-			_cmiOffline.onActivateListeners.destroy();
 			_cmiOffline.setActive(true);
-			_cmiOffline.addOnActivate(&cmiOffline_Activate);
 		}
-		//Otherwise it's safe to assume that the internet connection has already been checked for (by DownloadLibrary() and settings set accordingly)
-		//So if it was set to offline by DownloadLibrary() the execution path would never end up here while initilising the program.
 		else
 		{
-			_loadingWindow.UpdateStatus("Going online");
 			_settings.IsOffline = false;
 
+			DownloadLibrary();
 			LoadLibraryFromStorage();
 			LoadNavigation();
 		}
@@ -377,22 +373,7 @@ public final class Viewer
 		debug output(__FUNCTION__);
 		bool onwards, needToDownLoadLibrary;
 
-		if (_settings.IsOffline)
-		{
-			//Set offline, don't bother checking library
-			return;
-		}
-
-		if (!HasInternetConnection())
-		{
-			//No internet connection, don't download library, set to offline mode and clear last selected category
-			_settings.IsOffline = true;
-			_settings.LastSelectedCategory = "";
-			return;
-		}
-
 		//Async check if need to download library (async because sometimes it's really slow)
-		onwards = false;
 		_loadingWindow.UpdateStatus("Checking for library updates");
 		spawn(&DownloadWorker.NeedToDownloadLibrary);
 
