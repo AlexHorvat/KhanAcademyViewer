@@ -29,40 +29,30 @@ import gtk.Dialog;
 
 public final class About
 {
-	private AboutDialog _wdwAbout;
-
-	public this(void delegate() disposeFunction)
+	public this()
 	{
 		debug output(__FUNCTION__);
-		Dispose = disposeFunction;
+		AboutDialog wdwAbout = new AboutDialog();
 
-		_wdwAbout = new AboutDialog();
-		_wdwAbout.setTitle("About Khan Academy Viewer");
-		_wdwAbout.setProgramName("Khan Academy Viewer");
-		_wdwAbout.setVersion("0.3");
-		_wdwAbout.setCopyright("Copyright © 2013 Alex Horvat\nUses MessagePack by Masahiro Nakagawa");
-		_wdwAbout.setComments("The Khan Academy Viewer for the Gnome desktop");
-		_wdwAbout.setLicenseType(GtkLicense.GPL_3_0);
-		_wdwAbout.setAuthors(["Alex Horvat"]);
-		_wdwAbout.addOnResponse(&wdwAbout_Response);
-		_wdwAbout.setDestroyWithParent(true);
-		_wdwAbout.showAll();
+		wdwAbout.setTitle("About Khan Academy Viewer");
+		wdwAbout.setProgramName("Khan Academy Viewer");
+		wdwAbout.setVersion("0.3");
+		wdwAbout.setCopyright("Copyright © 2013 Alex Horvat\nUses MessagePack by Masahiro Nakagawa");
+		wdwAbout.setComments("The Khan Academy Viewer for the Gnome desktop");
+		wdwAbout.setLicenseType(GtkLicense.GPL_3_0);
+		wdwAbout.setAuthors(["Alex Horvat"]);
+		wdwAbout.addOnResponse(&wdwAbout_Response);
+		wdwAbout.setDestroyWithParent(true);
+		wdwAbout.setModal(true);
+		wdwAbout.showAll();
 	}
 
-	public void Show()
-	{
-		_wdwAbout.present();
-	}
-
-	private void delegate() Dispose;
-
-	private void wdwAbout_Response(int response, Dialog)
+	private void wdwAbout_Response(int response, Dialog dialog)
 	{
 		debug output(__FUNCTION__);
 		if (response == GtkResponseType.CANCEL)
 		{
-			_wdwAbout.destroy();
-			Dispose();
+			dialog.destroy();
 		}
 	}
 }
