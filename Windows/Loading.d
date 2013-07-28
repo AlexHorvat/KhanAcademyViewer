@@ -31,6 +31,8 @@ import gtk.Window;
 import gtk.Fixed;
 import gtk.Label;
 
+import KhanAcademyViewer.Include.Functions;
+
 public final class Loading
 {
 	private Window _wdwLoading;
@@ -79,11 +81,13 @@ public final class Loading
 	{
 		debug output(__FUNCTION__);
 		_lblStatus.setText(newStatus);
+		RefreshUI();
 	}
 	
 	public void SetDataDownloadedVisible(bool isVisible)
 	{
 		_lblDataDownloaded.setVisible(isVisible);
+		RefreshUI();
 	}
 
 	public void UpdateAmountDownloaded(long amountDownloaded)

@@ -60,9 +60,9 @@ import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.Controls.VideoControl;
 
 //TODO
-//Merge LoadLibrary and setonline/setoffline, they do a lot of the same stuff. Make the loading window appear when setting online/offline.
-
-//Use loading window more when going online/offline (seems that going online doesn't update the message past checking for internet...)
+//Why doesn't going offline message show in loading window (possibly just too fast)
+//Show error popup on no internet connection
+//Merge download library and go online? (Would eliminate the int connection check bool)
 
 public final class Viewer
 {
@@ -82,8 +82,6 @@ public final class Viewer
 	private CheckMenuItem _cmiKeepPosition;
 	private CheckMenuItem _cmiContinuousPlay;
 	private ViewControl _vcView;
-	private DownloadManager _downloadManager;
-	private About _about;
 	private VideoControl _vcVideo;
 
 	public this()
@@ -91,9 +89,9 @@ public final class Viewer
 		debug output(__FUNCTION__);
 		SetupWindow();
 		LoadSettings();
+		CreateLoadingWindow();
 		DownloadLibrary();
-		LoadLibraryFromStorage();
-		_settings.IsOffline ? SetOffline(false) : SetOnline(false, false); //No need to double check for internet connection
+		_settings.IsOffline ? SetOffline() : SetOnline(false); //No need to double check for internet connection, already checked in DownloadLibrary()
 		KillLoadingWindow();
 		HookUpOptionHandlers();
 	}
@@ -259,6 +257,11 @@ public final class Viewer
 			RefreshUI();
 		}
 
+		if (!hasInternetConnection)
+		{
+			//TODO pop up warning that there is no internet connection, and will be going offline
+		}
+
 		return hasInternetConnection;
 	}
 
@@ -296,70 +299,42 @@ public final class Viewer
 		//so the treepath stored here would be pointing to a different category
 		_settings.LastSelectedCategory = "";
 
-		_cmiOffline.getActive() ? SetOffline(true) : SetOnline(true, true);
+		CreateLoadingWindow();
+		_cmiOffline.getActive() ? SetOffline() : SetOnline(true);
+		KillLoadingWindow();
 	}
 
-	private void SetOnline(bool checkForInternetConnection, bool loadLibrary)
+	private void SetOnline(bool checkForInternetConnection)
 	{
 		debug output(__FUNCTION__);
-
-		if (checkForInternetConnection)
+		//If we're checking for an internet connection (i.e. user clicked go online) and there isn't one then go back offline.
+		if (checkForInternetConnection && !HasInternetConnection())
 		{
-			_loadingWindow = new Loading();
-			scope(exit) _loadingWindow.destroy();
-
-			RefreshUI();
-
-			if (!HasInternetConnection())
-			{
-				//Disable the listener before calling setActive or it will be fired
-				_cmiOffline.onActivateListeners.destroy();
-				_cmiOffline.setActive(true);
-				_cmiOffline.addOnActivate(&cmiOffline_Activate);
-				return;
-			}
+			//Disable the listener before calling setActive or it will be fired
+			_cmiOffline.onActivateListeners.destroy();
+			_cmiOffline.setActive(true);
+			_cmiOffline.addOnActivate(&cmiOffline_Activate);
 		}
-
-		_settings.IsOffline = false;
-
-		//TODO clean this up
-		if (loadLibrary)
+		//Otherwise it's safe to assume that the internet connection has already been checked for (by DownloadLibrary() and settings set accordingly)
+		//So if it was set to offline by DownloadLibrary() the execution path would never end up here while initilising the program.
+		else
 		{
-			//Enable full library
-			_completeLibrary = LibraryWorker.LoadLibrary();
-		}
+			_loadingWindow.UpdateStatus("Going online");
+			_settings.IsOffline = false;
 
-		LoadNavigation();
+			LoadLibraryFromStorage();
+			LoadNavigation();
+		}
 	}
 
-	private void SetOffline(bool loadOfflineLibrary)
+	private void SetOffline()
 	{
 		debug output(__FUNCTION__);
-		bool onwards = false;
+		_loadingWindow.UpdateStatus("Going offline");
 
 		_settings.IsOffline = true;
 
-		//TODO clean this up
-		if (loadOfflineLibrary)
-		{
-			//Only show video's which are downloaded, need to change _completeLibrary to reflect this
-			//Make async as might be slow on older computers
-			spawn(&LibraryWorker.LoadOfflineLibraryAsync);
-
-			while (!onwards)
-			{
-				receiveTimeout(
-					dur!"msecs"(250),
-					(shared Library offlineLibrary)
-					{
-						_completeLibrary = cast(Library)offlineLibrary;
-						onwards = true;
-					});
-				
-				RefreshUI();
-			}
-		}
-
+		LoadLibraryFromStorage();
 		LoadNavigation();
 	}
 
@@ -385,14 +360,22 @@ public final class Viewer
 		}
 	}
 
+	private void CreateLoadingWindow()
+	{
+		debug output(__FUNCTION__);
+		//If loading window already exists don't create a new one
+		if (!_loadingWindow)
+		{
+			//Load the window and refresh the UI to make sure it shows
+			_loadingWindow = new Loading();
+			RefreshUI();
+		}
+	}
+
 	private void DownloadLibrary()
 	{
 		debug output(__FUNCTION__);
 		bool onwards, needToDownLoadLibrary;
-
-		//Show the loading window and make sure it's loaded before starting the download
-		_loadingWindow = new Loading();
-		RefreshUI();
 
 		if (_settings.IsOffline)
 		{
@@ -405,6 +388,7 @@ public final class Viewer
 			//No internet connection, don't download library, set to offline mode and clear last selected category
 			_settings.IsOffline = true;
 			_settings.LastSelectedCategory = "";
+			return;
 		}
 
 		//Async check if need to download library (async because sometimes it's really slow)
@@ -456,21 +440,16 @@ public final class Viewer
 
 			if (!downloadSuccess)
 			{
+				//TODO make this a message box
 				output("Could not download library");
 				exit(1);
 			}
 		}
 	}
 
-	//TODO merge with Online/Offline
 	private void LoadLibraryFromStorage()
 	{
 		debug output(__FUNCTION__);
-		//Maybe make this async in the future
-		//Seems to be difficult to pass the loaded library around async
-		//If passed in a message it locks the sending thread
-		//And if passed as a shared variable it is always null in this thread
-		//even after being set on the loading thread
 		_loadingWindow.UpdateStatus("Processing library");
 		_loadingWindow.SetDataDownloadedVisible(false);
 
@@ -516,6 +495,7 @@ public final class Viewer
 	{
 		debug output(__FUNCTION__);
 		_loadingWindow.destroy();
+		_loadingWindow = null;
 	}
 
 	private bool miAbout_ButtonPress(Event, Widget)
@@ -529,22 +509,9 @@ public final class Viewer
 	private bool miAbout_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
-		if (_about)
-		{
-			_about.Show();
-		}
-		else
-		{
-			_about = new About(&DisposeAbout);
-		}
+		About about = new About();
 
 		return false;
-	}
-
-	private void DisposeAbout()
-	{
-		debug output(__FUNCTION__);
-		_about = null;
 	}
 
 	private bool miDownloadManager_ButtonPress(Event, Widget)
