@@ -21,7 +21,7 @@
 
 module KhanAcademyViewer.Windows.Viewer;
 
-alias std.stdio.writeln output;
+debug alias std.stdio.writeln output;
 
 import std.c.process;
 import std.concurrency;
@@ -39,6 +39,7 @@ import gtk.SeparatorMenuItem;
 import gtk.Grid;
 import gtk.Menu;
 import gtk.MenuBar;
+import gtk.Dialog;
 
 import gdk.Event;
 
@@ -60,8 +61,7 @@ import KhanAcademyViewer.Controls.ViewControl;
 import KhanAcademyViewer.Controls.VideoControl;
 
 //TODO
-//Why doesn't going offline message show in loading window (possibly just too fast)
-//Show error popup on no internet connection
+//Why doesn't going offline message show in loading window (possibly just too fast?)
 //Why check for internet pins cpu?
 
 public final class Viewer
@@ -258,7 +258,11 @@ public final class Viewer
 
 		if (!hasInternetConnection)
 		{
-			//TODO pop up warning that there is no internet connection, and will be going offline
+			//Pop up warning that there is no internet connection, and will be going offline
+			Dialog noConnectionDialog = new Dialog("No internet connection, going offline.", _wdwViewer, GtkDialogFlags.MODAL, [StockID.OK], [ResponseType.OK]);
+			noConnectionDialog.setSizeRequest(350, -1);
+			noConnectionDialog.run();
+			noConnectionDialog.destroy();
 		}
 
 		return hasInternetConnection;
@@ -421,9 +425,11 @@ public final class Viewer
 
 			if (!downloadSuccess)
 			{
-				//TODO make this a message box
-				output("Could not download library");
-				exit(1);
+				//Show warning about not being able to download library
+				Dialog noConnectionDialog = new Dialog("Could not download library.", _wdwViewer, GtkDialogFlags.MODAL, [StockID.OK], [ResponseType.OK]);
+				noConnectionDialog.setSizeRequest(300, -1);
+				noConnectionDialog.run();
+				noConnectionDialog.destroy();
 			}
 		}
 	}
