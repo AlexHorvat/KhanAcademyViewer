@@ -20,10 +20,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Include.Enums;
+module kav.Include.Enums;
 
 protected immutable enum ViewMode
 {
-	Flow = 1,
-	Tree = 2
+	flow = 1,
+	tree = 2
 }

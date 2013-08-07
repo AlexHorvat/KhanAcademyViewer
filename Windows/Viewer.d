@@ -19,83 +19,448 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module KhanAcademyViewer.Windows.Viewer;
+module kav.Windows.Viewer;
 
 debug alias std.stdio.writeln output;
 
-import std.c.process;
-import std.concurrency;
-
 import core.thread;
-
-import gtk.Widget;
-import gtk.Window;
-import gtk.MenuItem;
-import gtk.ScrolledWindow;
-import gtk.ButtonBox;
-import gtk.RadioMenuItem;
-import gtk.CheckMenuItem;
-import gtk.SeparatorMenuItem;
-import gtk.Grid;
-import gtk.Menu;
-import gtk.MenuBar;
-import gtk.Dialog;
-
-import gdk.Event;
 
 import glib.ListSG;
 
-import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.DataStructures.Settings;
-import KhanAcademyViewer.Include.Enums;
-import KhanAcademyViewer.Workers.LibraryWorker;
-import KhanAcademyViewer.Workers.DownloadWorker;
-import KhanAcademyViewer.Workers.SettingsWorker;
-import KhanAcademyViewer.Windows.Loading;
-import KhanAcademyViewer.Windows.DownloadManager;
-import KhanAcademyViewer.Windows.About;
-import KhanAcademyViewer.Include.Functions;
-import KhanAcademyViewer.Controls.TreeViewControl;
-import KhanAcademyViewer.Controls.FlowViewControl;
-import KhanAcademyViewer.Controls.ViewControl;
-import KhanAcademyViewer.Controls.VideoControl;
+import gdk.Event;
+
+import gtk.ButtonBox;
+import gtk.MenuItem;
+import gtk.ScrolledWindow;
+import gtk.Widget;
+import gtk.Window;
+
+import gtk.CheckMenuItem;
+import gtk.Dialog;
+import gtk.Grid;
+import gtk.Menu;
+import gtk.MenuBar;
+import gtk.RadioMenuItem;
+import gtk.SeparatorMenuItem;
+
+import kav.Controls.FlowViewControl;
+import kav.Controls.TreeViewControl;
+import kav.Controls.ViewControl;
+import kav.Controls.VideoControl;
+import kav.DataStructures.Library;
+import kav.DataStructures.Settings;
+import kav.Include.Enums;
+import kav.Include.Functions;
+import kav.Windows.About;
+import kav.Windows.DownloadManager;
+import kav.Windows.Loading;
+import kav.Workers.DownloadWorker;
+import kav.Workers.LibraryWorker;
+import kav.Workers.SettingsWorker;
+
+import std.concurrency;
+import std.c.process;
 
 //TODO
 //Why doesn't going offline message show in loading window (possibly just too fast?)
 //Why check for internet pins cpu?
+//Choose one of load library and load library async, no point having both...
 
 public final class Viewer
 {
-	private Library _completeLibrary;
-	private Settings _settings;
 
-	//UI controls
-	private Window _wdwViewer;
-	private ScrolledWindow _swParent;
-	private ScrolledWindow _swChild;
-	private MenuItem _miDownloadManager;
-	private ButtonBox _bboxBreadCrumbs;
-	private Loading _loadingWindow;
-	private RadioMenuItem _rmiFlow;
-	private RadioMenuItem _rmiTree;
-	private CheckMenuItem _cmiOffline;
-	private CheckMenuItem _cmiKeepPosition;
-	private CheckMenuItem _cmiContinuousPlay;
-	private ViewControl _vcView;
-	private VideoControl _vcVideo;
+public:
 
-	public this()
+	this()
 	{
 		debug output(__FUNCTION__);
-		SetupWindow();
-		LoadSettings();
-		CreateLoadingWindow();
-		HookUpOptionHandlers();
-		_settings.IsOffline ? SetOffline() : SetOnline();
-		KillLoadingWindow();
+		setupWindow();
+		loadSettings();
+		createLoadingWindow();
+		hookUpOptionHandlers();
+		_settings.isOffline ? setOffline() : setOnline();
+		killLoadingWindow();
 	}
 
-	private void SetupWindow()
+private:
+
+	ButtonBox		_bboxBreadCrumbs;
+	CheckMenuItem	_cmiOffline;
+	CheckMenuItem	_cmiKeepPosition;
+	CheckMenuItem	_cmiContinuousPlay;
+	Library			_completeLibrary;
+	Loading			_loadingWindow;
+	MenuItem		_miDownloadManager;
+	RadioMenuItem	_rmiFlow;
+	RadioMenuItem	_rmiTree;
+	Settings		_settings;
+	ScrolledWindow	_swParent;
+	ScrolledWindow	_swChild;
+	ViewControl		_vcView;
+	VideoControl	_vcVideo;
+	Window			_wdwViewer;
+
+	void cmiContinuousPlay_Activate(MenuItem)
+	{
+		debug output(__FUNCTION__);
+		_settings.continuousPlay = cast(bool)_cmiContinuousPlay.getActive();
+		
+		if(_settings.continuousPlay)
+		{
+			_vcVideo.startContinuousPlayMode(&_vcView.playNextVideo);
+		}
+		else
+		{
+			_vcVideo.stopContinuousPlayMode();
+		}
+	}
+
+	void cmiKeepPosition_Activate(MenuItem)
+	{
+		debug output(__FUNCTION__);
+		_settings.keepPosition = cast(bool)_cmiKeepPosition.getActive();
+		
+		if (!_cmiKeepPosition.getActive())
+		{
+			//Clear last selected when turning off keep position
+			_settings.lastSelectedCategory = "";
+		}
+	}
+	
+	void cmiOffline_Activate(MenuItem)
+	{
+		debug output(__FUNCTION__);
+		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
+		//so the treepath stored here would be pointing to a different category
+		_settings.lastSelectedCategory = "";
+		
+		createLoadingWindow();
+		_cmiOffline.getActive() ? setOffline() : setOnline();
+		killLoadingWindow();
+	}
+
+	void createLoadingWindow()
+	{
+		debug output(__FUNCTION__);
+		//If loading window already exists don't create a new one
+		if (!_loadingWindow)
+		{
+			//Load the window and refresh the UI to make sure it shows
+			_loadingWindow = new Loading();
+			Functions.refreshUI();
+		}
+	}
+
+	void downloadLibrary()
+	{
+		debug output(__FUNCTION__);
+		bool onwards, needToDownLoadLibrary;
+		
+		//Async check if need to download library (async because sometimes it's really slow)
+		_loadingWindow.updateStatus("Checking for library updates");
+		spawn(&DownloadWorker.needToDownloadLibrary);
+		
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(250),
+				(bool refreshNeeded)
+				{
+				needToDownLoadLibrary = refreshNeeded;
+				onwards = true;
+			});
+			
+			Functions.refreshUI();
+		}
+		
+		//If library needs to downloaded do another async call to DownloadLibrary
+		//keep _loadingWindow updated with progress
+		if (needToDownLoadLibrary)
+		{
+			bool downloadSuccess;
+			onwards = false;
+			_loadingWindow.updateStatus("Downloading library");
+			_loadingWindow.setDataDownloadedVisible(true);
+			spawn(&DownloadWorker.downloadLibrary);
+			
+			while (!onwards)
+			{
+				receiveTimeout(
+					dur!"msecs"(250),
+					(bool quit)
+					{
+					//Download has finished
+					downloadSuccess = quit;
+					onwards = true;
+				},
+				(ulong amountDownloaded)
+				{
+					//Update the loading window with amount downloaded
+					_loadingWindow.updateAmountDownloaded(amountDownloaded);
+				});
+				
+				Functions.refreshUI();
+			}
+			
+			if (!downloadSuccess)
+			{
+				//Show warning about not being able to download library
+				Dialog noConnectionDialog = new Dialog("Could not download library.", _wdwViewer, GtkDialogFlags.MODAL, [StockID.OK], [ResponseType.OK]);
+				noConnectionDialog.setSizeRequest(300, -1);
+				noConnectionDialog.run();
+				noConnectionDialog.destroy();
+			}
+		}
+	}
+	
+	void downloadManager_Closed()
+	{
+		debug output(__FUNCTION__);
+		//If offline need to refresh the views so that any videos which have been deleted are removed
+		if(_settings.isOffline)
+		{
+			bool onwards = false;
+			
+			_loadingWindow = new Loading();
+			scope(exit) _loadingWindow.destroy();
+			
+			_loadingWindow.updateStatus("Refreshing library");
+			
+			spawn(&LibraryWorker.loadOfflineLibraryAsync);
+			
+			while (!onwards)
+			{
+				receiveTimeout(
+					dur!"msecs"(250),
+					(shared Library offlineLibrary)
+					{
+					_completeLibrary = cast(Library)offlineLibrary;
+					onwards = true;
+				});
+				
+				Functions.refreshUI();
+			}
+			
+			loadNavigation();
+		}
+	}
+
+	bool hasInternetConnection()
+	{
+		debug output(__FUNCTION__);
+		bool onwards = false;
+		bool hasInternetConnection;
+		
+		_loadingWindow.updateStatus("Checking for internet connection");
+		_loadingWindow.setDataDownloadedVisible(false);
+		spawn(&DownloadWorker.hasInternetConnection);
+		
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(250),
+				(bool hasConnection)
+				{
+				hasInternetConnection = hasConnection;
+				onwards = true;
+			});
+			
+			Functions.refreshUI();
+		}
+		
+		if (!hasInternetConnection)
+		{
+			//Pop up warning that there is no internet connection, and will be going offline
+			Dialog noConnectionDialog = new Dialog("No internet connection, going offline.", _wdwViewer, GtkDialogFlags.MODAL, [StockID.OK], [ResponseType.OK]);
+			noConnectionDialog.setSizeRequest(350, -1);
+			noConnectionDialog.run();
+			noConnectionDialog.destroy();
+		}
+		
+		return hasInternetConnection;
+	}
+
+	void hookUpOptionHandlers()
+	{
+		debug output(__FUNCTION__);
+		//The option handlers don't play nice when being set in LoadSettings() they fire when set to active
+		//and using GtkD there seems to be no way to temporarily disable the firing, so add the handlers after
+		//everything is loaded.
+		_rmiFlow.addOnActivate(&rmiFlow_Activate);
+		_rmiTree.addOnActivate(&rmiTree_Activate);
+		_cmiOffline.addOnActivate(&cmiOffline_Activate);
+		_cmiKeepPosition.addOnActivate(&cmiKeepPosition_Activate);
+		_cmiContinuousPlay.addOnActivate(&cmiContinuousPlay_Activate);
+	}
+
+	void killLoadingWindow()
+	{
+		debug output(__FUNCTION__);
+		_loadingWindow.destroy();
+		_loadingWindow = null;
+	}
+
+	void loadLibraryFromStorage()
+	{
+		debug output(__FUNCTION__);
+		_loadingWindow.updateStatus("Processing library");
+		_loadingWindow.setDataDownloadedVisible(false);
+		
+		//The library takes a few seconds to write to disc after being downloaded
+		//loop and wait until it shows up, otherwise cannot load library and program
+		//crashes
+		while(!LibraryWorker.libraryFileExists())
+		{
+			Functions.refreshUI();
+			Thread.sleep(dur!"msecs"(250));
+		}
+		
+		//Load the online or offline library based on whether currently on or offline...
+		_completeLibrary = _settings.isOffline ? LibraryWorker.loadOfflineLibrary() : LibraryWorker.loadLibrary();
+	}
+
+	void loadSettings()
+	{
+		debug output(__FUNCTION__);
+		_settings = SettingsWorker.loadSettings();
+		
+		//Set menu items
+		final switch (_settings.viewModeSetting)
+		{
+			case ViewMode.flow:
+				_rmiFlow.setActive(true);
+				break;
+				
+			case ViewMode.tree:
+				_rmiTree.setActive(true);
+				break;
+		}
+		
+		_cmiOffline.setActive(_settings.isOffline);
+		_cmiKeepPosition.setActive(_settings.keepPosition);
+		_cmiContinuousPlay.setActive(_settings.continuousPlay);
+	}
+
+	void loadNavigation()
+	{
+		debug output(__FUNCTION__);
+		//Stop any loaded video
+		_vcVideo.unloadVideo();
+		
+		if (_vcView)
+		{
+			_vcView.destroy();
+		}
+		
+		final switch (_settings.viewModeSetting)
+		{
+			case ViewMode.flow:
+				_vcView = new FlowViewControl(_swParent, _swChild, _bboxBreadCrumbs, _completeLibrary, _vcVideo, _settings);
+				break;
+				
+			case ViewMode.tree:
+				_vcView = new TreeViewControl(_swParent, _swChild, _completeLibrary, _vcVideo, _settings);
+				break;
+		}
+		
+		_vcView.preloadCategory();
+	}
+
+	bool miAbout_ButtonPress(Event, Widget)
+	{
+		debug output(__FUNCTION__);
+		//Don't know why this works but it does:
+		//Just so long as this handler is here and just returns true, then the about window is focused when created.
+		return true;
+	}
+	
+	bool miAbout_ButtonRelease(Event, Widget)
+	{
+		debug output(__FUNCTION__);
+		About about = new About();
+		
+		return false;
+	}
+	
+	bool miDownloadManager_ButtonPress(Event, Widget)
+	{
+		debug output(__FUNCTION__);
+		//Again don't know why this works but it does put download manager into focus just so long as this handler exists and returns true
+		return true;
+	}
+	
+	bool miDownloadManager_ButtonRelease(Event, Widget)
+	{
+		debug output(__FUNCTION__);
+		//Stop any playing videos as it's possible to delete a video that's playing
+		_vcVideo.unloadVideo();
+		
+		DownloadManager downloadManager = new DownloadManager(_settings, &downloadManager_Closed);
+		return true;
+	}
+	
+	bool miExit_ButtonRelease(Event, Widget)
+	{
+		debug output(__FUNCTION__);
+		SettingsWorker.saveSettings(_settings);
+		exit(0);
+		return true;
+	}
+
+	void rmiFlow_Activate(MenuItem)
+	{
+		debug output(__FUNCTION__);
+		if (_rmiFlow.getActive()) //Activate handler includes de-activate so make sure it is actually activated
+		{
+			_settings.viewModeSetting = ViewMode.flow;
+			
+			loadNavigation();
+		}
+	}
+	
+	void rmiTree_Activate(MenuItem)
+	{
+		debug output(__FUNCTION__);
+		if (_rmiTree.getActive()) //Activate handler includes de-activate so make sure it is actually activated
+		{
+			_settings.viewModeSetting = ViewMode.tree;
+			
+			loadNavigation();
+		}
+	}
+
+	void setOffline()
+	{
+		debug output(__FUNCTION__);
+		_loadingWindow.updateStatus("Going offline");
+		
+		_settings.isOffline = true;
+		
+		loadLibraryFromStorage();
+		loadNavigation();
+	}
+
+	void setOnline()
+	{
+		debug output(__FUNCTION__);
+		_loadingWindow.updateStatus("Going online");
+		
+		//If there's no internet connection go back offline
+		if (!hasInternetConnection())
+		{
+			_cmiOffline.setActive(true);
+		}
+		else
+		{
+			_settings.isOffline = false;
+			
+			downloadLibrary();
+			loadLibraryFromStorage();
+			loadNavigation();
+		}
+	}
+
+	void setupWindow()
 	{
 		debug output(__FUNCTION__);
 		//Create the window
@@ -195,373 +560,13 @@ public final class Viewer
 		_wdwViewer.showAll();
 
 		//Widgets shown, now add the video overlays
-		_vcVideo.AddOverlays();
+		_vcVideo.addOverlays();
 	}
-
-	private void HookUpOptionHandlers()
-	{
-		debug output(__FUNCTION__);
-		//The option handlers don't play nice when being set in LoadSettings() they fire when set to active
-		//and using GtkD there seems to be no way to temporarily disable the firing, so add the handlers after
-		//everything is loaded.
-		_rmiFlow.addOnActivate(&rmiFlow_Activate);
-		_rmiTree.addOnActivate(&rmiTree_Activate);
-		_cmiOffline.addOnActivate(&cmiOffline_Activate);
-		_cmiKeepPosition.addOnActivate(&cmiKeepPosition_Activate);
-		_cmiContinuousPlay.addOnActivate(&cmiContinuousPlay_Activate);
-	}
-
-	private void LoadSettings()
-	{
-		debug output(__FUNCTION__);
-		_settings = SettingsWorker.LoadSettings();
-
-		//Set menu items
-		final switch (_settings.ViewModeSetting)
-		{
-			case ViewMode.Flow:
-				_rmiFlow.setActive(true);
-				break;
-				
-			case ViewMode.Tree:
-				_rmiTree.setActive(true);
-				break;
-		}
-
-		_cmiOffline.setActive(_settings.IsOffline);
-		_cmiKeepPosition.setActive(_settings.KeepPosition);
-		_cmiContinuousPlay.setActive(_settings.ContinuousPlay);
-	}
-
-	private bool HasInternetConnection()
-	{
-		debug output(__FUNCTION__);
-		bool onwards = false;
-		bool hasInternetConnection;
-
-		_loadingWindow.UpdateStatus("Checking for internet connection");
-		_loadingWindow.SetDataDownloadedVisible(false);
-		spawn(&DownloadWorker.HasInternetConnection);
 		
-		while (!onwards)
-		{
-			receiveTimeout(
-				dur!"msecs"(250),
-				(bool hasConnection)
-				{
-					hasInternetConnection = hasConnection;
-					onwards = true;
-				});
-			
-			RefreshUI();
-		}
-
-		if (!hasInternetConnection)
-		{
-			//Pop up warning that there is no internet connection, and will be going offline
-			Dialog noConnectionDialog = new Dialog("No internet connection, going offline.", _wdwViewer, GtkDialogFlags.MODAL, [StockID.OK], [ResponseType.OK]);
-			noConnectionDialog.setSizeRequest(350, -1);
-			noConnectionDialog.run();
-			noConnectionDialog.destroy();
-		}
-
-		return hasInternetConnection;
-	}
-
-	private void cmiKeepPosition_Activate(MenuItem)
+	void wdwViewer_Destroy(Widget)
 	{
 		debug output(__FUNCTION__);
-		_settings.KeepPosition = cast(bool)_cmiKeepPosition.getActive();
-
-		if (!_cmiKeepPosition.getActive())
-		{
-			//Clear last selected when turning off keep position
-			_settings.LastSelectedCategory = "";
-		}
-	}
-
-	private void cmiContinuousPlay_Activate(MenuItem)
-	{
-		debug output(__FUNCTION__);
-		_settings.ContinuousPlay = cast(bool)_cmiContinuousPlay.getActive();
-
-		if(_settings.ContinuousPlay)
-		{
-			_vcVideo.StartContinuousPlayMode(&_vcView.PlayNextVideo);
-		}
-		else
-		{
-			_vcVideo.StopContinuousPlayMode();
-		}
-	}
-
-	private void cmiOffline_Activate(MenuItem)
-	{
-		debug output(__FUNCTION__);
-		//Clear the last selected category to stop bugs - online and offline libraries are different sizes usually
-		//so the treepath stored here would be pointing to a different category
-		_settings.LastSelectedCategory = "";
-
-		CreateLoadingWindow();
-		_cmiOffline.getActive() ? SetOffline() : SetOnline();
-		KillLoadingWindow();
-	}
-
-	private void SetOnline()
-	{
-		debug output(__FUNCTION__);
-		_loadingWindow.UpdateStatus("Going online");
-
-		//If there's no internet connection go back offline
-		if (!HasInternetConnection())
-		{
-			_cmiOffline.setActive(true);
-		}
-		else
-		{
-			_settings.IsOffline = false;
-
-			DownloadLibrary();
-			LoadLibraryFromStorage();
-			LoadNavigation();
-		}
-	}
-
-	private void SetOffline()
-	{
-		debug output(__FUNCTION__);
-		_loadingWindow.UpdateStatus("Going offline");
-
-		_settings.IsOffline = true;
-
-		LoadLibraryFromStorage();
-		LoadNavigation();
-	}
-
-	private void rmiFlow_Activate(MenuItem)
-	{
-		debug output(__FUNCTION__);
-		if (_rmiFlow.getActive()) //Activate handler includes de-activate so make sure it is actually activated
-		{
-			_settings.ViewModeSetting = ViewMode.Flow;
-
-			LoadNavigation();
-		}
-	}
-
-	private void rmiTree_Activate(MenuItem)
-	{
-		debug output(__FUNCTION__);
-		if (_rmiTree.getActive()) //Activate handler includes de-activate so make sure it is actually activated
-		{
-			_settings.ViewModeSetting = ViewMode.Tree;
-
-			LoadNavigation();
-		}
-	}
-
-	private void CreateLoadingWindow()
-	{
-		debug output(__FUNCTION__);
-		//If loading window already exists don't create a new one
-		if (!_loadingWindow)
-		{
-			//Load the window and refresh the UI to make sure it shows
-			_loadingWindow = new Loading();
-			RefreshUI();
-		}
-	}
-
-	private void DownloadLibrary()
-	{
-		debug output(__FUNCTION__);
-		bool onwards, needToDownLoadLibrary;
-
-		//Async check if need to download library (async because sometimes it's really slow)
-		_loadingWindow.UpdateStatus("Checking for library updates");
-		spawn(&DownloadWorker.NeedToDownloadLibrary);
-
-		while (!onwards)
-		{
-			receiveTimeout(
-				dur!"msecs"(250),
-				(bool refreshNeeded)
-				{
-					needToDownLoadLibrary = refreshNeeded;
-					onwards = true;
-				});
-
-			RefreshUI();
-		}
-
-		//If library needs to downloaded do another async call to DownloadLibrary
-		//keep _loadingWindow updated with progress
-		if (needToDownLoadLibrary)
-		{
-			bool downloadSuccess;
-			onwards = false;
-			_loadingWindow.UpdateStatus("Downloading library");
-			_loadingWindow.SetDataDownloadedVisible(true);
-			spawn(&DownloadWorker.DownloadLibrary);
-
-			while (!onwards)
-			{
-				receiveTimeout(
-					dur!"msecs"(250),
-					(bool quit)
-					{
-						//Download has finished
-						downloadSuccess = quit;
-						onwards = true;
-					},
-					(ulong amountDownloaded)
-					{
-						//Update the loading window with amount downloaded
-						_loadingWindow.UpdateAmountDownloaded(amountDownloaded);
-					});
-				
-				RefreshUI();
-			}
-
-			if (!downloadSuccess)
-			{
-				//Show warning about not being able to download library
-				Dialog noConnectionDialog = new Dialog("Could not download library.", _wdwViewer, GtkDialogFlags.MODAL, [StockID.OK], [ResponseType.OK]);
-				noConnectionDialog.setSizeRequest(300, -1);
-				noConnectionDialog.run();
-				noConnectionDialog.destroy();
-			}
-		}
-	}
-
-	private void LoadLibraryFromStorage()
-	{
-		debug output(__FUNCTION__);
-		_loadingWindow.UpdateStatus("Processing library");
-		_loadingWindow.SetDataDownloadedVisible(false);
-
-		//The library takes a few seconds to write to disc after being downloaded
-		//loop and wait until it shows up, otherwise cannot load library and program
-		//crashes
-		while(!LibraryWorker.LibraryFileExists())
-		{
-			RefreshUI();
-			Thread.sleep(dur!"msecs"(250));
-		}
-
-		//Load the online or offline library based on whether currently on or offline...
-		_completeLibrary = _settings.IsOffline ? LibraryWorker.LoadOfflineLibrary() : LibraryWorker.LoadLibrary();
-	}
-
-	private void LoadNavigation()
-	{
-		debug output(__FUNCTION__);
-		//Stop any loaded video
-		_vcVideo.UnloadVideo();
-
-		if (_vcView)
-		{
-			_vcView.destroy();
-		}
-
-		final switch (_settings.ViewModeSetting)
-		{
-			case ViewMode.Flow:
-				_vcView = new FlowViewControl(_swParent, _swChild, _bboxBreadCrumbs, _completeLibrary, _vcVideo, _settings);
-				break;
-
-			case ViewMode.Tree:
-				_vcView = new TreeViewControl(_swParent, _swChild, _completeLibrary, _vcVideo, _settings);
-				break;
-		}
-
-		_vcView.PreloadCategory();
-	}
-
-	private void KillLoadingWindow()
-	{
-		debug output(__FUNCTION__);
-		_loadingWindow.destroy();
-		_loadingWindow = null;
-	}
-
-	private bool miAbout_ButtonPress(Event, Widget)
-	{
-		debug output(__FUNCTION__);
-		//Don't know why this works but it does:
-		//Just so long as this handler is here and just returns true, then the about window is focused when created.
-		return true;
-	}
-
-	private bool miAbout_ButtonRelease(Event, Widget)
-	{
-		debug output(__FUNCTION__);
-		About about = new About();
-
-		return false;
-	}
-
-	private bool miDownloadManager_ButtonPress(Event, Widget)
-	{
-		debug output(__FUNCTION__);
-		//Again don't know why this works but it does put download manager into focus just so long as this handler exists and returns true
-		return true;
-	}
-
-	private bool miDownloadManager_ButtonRelease(Event, Widget)
-	{
-		debug output(__FUNCTION__);
-		//Stop any playing videos as it's possible to delete a video that's playing
-		_vcVideo.UnloadVideo();
-
-		DownloadManager downloadManager = new DownloadManager(_settings, &OnDownloadManager_Closed);
-		return true;
-	}
-
-	private void OnDownloadManager_Closed()
-	{
-		debug output(__FUNCTION__);
-		//If offline need to refresh the views so that any videos which have been deleted are removed
-		if(_settings.IsOffline)
-		{
-			bool onwards = false;
-
-			_loadingWindow = new Loading();
-			scope(exit) _loadingWindow.destroy();
-
-			_loadingWindow.UpdateStatus("Refreshing library");
-
-			spawn(&LibraryWorker.LoadOfflineLibraryAsync);
-			
-			while (!onwards)
-			{
-				receiveTimeout(
-					dur!"msecs"(250),
-					(shared Library offlineLibrary)
-					{
-					_completeLibrary = cast(Library)offlineLibrary;
-					onwards = true;
-				});
-				
-				RefreshUI();
-			}
-
-			LoadNavigation();
-		}
-	}
-
-	private bool miExit_ButtonRelease(Event, Widget)
-	{
-		debug output(__FUNCTION__);
-		SettingsWorker.SaveSettings(_settings);
-		exit(0);
-		return true;
-	}
-	
-	private void wdwViewer_Destroy(Widget)
-	{
-		debug output(__FUNCTION__);
-		SettingsWorker.SaveSettings(_settings);
+		SettingsWorker.saveSettings(_settings);
 		exit(0);
 	}
 }

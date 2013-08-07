@@ -53,7 +53,6 @@
     <Compile Include="Workers\LibraryWorker.d" />
     <Compile Include="DataStructures\Library.d" />
     <Compile Include="DataStructures\BreadCrumb.d" />
-    <Compile Include="Include\msgpack.d" />
     <Compile Include="Windows\Fullscreen.d" />
     <Compile Include="Windows\Loading.d" />
     <Compile Include="Workers\DownloadWorker.d" />
@@ -69,6 +68,7 @@
     <Compile Include="Windows\DownloadManager.d" />
     <Compile Include="Controls\VideoControl.d" />
     <Compile Include="Controls\VideoScreen.d" />
+    <Compile Include="Include\MsgPack.d" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Windows\" />

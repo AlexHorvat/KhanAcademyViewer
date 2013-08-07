@@ -20,27 +20,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Workers.SettingsWorker;
+module kav.Workers.SettingsWorker;
 
 debug alias std.stdio.writeln output;
+
+import kav.DataStructures.Settings;
+import kav.Include.Config;
+import kav.Include.Enums;
+
+import msgpack;
 
 import std.file;
 import std.path;
 
-import msgpack;
-
-import KhanAcademyViewer.DataStructures.Settings;
-import KhanAcademyViewer.Include.Config;
-import KhanAcademyViewer.Include.Enums;
-
 public static class SettingsWorker
 {
-	public static Settings LoadSettings()
+
+public:
+
+	static Settings loadSettings()
 	{
 		debug output(__FUNCTION__);
-		if (SettingsFileExists())
+		if (settingsFileExists())
 		{
-			return GetSavedSettings();
+			return getSavedSettings();
 		}
 		else
 		{
@@ -48,7 +51,7 @@ public static class SettingsWorker
 		}
 	}
 
-	public static void SaveSettings(Settings settings)
+	static void saveSettings(Settings settings)
 	{
 		debug output(__FUNCTION__);
 		string settingsFileName = expandTilde(SETTINGS_FILE_PATH);
@@ -57,15 +60,9 @@ public static class SettingsWorker
 		write(settingsFileName, serialised);
 	}
 
-	private static bool SettingsFileExists()
-	{
-		debug output(__FUNCTION__);
-		string settingsFileName = expandTilde(SETTINGS_FILE_PATH);
-		
-		return exists(settingsFileName);
-	}
+private:
 
-	private static Settings GetSavedSettings()
+	static Settings getSavedSettings()
 	{
 		debug output(__FUNCTION__);
 		Settings settings;
@@ -74,7 +71,15 @@ public static class SettingsWorker
 		
 		//Convert the serialised library back into a Library object
 		unpack(serialised, settings);
-
+		
 		return settings;
+	}
+
+	static bool settingsFileExists()
+	{
+		debug output(__FUNCTION__);
+		string settingsFileName = expandTilde(SETTINGS_FILE_PATH);
+		
+		return exists(settingsFileName);
 	}
 }

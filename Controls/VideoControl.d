@@ -20,72 +20,51 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Controls.VideoControl;
+module kav.Controls.VideoControl;
 
 debug alias std.stdio.writeln output;
 
 import core.thread;
 
-import std.file:exists;
-import std.string:format;
-
-//For some reason the gstreamer gtkd code will not compile without glib.Date being included in this project
-import glib.Date;
-
-import gtk.Grid;
-import gtk.EventBox;
-import gtk.Label;
-import gtk.Button;
-import gtk.Scale;
-import gtk.ScrolledWindow;
-import gtk.Viewport;
-import gtk.Image;
-import gtk.Range;
-
 import gdk.RGBA;
 
-import gstreamer.gstreamer;
-import gstreamer.Element;
-import gstreamer.ElementFactory;
-import gstreamer.Bus;
-import gstreamer.Message;
+import glib.Date; //For some reason the gstreamer gtkd code will not compile without glib.Date being included in this project
 
 import gstinterfaces.VideoOverlay;
 
-import KhanAcademyViewer.Include.Functions;
-import KhanAcademyViewer.Controls.VideoScreen;
-import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.Windows.Fullscreen;
+import gstreamer.Bus;
+import gstreamer.Element;
+import gstreamer.ElementFactory;
+import gstreamer.gstreamer;
+import gstreamer.Message;
+
+import gtk.Button;
+import gtk.EventBox;
+import gtk.Grid;
+import gtk.Image;
+import gtk.Label;
+import gtk.Range;
+import gtk.Scale;
+import gtk.ScrolledWindow;
+import gtk.Viewport;
+
+import kav.Controls.VideoScreen;
+import kav.DataStructures.Library;
+import kav.Include.Functions;
+import kav.Windows.Fullscreen;
+
+import std.file:exists;
+import std.string:format;
 
 public final class VideoControl : Grid
 {
-	public shared static bool IsPlaying = false;
-	public shared static bool IsFullscreen = false; //Is shared with HidePause and HideTitle threads in VideoScreen
 
-	private immutable uint _pointOneSecond = 100000000;
-	private immutable uint _oneSecond = 1000000000;
+public:
 
-	private double _maxRange;
-	private bool _isContinuousPlay = false;
+	shared static bool isPlaying = false;
+	shared static bool isFullscreen = false; //Is shared with HidePause and HideTitle threads in VideoScreen
 
-	private Label _lblTitle;
-	private EventBox _ebVideo;
-	private VideoScreen _vsScreen;
-	private Button _btnPlay;
-	private Scale _sclPosition;
-	private Button _btnFullscreen;
-	private Label _lblCurrentTime;
-	private Label _lblTotalTime;
-	private Label _lblDescription;
-	private Image _imgPlay;
-	private Image _imgPause;
-
-	private VideoOverlay _voOverlay;
-	private Element _elSource;
-	
-	private Thread _updateElapsedTimeThread;
-
-	public this()
+	this()
 	{
 		debug output(__FUNCTION__);
 		//Add 4 columns to the grid
@@ -116,7 +95,7 @@ public final class VideoControl : Grid
 		_ebVideo.setHexpand(true);
 		super.attach(_ebVideo, 0, 1, 4, 1);
 
-		_vsScreen = new VideoScreen(&PlayPause);
+		_vsScreen = new VideoScreen(&playPause);
 		_ebVideo.add(_vsScreen);
 		
 		_btnPlay = new Button();
@@ -160,13 +139,13 @@ public final class VideoControl : Grid
 		super.attach(swDescription, 0, 4, 4, 1);
 	}
 
-	public ~this()
+	~this()
 	{
 		debug output(__FUNCTION__);
 		//Make sure everything closes in an orderly fashion.
 		//Stop the video
 		_elSource.setState(GstState.NULL);
-		IsPlaying = false;
+		isPlaying = false;
 		
 		//Make sure the update elapsed time thread is dead
 		if (_updateElapsedTimeThread)
@@ -180,23 +159,23 @@ public final class VideoControl : Grid
 		_elSource = null;
 	}
 
-	public void AddOverlays()
+	void addOverlays()
 	{
 		debug output(__FUNCTION__);
-		_vsScreen.AddOverlays();
+		_vsScreen.addOverlays();
 	}
 
-	public void LoadVideo(Library currentVideo, bool startPlaying)
+	void loadVideo(Library currentVideo, bool startPlaying)
 	{
 		debug output(__FUNCTION__);
 		//Always stop current video before playing another as otherwise can end up with two videos playing at once
-		UnloadVideo();
+		unloadVideo();
 
 		//Get the spinner going
-		_vsScreen.ShowSpinner();
+		_vsScreen.showSpinner();
 
 		//Load the text for the video
-		LoadVideoDetails(currentVideo);
+		loadVideoDetails(currentVideo);
 
 		//Spinner's going so get the video ready to play
 		if (!GStreamer.isInitialized)
@@ -213,7 +192,7 @@ public final class VideoControl : Grid
 		
 		//Setup the video overlay
 		_voOverlay = new VideoOverlay(elVideoSink);
-		_voOverlay.setWindowHandle(_vsScreen.GetDrawingWindowID());
+		_voOverlay.setWindowHandle(_vsScreen.getDrawingWindowID());
 		
 		//Create playbin element and link to videosink
 		_elSource = ElementFactory.make("playbin", "playBin");
@@ -224,7 +203,7 @@ public final class VideoControl : Grid
 
 		GstState current;
 		GstState pending;
-		string localFileName = GetLocalFileName(currentVideo.MP4);
+		string localFileName = Functions.getLocalFileName(currentVideo.mp4);
 		string totalTime;
 
 		//If file is saved locally then load it, otherwise stream it
@@ -234,7 +213,7 @@ public final class VideoControl : Grid
 		}
 		else
 		{
-			_elSource.setProperty("uri", currentVideo.MP4);
+			_elSource.setProperty("uri", currentVideo.mp4);
 		}
 
 		//Get the video buffered and ready to play
@@ -244,7 +223,7 @@ public final class VideoControl : Grid
 		//While loading keep the UI going - refresh every 0.1 seconds until video reports it's ready
 		while (current != GstState.PAUSED)
 		{
-			RefreshUI();
+			Functions.refreshUI();
 			_elSource.getState(current, pending, _pointOneSecond);
 		}
 		
@@ -263,82 +242,213 @@ public final class VideoControl : Grid
 		_btnPlay.setSensitive(true);
 		_btnFullscreen.setSensitive(true);
 		_sclPosition.setSensitive(true);
-		_vsScreen.SetEnabled(true);
+		_vsScreen.setEnabled(true);
 
 		//And get rid of the spinner
-		_vsScreen.HideSpinner();
+		_vsScreen.hideSpinner();
 
 		if (startPlaying)
 		{
-			Play();
+			play();
 		}
 	}
+	
+	void startContinuousPlayMode(void delegate() playNextVideoMethod)
+	{
+		debug output(__FUNCTION__);
+		_isContinuousPlay = true;
+		playNextVideo = playNextVideoMethod;
+	}
 
-	public void UnloadVideo()
+	void stopContinuousPlayMode()
+	{
+		debug output(__FUNCTION__);
+		_isContinuousPlay = false;
+		playNextVideo = null;
+	}
+
+	void unloadVideo()
 	{
 		debug output(__FUNCTION__);
 		if (_elSource)
 		{
 			//Stop the video
 			_elSource.setState(GstState.NULL);
-			IsPlaying = false;
-
+			isPlaying = false;
+			
 			//Make sure the update elapsed time thread is dead
 			if (_updateElapsedTimeThread)
 			{
 				_updateElapsedTimeThread.join(false);
 				_updateElapsedTimeThread = null;
 			}
-
+			
 			//Reset the UI
 			_btnPlay.setImage(_imgPlay);
 			_sclPosition.setValue(0);
 			_btnPlay.setSensitive(false);
 			_sclPosition.setSensitive(false);
 			_btnFullscreen.setSensitive(false);
-			_vsScreen.SetEnabled(false);
-
+			_vsScreen.setEnabled(false);
+			
 			_lblTitle.setText("");
 			_lblDescription.setText("");
 			_lblTotalTime.setText("");
 			_lblCurrentTime.setText("");
-
+			
 			//Finally kill elSource
 			_elSource.destroy();
 			_elSource = null;
 		}
 	}
 
-	public void StartContinuousPlayMode(void delegate() playNextVideoMethod)
+private:
+
+	immutable uint	_oneSecond = 1000000000;
+	immutable uint	_pointOneSecond = 100000000;
+
+	Button			_btnFullscreen;
+	Button			_btnPlay;
+	EventBox		_ebVideo;
+	Element			_elSource;
+	Image			_imgPause;
+	Image			_imgPlay;
+	bool			_isContinuousPlay = false;
+	Label			_lblCurrentTime;
+	Label			_lblDescription;
+	Label			_lblTitle;
+	Label			_lblTotalTime;
+	double			_maxRange;
+	Scale			_sclPosition;
+	VideoOverlay	_voOverlay;
+	VideoScreen		_vsScreen;
+	Thread			_updateElapsedTimeThread;
+
+	void btnFullscreen_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
-		_isContinuousPlay = true;
-		PlayNextVideo = playNextVideoMethod;
+		Fullscreen fullScreen = new Fullscreen(_vsScreen, &exitFullscreen);
+		isFullscreen = true;
 	}
 
-	public void StopContinuousPlayMode()
+	void btnPlay_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
-		_isContinuousPlay = false;
-		PlayNextVideo = null;
+		playPause();
 	}
 
-	private void delegate() PlayNextVideo;
-
-	private void btnPlay_Clicked(Button)
+	void callNextVideo()
 	{
 		debug output(__FUNCTION__);
-		PlayPause();
+		//Need to call PlayNextVideo from a new thread, so that the Play thread can join back to main thread when unloading video.
+		playNextVideo();
 	}
 
-	private void btnFullscreen_Clicked(Button)
+	bool elSource_Watch(Message message)
 	{
 		debug output(__FUNCTION__);
-		Fullscreen fullScreen = new Fullscreen(_vsScreen, &ExitFullscreen);
-		IsFullscreen = true;
+		switch (message.type)
+		{
+			case GstMessageType.EOS: //End of video, either stop or load the next video depending on isContinuousPlay
+				pause();
+				
+				//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
+				seekTo(0);
+				
+				if (_isContinuousPlay)
+				{
+					//Call next video from another thread, make sure this watch doesn't get kept going forever
+					Thread callNextVideoThread = new Thread(&callNextVideo);
+					callNextVideoThread.start();
+					callNextVideoThread = null;
+				}
+				
+				return false;
+				break;
+				
+			case GstMessageType.ERROR:
+				isPlaying = false;
+				return false;
+				break;
+				
+			default:
+				break;
+		}
+		
+		return true;
 	}
 
-	private bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range)
+	void exitFullscreen()
+	{
+		debug output(__FUNCTION__);
+		_vsScreen.hideTitle();
+		_vsScreen.reparent(_ebVideo);
+		isFullscreen = false;
+	}
+
+	void loadVideoDetails(Library currentVideo)
+	{
+		debug output(__FUNCTION__);
+		//Get the authors (if there are any)
+		string authors;
+		
+		if (currentVideo.authorNames.length > 0)
+		{
+			foreach (string author; currentVideo.authorNames)
+			{
+				authors ~= author;
+				authors ~= ", ";
+			}
+			//Cut off trailing ", "
+			authors.length = authors.length - 2;
+		}
+		
+		_lblTitle.setText(currentVideo.title);
+		
+		//Add authors and date added to description
+		_lblDescription.setText(currentVideo.description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.dateAdded.date.toString());
+		
+		//If in fullscreen mode show the video title
+		if (isFullscreen)
+		{
+			_vsScreen.showTitle(currentVideo.title);
+		}
+	}
+
+	void pause()
+	{
+		debug output(__FUNCTION__);
+		_elSource.setState(GstState.PAUSED);
+		_btnPlay.setImage(_imgPlay);
+		
+		isPlaying = false;
+		
+		_updateElapsedTimeThread.join();
+		_updateElapsedTimeThread = null;
+	}
+
+	void play()
+	{
+		debug output(__FUNCTION__);
+		//Get the video playing
+		_elSource.setState(GstState.PLAYING);
+		_btnPlay.setImage(_imgPause);
+		isPlaying = true;
+		
+		//Add the loop to update the elapsed time on it's own thread
+		_updateElapsedTimeThread = new Thread(&updateElapsedTime);
+		_updateElapsedTimeThread.start();
+	}
+
+	void delegate() playNextVideo;
+	
+	void playPause()
+	{
+		debug output(__FUNCTION__);
+		isPlaying ? pause() : play();
+	}
+
+	bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range)
 	{
 		debug output(__FUNCTION__);
 		if (scrollType == GtkScrollType.JUMP)
@@ -349,76 +459,22 @@ public final class VideoControl : Grid
 				position = _maxRange;
 			}
 			
-			SeekTo(position);
+			seekTo(position);
 		}
 		
 		return false;
 	}
 
-	private void LoadVideoDetails(Library currentVideo)
+	void seekTo(double seconds)
 	{
 		debug output(__FUNCTION__);
-		//Get the authors (if there are any)
-		string authors;
+		long nanoSeconds = cast(long)seconds * _oneSecond;
+		//Pause();
+		_elSource.seek(nanoSeconds);
 		
-		if (currentVideo.AuthorNames.length > 0)
-		{
-			foreach (string author; currentVideo.AuthorNames)
-			{
-				authors ~= author;
-				authors ~= ", ";
-			}
-			//Cut off trailing ", "
-			authors.length = authors.length - 2;
-		}
-		
-		_lblTitle.setText(currentVideo.Title);
-		
-		//Add authors and date added to description
-		_lblDescription.setText(currentVideo.Description ~ "\n\nAuthor(s): " ~ authors ~ "\n\nDate Added: " ~ currentVideo.DateAdded.date.toString());
-
-		//If in fullscreen mode show the video title
-		if (IsFullscreen)
-		{
-			_vsScreen.ShowTitle(currentVideo.Title);
-		}
 	}
 
-	private void ExitFullscreen()
-	{
-		debug output(__FUNCTION__);
-		_vsScreen.HideTitle();
-		_vsScreen.reparent(_ebVideo);
-		IsFullscreen = false;
-	}
-
-	private void PlayPause()
-	{
-		debug output(__FUNCTION__);
-		if (IsPlaying)
-		{
-			Pause();
-		}
-		else
-		{
-			Play();
-		}
-	}
-
-	private void Play()
-	{
-		debug output(__FUNCTION__);
-		//Get the video playing
-		_elSource.setState(GstState.PLAYING);
-		_btnPlay.setImage(_imgPause);
-		IsPlaying = true;
-
-		//Add the loop to update the elapsed time on it's own thread
-		_updateElapsedTimeThread = new Thread(&UpdateElapsedTime);
-		_updateElapsedTimeThread.start();
-	}
-
-	private void UpdateElapsedTime()
+	void updateElapsedTime()
 	{
 		debug output(__FUNCTION__);
 		//This thread will self destruct when IsPlaying is set to false
@@ -426,7 +482,7 @@ public final class VideoControl : Grid
 		double positionInSeconds;
 		string currentTime;
 
-		while(IsPlaying)
+		while(isPlaying)
 		{
 			//Swallow any queryPosition errors
 			if (_elSource.queryPosition(GstFormat.TIME, position))
@@ -447,67 +503,5 @@ public final class VideoControl : Grid
 			//Time updated, now wait half a second to update it again
 			Thread.sleep(dur!("msecs")(500));
 		}
-	}
-
-	private bool elSource_Watch(Message message)
-	{
-		debug output(__FUNCTION__);
-		switch (message.type)
-		{
-			case GstMessageType.EOS: //End of video, either stop or load the next video depending on isContinuousPlay
-				Pause();
-
-				//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
-				SeekTo(0);
-				
-				if (_isContinuousPlay)
-				{
-					//Call next video from another thread, make sure this watch doesn't get kept going forever
-					Thread CallNextVideoThread = new Thread(&CallNextVideo);
-					CallNextVideoThread.start();
-					CallNextVideoThread = null;
-				}
-
-				return false;
-				break;
-				
-			case GstMessageType.ERROR:
-				IsPlaying = false;
-				return false;
-				break;
-				
-			default:
-				break;
-		}
-
-		return true;
-	}
-
-	private void CallNextVideo()
-	{
-		debug output(__FUNCTION__);
-		//Need to call PlayNextVideo from a new thread, so that the Play thread can join back to main thread when unloading video.
-		PlayNextVideo();
-	}
-
-	private void Pause()
-	{
-		debug output(__FUNCTION__);
-		_elSource.setState(GstState.PAUSED);
-		_btnPlay.setImage(_imgPlay);
-		
-		IsPlaying = false;
-
-		_updateElapsedTimeThread.join();
-		_updateElapsedTimeThread = null;
-	}
-
-	private void SeekTo(double seconds)
-	{
-		debug output(__FUNCTION__);
-		long nanoSeconds = cast(long)seconds * _oneSecond;
-		//Pause();
-		_elSource.seek(nanoSeconds);
-
 	}
 }

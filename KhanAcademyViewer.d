@@ -19,7 +19,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module KhanAcademyViewer.Main;
+module kav.Main;
 
 alias std.stdio.writeln output;
 
@@ -28,7 +28,7 @@ import gtk.Version;
 
 import gstreamer.gstreamer:GStreamer;
 
-import KhanAcademyViewer.Windows.Viewer;
+import kav.Windows.Viewer;
 
 public void main(string args[]) {
 	debug output(__FUNCTION__);

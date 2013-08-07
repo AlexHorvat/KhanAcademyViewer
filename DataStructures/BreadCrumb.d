@@ -19,10 +19,13 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module KhanAcademyViewer.DataStructures.BreadCrumb;
+module kav.DataStructures.BreadCrumb;
 
 public final class BreadCrumb
 {
-	public int RowIndex;
-	public string Title;
+
+public:
+
+	int		rowIndex;
+	string	title;
 }

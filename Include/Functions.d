@@ -20,46 +20,52 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Include.Functions;
+module kav.Include.Functions;
 
 debug alias std.stdio.writeln output;
 
 import gtk.Main;
 
-import KhanAcademyViewer.Include.Config;
+import kav.Include.Config;
 
 import std.file;
 import std.path:expandTilde;
 import std.string:lastIndexOf;
 
-protected bool[string] GetDownloadedFiles()
+public static class Functions
 {
-	debug output(__FUNCTION__);
-	//Load all existing mp4 files into hashtable then pass to RecurseOfflineLibrary
-	//this is faster than accessing the disc everytime to check if a file exists
-	bool[string] downloadedFiles;
-	string downloadDirectory = expandTilde(DOWNLOAD_FILE_PATH);
-	
-	foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
+
+public:
+
+	static bool[string] getDownloadedFiles()
 	{
-		downloadedFiles[file[file.lastIndexOf("/") .. $]] = true;
+		debug output(__FUNCTION__);
+		//Load all existing mp4 files into hashtable then pass to RecurseOfflineLibrary
+		//this is faster than accessing the disc everytime to check if a file exists
+		bool[string] downloadedFiles;
+		string downloadDirectory = expandTilde(DOWNLOAD_FILE_PATH);
+		
+		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
+		{
+			downloadedFiles[file[file.lastIndexOf("/") .. $]] = true;
+		}
+
+		downloadedFiles.rehash();
+		
+		return downloadedFiles;
 	}
 
-	downloadedFiles.rehash();
-	
-	return downloadedFiles;
-}
-
-protected string GetLocalFileName(string url)
-{
-	return expandTilde(DOWNLOAD_FILE_PATH) ~ url[url.lastIndexOf("/") .. $];
-}
-
-protected final void RefreshUI()
-{
-	//Run any gtk events pending to refresh the UI
-	while (Main.eventsPending)
+	static string getLocalFileName(string url)
 	{
-		Main.iteration();
+		return expandTilde(DOWNLOAD_FILE_PATH) ~ url[url.lastIndexOf("/") .. $];
+	}
+
+	static void refreshUI()
+	{
+		//Run any gtk events pending to refresh the UI
+		while (Main.eventsPending)
+		{
+			Main.iteration();
+		}
 	}
 }

@@ -19,27 +19,28 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module KhanAcademyViewer.Workers.LibraryWorker;
+module kav.Workers.LibraryWorker;
 
 debug alias std.stdio.writeln output;
 
-import std.path;
-import std.file;
-import std.string;
-import std.array;
-import std.concurrency;
+import kav.DataStructures.Library;
+import kav.Include.Config;
+import kav.Include.Functions;
 
 import msgpack;
 
-import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.Include.Config;
-import KhanAcademyViewer.Include.Functions;
+import std.array;
+import std.concurrency;
+import std.file;
+import std.path;
+import std.string;
 
 public static class LibraryWorker
 {
-	private static Library offlineLibrary;
 
-	public static bool LibraryFileExists()
+public:
+
+	static bool libraryFileExists()
 	{
 		debug output(__FUNCTION__);
 		string libraryFileName = expandTilde(LIBRARY_FILE_PATH);
@@ -47,7 +48,7 @@ public static class LibraryWorker
 		return exists(libraryFileName);
 	}
 
-	public static Library LoadLibrary()
+	static Library loadLibrary()
 	{
 		debug output(__FUNCTION__);
 		Library completeLibrary;
@@ -59,31 +60,35 @@ public static class LibraryWorker
 
 		return completeLibrary;
 	}
+
+	static Library loadOfflineLibrary()
+	{
+		debug output(__FUNCTION__);
+		return recurseOfflineLibrary(loadLibrary(), Functions.getDownloadedFiles());
+	}
 	
-	public static void LoadOfflineLibraryAsync()
+	static void loadOfflineLibraryAsync()
 	{
 		debug output(__FUNCTION__);
-		offlineLibrary = RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
-		ownerTid.send(cast(shared)offlineLibrary);
+		_offlineLibrary = recurseOfflineLibrary(loadLibrary(), Functions.getDownloadedFiles());
+		ownerTid.send(cast(shared)_offlineLibrary);
 	}
 
-	public static Library LoadOfflineLibrary()
-	{
-		debug output(__FUNCTION__);
-		return RecurseOfflineLibrary(LoadLibrary(), GetDownloadedFiles());
-	}
+private:
 
-	private static Library RecurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)
+	static Library _offlineLibrary;
+
+	static Library recurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)
 	{
 		debug output(__FUNCTION__);
 		//If current library has children, recurse down another level and replace it's children with updated values
-		if (currentLibrary.Children)
+		if (currentLibrary.children)
 		{
 			Appender!(Library[], Library) appendLibrary = appender!(Library[], Library);
 
-			foreach(Library childLibrary; currentLibrary.Children)
+			foreach(Library childLibrary; currentLibrary.children)
 			{
-				Library newChildLibrary = RecurseOfflineLibrary(childLibrary, downloadedFiles);
+				Library newChildLibrary = recurseOfflineLibrary(childLibrary, downloadedFiles);
 
 				if (newChildLibrary)
 				{
@@ -93,7 +98,7 @@ public static class LibraryWorker
 
 			if (appendLibrary.data)
 			{
-				currentLibrary.Children = appendLibrary.data;
+				currentLibrary.children = appendLibrary.data;
 				return currentLibrary;
 			}
 			else
@@ -102,7 +107,7 @@ public static class LibraryWorker
 			}
 		}
 		//This is a video containing library, check if video exists on disc, if so return the library
-		else if (currentLibrary.MP4 != null && currentLibrary.MP4[currentLibrary.MP4.lastIndexOf("/") .. $] in downloadedFiles)
+		else if (currentLibrary.mp4 != null && currentLibrary.mp4[currentLibrary.mp4.lastIndexOf("/") .. $] in downloadedFiles)
 		{
 			return currentLibrary;
 		}

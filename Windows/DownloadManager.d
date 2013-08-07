@@ -20,84 +20,218 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Windows.DownloadManager;
+module kav.Windows.DownloadManager;
 
 debug alias std.stdio.writeln output;
 
-import std.file;
-import std.path:expandTilde;
-import std.string:format;
-import std.concurrency;
-
 import core.time;
 
-import gtk.Window;
-import gtk.Button;
-import gtk.Statusbar;
-import gtk.TreeView;
-import gtk.TreeIter;
-import gtk.TreePath;
-import gtk.TreeStore;
-import gtk.TreeViewColumn;
-import gtk.CellRendererText;
-import gtk.CellRendererPixbuf;
-import gtk.Image;
-import gtk.Widget;
-import gtk.Grid;
-import gtk.ScrolledWindow;
-import gtk.Fixed;
-import gtk.Dialog;
-
-import gdk.Pixbuf;
 import gdk.Event;
+import gdk.Pixbuf;
 
 import gobject.Value;
 
-import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.Workers.LibraryWorker;
-import KhanAcademyViewer.Include.Config;
-import KhanAcademyViewer.Include.Functions;
-import KhanAcademyViewer.Workers.DownloadWorker;
-import KhanAcademyViewer.DataStructures.Settings;
+import gtk.Button;
+import gtk.CellRendererText;
+import gtk.CellRendererPixbuf;
+import gtk.Dialog;
+import gtk.Fixed;
+import gtk.Grid;
+import gtk.Image;
+import gtk.ScrolledWindow;
+import gtk.Statusbar;
+import gtk.TreeIter;
+import gtk.TreePath;
+import gtk.TreeStore;
+import gtk.TreeView;
+import gtk.TreeViewColumn;
+import gtk.Widget;
+import gtk.Window;
+
+import kav.DataStructures.Library;
+import kav.DataStructures.Settings;
+import kav.Include.Config;
+import kav.Include.Functions;
+import kav.Workers.DownloadWorker;
+import kav.Workers.LibraryWorker;
+
+import std.concurrency;
+import std.file;
+import std.path:expandTilde;
+import std.string:format;
 
 public final class DownloadManager
 {
-	private immutable string _imageColumnName = "ImageColumn";
-	private immutable bool IsOffline;
-	
-	private Library _completeLibrary;
-	private Window _wdwDownloadManager;
-	private Statusbar _statusDownloads;
-	private TreeView _tvVideos;
-	private Button _btnDone;
-	private Pixbuf _downloadImage;
-	private Pixbuf _deleteImage;
-	private Pixbuf _stopImage;
-	private uint _statusBarContextID;
-	private TreeIter[string] _activeIters; //Keep track of which videos are downloading by tracking their TreeIter
 
-	public this(Settings settings, void delegate() onDownloadManager_Closed)
+public:
+
+	this(Settings settings, void delegate() downloadManager_Closed)
 	{
 		debug output(__FUNCTION__);
-		IsOffline = settings.IsOffline;
-		DownloadManager_Closed = onDownloadManager_Closed;
+		_isOffline = settings.isOffline;
+		this.downloadManager_Closed = downloadManager_Closed;
 
-		SetupWindow();
-		_completeLibrary = IsOffline ? LibraryWorker.LoadOfflineLibrary() : LibraryWorker.LoadLibrary();
-		LoadTree();
-		DownloadedVideoSize();
+		setupWindow();
+		_completeLibrary = _isOffline ? LibraryWorker.loadOfflineLibrary() : LibraryWorker.loadLibrary();
+		loadTree();
+		downloadedVideoSize();
 	}
 
-	public ~this()
+	~this()
 	{
 		debug output(__FUNCTION__);
-		DownloadManager_Closed();
+		downloadManager_Closed();
 		_wdwDownloadManager.destroy();
 	}
 
-	private void delegate() DownloadManager_Closed;
+private:
 
-	private void SetupWindow()
+	immutable string	_imageColumnName = "ImageColumn";
+	immutable bool		_isOffline;
+
+	TreeIter[string]	_activeIters; //Keep track of which videos are downloading by tracking their TreeIter
+	Button				_btnDone;
+	Library				_completeLibrary;
+	Pixbuf				_deleteImage;
+	Pixbuf				_downloadImage;
+	uint				_statusBarContextID;
+	Statusbar			_statusDownloads;
+	Pixbuf				_stopImage;
+	TreeView			_tvVideos;
+	Window				_wdwDownloadManager;
+
+	private void btnDone_Clicked(Button)
+	{
+		debug output(__FUNCTION__);
+		//Check if there are still videos downloading
+		if (_activeIters.length >  0)
+		{
+			//Prompt user to cancel downloads
+			Dialog cancelDownloads = new Dialog("Stop downloads?", _wdwDownloadManager, GtkDialogFlags.MODAL, [StockID.YES, StockID.NO], [ResponseType.YES, ResponseType.NO]);
+			
+			int cancelResponse = cancelDownloads.run();
+			cancelDownloads.destroy();
+			
+			if (cancelResponse == ResponseType.NO)
+			{
+				return;
+			}
+			
+			//There are still downloads going, cancel them all
+			foreach( url; _activeIters.keys)
+			{
+				_activeIters[url].destroy();
+				_activeIters.remove(url);
+			}
+		}
+		
+		this.destroy();
+	}
+
+	private void createColumns(TreeView treeView)
+	{
+		debug output(__FUNCTION__);
+		CellRendererText renderer = new CellRendererText();
+		CellRendererPixbuf imageRenderer = new CellRendererPixbuf();
+		
+		TreeViewColumn urlColumn = new TreeViewColumn("VideoUrl", renderer, "text", 0);
+		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
+		TreeViewColumn imageColumn = new TreeViewColumn(_imageColumnName, imageRenderer, "pixbuf", 2);
+		TreeViewColumn progressColumn = new TreeViewColumn("Progress", renderer, "text", 3);
+		
+		urlColumn.setVisible(false);
+		
+		treeView.appendColumn(urlColumn);
+		treeView.appendColumn(titleColumn);
+		treeView.appendColumn(imageColumn);
+		treeView.appendColumn(progressColumn);
+	}
+
+	private TreeStore createModel()
+	{
+		debug output(__FUNCTION__);
+		if (!_completeLibrary)
+		{
+			return null;
+		}
+		
+		TreeStore treeStore = new TreeStore([GType.STRING, GType.STRING, Pixbuf.getType(), GType.STRING]);
+		
+		recurseTreeChildren(treeStore, _completeLibrary, null, Functions.getDownloadedFiles());
+		
+		return treeStore;
+	}
+
+	private void downloadedVideoSize()
+	{
+		debug output(__FUNCTION__);
+		//Set item on status bar with total size of videos in download directory
+		string downloadDirectory = expandTilde(DOWNLOAD_FILE_PATH);
+		ulong totalFileSize;
+		
+		if (_statusBarContextID != 0)
+		{
+			_statusDownloads.removeAll(_statusBarContextID);
+		}
+		
+		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
+		{
+			totalFileSize += getSize(file);
+		}
+		
+		_statusBarContextID = _statusDownloads.getContextId("Total File Size");
+		_statusDownloads.push(_statusBarContextID, format("Total size of downloaded videos: %sKB", totalFileSize / 1024));
+	}
+
+	private void delegate() downloadManager_Closed;
+
+	private void loadTree()
+	{
+		createColumns(_tvVideos);
+		_tvVideos.setModel(createModel());
+		_tvVideos.addOnButtonRelease(&tvVideos_ButtonRelease);
+	}
+
+	private void recurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter, bool[string] downloadedFiles)
+	{
+		debug output(__FUNCTION__);
+		foreach(Library childLibrary; library.children)
+		{
+			TreeIter iter;
+			
+			if (parentIter)
+			{
+				iter = treeStore.append(parentIter);
+			}
+			else
+			{
+				iter = treeStore.createIter();
+			}
+			
+			//Fill the rows
+			treeStore.setValue(iter, 1, childLibrary.title);
+			
+			//If there is a video link, see if the video already exists, if it does, show the delete icon
+			//otherwise show the download icon
+			if (childLibrary.mp4 != "")
+			{
+				treeStore.setValue(iter, 0, childLibrary.mp4);
+				
+				if (childLibrary.mp4[childLibrary.mp4.lastIndexOf("/") .. $] in downloadedFiles)
+				{
+					treeStore.setValue(iter, 2, _deleteImage);
+				}
+				else
+				{
+					treeStore.setValue(iter, 2, _downloadImage);
+				}
+			}
+			
+			recurseTreeChildren(treeStore, childLibrary, iter, downloadedFiles);
+		}
+	}
+
+	private void setupWindow()
 	{
 		debug output(__FUNCTION__);
 		Image imageSetter = new Image();
@@ -145,13 +279,6 @@ public final class DownloadManager
 		fixDone.put(_btnDone, 0, 5);
 		
 		_wdwDownloadManager.showAll();
-	}
-
-	private void LoadTree()
-	{
-		CreateColumns(_tvVideos);
-		_tvVideos.setModel(CreateModel());
-		_tvVideos.addOnButtonRelease(&tvVideos_ButtonRelease);
 	}
 	
 	private bool tvVideos_ButtonRelease(Event e, Widget)
@@ -233,7 +360,7 @@ public final class DownloadManager
 			store.setValue(selectedItem, 3, "Downloading...");
 
 			_activeIters[url] = selectedItem;
-			spawn(&DownloadWorker.DownloadVideo, url);
+			spawn(&DownloadWorker.downloadVideo, url);
 
 			while (!onwards)
 			{
@@ -273,7 +400,7 @@ public final class DownloadManager
 						onwards = true;
 					});
 
-				RefreshUI();
+				Functions.refreshUI();
 			}
 
 			//If user closes window before all downloads are done then code will crash here
@@ -284,7 +411,7 @@ public final class DownloadManager
 				return false;
 			}
 
-			DownloadedVideoSize();
+			downloadedVideoSize();
 		}
 		else if (selectedImage == _stopImage.getPixbufStruct())
 		{
@@ -307,7 +434,7 @@ public final class DownloadManager
 			//	Remove the item from the tree
 			//Delete the file
 			//Recalc total video size on disk
-			if (IsOffline)
+			if (_isOffline)
 			{
 				store.remove(selectedItem);
 			}
@@ -316,8 +443,8 @@ public final class DownloadManager
 				store.setValue(selectedItem, 2, _downloadImage);
 			}
 
-			DownloadWorker.DeleteVideo(url);
-			DownloadedVideoSize();
+			DownloadWorker.deleteVideo(url);
+			downloadedVideoSize();
 		}
 		else
 		{
@@ -325,127 +452,5 @@ public final class DownloadManager
 		}
 
 		return false;
-	}
-
-	private TreeStore CreateModel()
-	{
-		debug output(__FUNCTION__);
-		if (!_completeLibrary)
-		{
-			return null;
-		}
-
-		TreeStore treeStore = new TreeStore([GType.STRING, GType.STRING, Pixbuf.getType(), GType.STRING]);
-
-		RecurseTreeChildren(treeStore, _completeLibrary, null, GetDownloadedFiles());
-
-		return treeStore;
-	}
-	
-	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter, bool[string] downloadedFiles)
-	{
-		debug output(__FUNCTION__);
-		foreach(Library childLibrary; library.Children)
-		{
-			TreeIter iter;
-			
-			if (parentIter)
-			{
-				iter = treeStore.append(parentIter);
-			}
-			else
-			{
-				iter = treeStore.createIter();
-			}
-
-			//Fill the rows
-			treeStore.setValue(iter, 1, childLibrary.Title);
-
-			//If there is a video link, see if the video already exists, if it does, show the delete icon
-			//otherwise show the download icon
-			if (childLibrary.MP4 != "")
-			{
-				treeStore.setValue(iter, 0, childLibrary.MP4);
-
-				if (childLibrary.MP4[childLibrary.MP4.lastIndexOf("/") .. $] in downloadedFiles)
-				{
-					treeStore.setValue(iter, 2, _deleteImage);
-				}
-				else
-				{
-					treeStore.setValue(iter, 2, _downloadImage);
-				}
-			}
-			
-			RecurseTreeChildren(treeStore, childLibrary, iter, downloadedFiles);
-		}
-	}
-	
-	private void CreateColumns(TreeView treeView)
-	{
-		debug output(__FUNCTION__);
-		CellRendererText renderer = new CellRendererText();
-		CellRendererPixbuf imageRenderer = new CellRendererPixbuf();
-
-		TreeViewColumn urlColumn = new TreeViewColumn("VideoUrl", renderer, "text", 0);
-		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
-		TreeViewColumn imageColumn = new TreeViewColumn(_imageColumnName, imageRenderer, "pixbuf", 2);
-		TreeViewColumn progressColumn = new TreeViewColumn("Progress", renderer, "text", 3);
-
-		urlColumn.setVisible(false);
-
-		treeView.appendColumn(urlColumn);
-		treeView.appendColumn(titleColumn);
-		treeView.appendColumn(imageColumn);
-		treeView.appendColumn(progressColumn);
-	}
-
-	private void btnDone_Clicked(Button)
-	{
-		debug output(__FUNCTION__);
-		//Check if there are still videos downloading
-		if (_activeIters.length >  0)
-		{
-			//Prompt user to cancel downloads
-			Dialog cancelDownloads = new Dialog("Stop downloads?", _wdwDownloadManager, GtkDialogFlags.MODAL, [StockID.YES, StockID.NO], [ResponseType.YES, ResponseType.NO]);
-
-			int cancelResponse = cancelDownloads.run();
-			cancelDownloads.destroy();
-
-			if (cancelResponse == ResponseType.NO)
-			{
-				return;
-			}
-
-			//There are still downloads going, cancel them all
-			foreach( url; _activeIters.keys)
-			{
-				_activeIters[url].destroy();
-				_activeIters.remove(url);
-			}
-		}
-
-		this.destroy();
-	}
-
-	private void DownloadedVideoSize()
-	{
-		debug output(__FUNCTION__);
-		//Set item on status bar with total size of videos in download directory
-		string downloadDirectory = expandTilde(DOWNLOAD_FILE_PATH);
-		ulong totalFileSize;
-
-		if (_statusBarContextID != 0)
-		{
-			_statusDownloads.removeAll(_statusBarContextID);
-		}
-
-		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
-		{
-			totalFileSize += getSize(file);
-		}
-
-		_statusBarContextID = _statusDownloads.getContextId("Total File Size");
-		_statusDownloads.push(_statusBarContextID, format("Total size of downloaded videos: %sKB", totalFileSize / 1024));
 	}
 }

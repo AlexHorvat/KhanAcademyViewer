@@ -20,7 +20,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Windows.About;
+module kav.Windows.About;
 
 debug alias std.stdio.writeln output;
 
@@ -29,7 +29,10 @@ import gtk.Dialog;
 
 public final class About
 {
-	public this()
+
+public:
+
+	this()
 	{
 		debug output(__FUNCTION__);
 		AboutDialog wdwAbout = new AboutDialog();
@@ -47,7 +50,9 @@ public final class About
 		wdwAbout.showAll();
 	}
 
-	private void wdwAbout_Response(int response, Dialog dialog)
+private:
+
+	void wdwAbout_Response(int response, Dialog dialog)
 	{
 		debug output(__FUNCTION__);
 		if (response == GtkResponseType.CANCEL)

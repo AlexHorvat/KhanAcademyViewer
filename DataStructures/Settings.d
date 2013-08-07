@@ -20,15 +20,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.DataStructures.Settings;
+module kav.DataStructures.Settings;
 
-import KhanAcademyViewer.Include.Enums;
+import kav.Include.Enums;
 
 public final class Settings
 {
-	public bool ContinuousPlay = false;
-	public bool IsOffline = false;
-	public bool KeepPosition = false;
-	public string LastSelectedCategory;
-	public ViewMode ViewModeSetting = ViewMode.Flow;
+
+public:
+
+	bool		continuousPlay = false;
+	bool		isOffline = false;
+	bool		keepPosition = false;
+	string		lastSelectedCategory;
+	ViewMode	viewModeSetting = ViewMode.flow;
 }

@@ -20,37 +20,37 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Controls.TreeViewControl;
+module kav.Controls.TreeViewControl;
 
 debug alias std.stdio.writeln output;
 
-import std.conv:to;
-import std.array:split;
-import std.string:lastIndexOf;
-
-import gtk.ScrolledWindow;
-import gtk.ButtonBox;
-import gtk.TreeView;
-import gtk.TreeViewColumn;
-import gtk.TreeStore;
-import gtk.TreeIter;
-import gtk.TreePath;
-import gtk.Widget;
-import gtk.CellRendererText;
-
 import gdk.Event;
 
-import KhanAcademyViewer.Controls.ViewControl;
-import KhanAcademyViewer.Controls.VideoControl;
-import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.DataStructures.Settings;
+import gtk.ButtonBox;
+import gtk.CellRendererText;
+import gtk.ScrolledWindow;
+import gtk.TreeIter;
+import gtk.TreePath;
+import gtk.TreeStore;
+import gtk.TreeView;
+import gtk.TreeViewColumn;
+import gtk.Widget;
+
+import kav.DataStructures.Library;
+import kav.DataStructures.Settings;
+import kav.Controls.VideoControl;
+import kav.Controls.ViewControl;
+
+import std.array:split;
+import std.conv:to;
+import std.string:lastIndexOf;
 
 public final class TreeViewControl : ViewControl
 {
-	private TreeView _tvTree;
-	private string _currentTreePath;
 
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, VideoControl videoControl, Settings settings)
+public:
+
+	this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, Library completeLibrary, VideoControl videoControl, Settings settings)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -59,10 +59,10 @@ public final class TreeViewControl : ViewControl
 		_vcVideo = videoControl;
 		_settings = settings;
 
-		BuildView();
+		buildView();
 	}
 
-	public ~this()
+	~this()
 	{
 		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
@@ -70,50 +70,41 @@ public final class TreeViewControl : ViewControl
 		_scrollChild.show();
 	}
 
-	public override void PreloadCategory()
-	{
-		debug output(__FUNCTION__);
-		if (_settings && _settings.KeepPosition && _settings.LastSelectedCategory != "")
-		{
-			_tvTree.expandToPath(new TreePath(_settings.LastSelectedCategory));
-		}
-	}
-
-	public override bool GetNextVideo(out Library returnVideo, out string returnPath)
+	override bool getNextVideo(out Library returnVideo, out string returnPath)
 	{
 		debug output(__FUNCTION__);
 		//Get current path and set path to next node
 		TreeIter selectedItem = _tvTree.getSelectedIter();
 		TreePath treePath = selectedItem.getTreePath();
 		treePath.next;
-
+		
 		//Set tvTree to next node if possible - if this is the end of the current category
 		//then tvTree doesn't change
 		_tvTree.getSelection().selectPath(treePath);
-
+		
 		//Check if next node was actually selected
 		if (treePath.compare(_tvTree.getSelectedIter().getTreePath()) == 0)
 		{
 			//New node has been selected, so set the library and path
 			//Get the new nodes path
 			string treePathString = treePath.toString();
-
+			
 			//Set current tree path to compare against when checking whether to load another video or not in button release method
 			_currentTreePath = treePathString;
-
+			
 			//Iterate other the library to get the corrent video using the new treepath
 			string[] paths = split(treePathString, ":");
-
+			
 			returnVideo = _completeLibrary;
-
+			
 			foreach (string path; paths)
 			{
-				returnVideo = returnVideo.Children[to!size_t(path)];
+				returnVideo = returnVideo.children[to!size_t(path)];
 			}
-
+			
 			//Set returnPath to current treepath minus last item as this is used for the category not the video itself
 			returnPath = treePathString[0 .. treePathString.lastIndexOf(":")];
-
+			
 			//Both the new video library and path have been set by here, so return true to tell the video player to keep
 			//going with the next video
 			return true;
@@ -124,18 +115,32 @@ public final class TreeViewControl : ViewControl
 			return false;
 		}
 	}
-	
-	private void BuildView()
+
+	override void preloadCategory()
 	{
 		debug output(__FUNCTION__);
-		_tvTree = new TreeView(CreateModel());
+		if (_settings && _settings.keepPosition && _settings.lastSelectedCategory != "")
+		{
+			_tvTree.expandToPath(new TreePath(_settings.lastSelectedCategory));
+		}
+	}
+
+private:
+
+	string		_currentTreePath;
+	TreeView	_tvTree;
+	
+	void buildView()
+	{
+		debug output(__FUNCTION__);
+		_tvTree = new TreeView(createModel());
 
 		_tvTree.setHeadersVisible(false);
 		_tvTree.setEnableSearch(false);
 		_tvTree.show();
 		_tvTree.addEvents(GdkEventMask.BUTTON_RELEASE_MASK);
 
-		CreateColumns(_tvTree);
+		createColumns(_tvTree);
 		_tvTree.addOnButtonRelease(&tvTree_ButtonRelease);
 
 		_scrollChild.hide();
@@ -143,46 +148,8 @@ public final class TreeViewControl : ViewControl
 
 		_scrollParent.add(_tvTree);
 	}
-	
-	private TreeStore CreateModel()
-	{
-		debug output(__FUNCTION__);
-		if (!_completeLibrary)
-		{
-			return null;
-		}
-		
-		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING]);
-		
-		RecurseTreeChildren(treeStore, _completeLibrary, null);
-		
-		return treeStore;
-	}
-	
-	private void RecurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
-	{
-		debug output(__FUNCTION__);
-		foreach(Library childLibrary; library.Children)
-		{
-			TreeIter iter;
-			
-			if (parentIter)
-			{
-				iter = treeStore.append(parentIter);
-			}
-			else
-			{
-				iter = treeStore.createIter();
-			}
-			
-			treeStore.setValue(iter, 0, childLibrary.MP4 != "");
-			treeStore.setValue(iter, 1, childLibrary.Title);
-			
-			RecurseTreeChildren(treeStore, childLibrary, iter);
-		}
-	}
 
-	private void CreateColumns(TreeView treeView)
+	void createColumns(TreeView treeView)
 	{
 		debug output(__FUNCTION__);
 		CellRendererText renderer = new CellRendererText();
@@ -194,8 +161,46 @@ public final class TreeViewControl : ViewControl
 		treeView.appendColumn(indexColumn);
 		treeView.appendColumn(titleColumn);
 	}
+	
+	TreeStore createModel()
+	{
+		debug output(__FUNCTION__);
+		if (!_completeLibrary)
+		{
+			return null;
+		}
+		
+		TreeStore treeStore = new TreeStore([GType.INT, GType.STRING]);
+		
+		recurseTreeChildren(treeStore, _completeLibrary, null);
+		
+		return treeStore;
+	}
+	
+	void recurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
+	{
+		debug output(__FUNCTION__);
+		foreach(Library childLibrary; library.children)
+		{
+			TreeIter iter;
 
-	private bool tvTree_ButtonRelease(Event, Widget)
+			if (parentIter)
+			{
+				iter = treeStore.append(parentIter);
+			}
+			else
+			{
+				iter = treeStore.createIter();
+			}
+			
+			treeStore.setValue(iter, 0, childLibrary.mp4 != "");
+			treeStore.setValue(iter, 1, childLibrary.title);
+			
+			recurseTreeChildren(treeStore, childLibrary, iter);
+		}
+	}
+
+	bool tvTree_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvTree.getSelectedIter();
@@ -214,14 +219,14 @@ public final class TreeViewControl : ViewControl
 				
 				foreach (string path; paths)
 				{
-					currentVideo = currentVideo.Children[to!size_t(path)];
+					currentVideo = currentVideo.children[to!size_t(path)];
 				}
 
 				//Set current tree path to compare against when checking whether to load another video or not
 				_currentTreePath = treePath;
 
 				//Pass in current treepath minus last item as this is used for the category not the video itself
-				LoadVideo(currentVideo, treePath[0 .. treePath.lastIndexOf(":")], false);
+				loadVideo(currentVideo, treePath[0 .. treePath.lastIndexOf(":")], false);
 			}
 		}
 		

@@ -20,44 +20,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Controls.FlowViewControl;
+module kav.Controls.FlowViewControl;
 
 debug alias std.stdio.writeln output;
+
+import gdk.Event;
+
+import gtk.Button;
+import gtk.ButtonBox;
+import gtk.CellRendererText;
+import gtk.ListStore;
+import gtk.ScrolledWindow;
+import gtk.TreeIter;
+import gtk.TreePath;
+import gtk.TreeSelection;
+import gtk.TreeView;
+import gtk.TreeViewColumn;
+import gtk.Widget;
+
+import kav.DataStructures.BreadCrumb;
+import kav.DataStructures.Library;
+import kav.DataStructures.Settings;
+import kav.Controls.VideoControl;
+import kav.Controls.ViewControl;
 
 import std.conv:to;
 import std.string:split;
 
-import gtk.ScrolledWindow;
-import gtk.ButtonBox;
-import gtk.TreeView;
-import gtk.TreeViewColumn;
-import gtk.TreePath;
-import gtk.TreeIter;
-import gtk.TreeSelection;
-import gtk.ListStore;
-import gtk.Widget;
-import gtk.CellRendererText;
-import gtk.Button;
-
-import gdk.Event;
-
-import KhanAcademyViewer.Controls.ViewControl;
-import KhanAcademyViewer.Controls.VideoControl;
-import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.DataStructures.BreadCrumb;
-import KhanAcademyViewer.DataStructures.Settings;
-
 public final class FlowViewControl : ViewControl
 {
-	private ButtonBox _bboxBreadCrumbs;
-	private Library _parentLibrary;
-	private Library _childLibrary;
-	private TreeView _tvParent;
-	private TreeView _tvChild;
-	private int _breadCrumbAvailableWidth;
-	private BreadCrumb[] _breadCrumbs;
-	
-	public this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, VideoControl videoControl, Settings settings)
+
+public:
+		
+	this(ScrolledWindow scrollParent, ScrolledWindow scrollChild, ButtonBox bboxBreadCrumbs, Library completeLibrary, VideoControl videoControl, Settings settings)
 	{
 		debug output(__FUNCTION__);
 		_scrollParent = scrollParent;
@@ -68,10 +63,10 @@ public final class FlowViewControl : ViewControl
 		_vcVideo = videoControl;
 		_settings = settings;
 
-		BuildView();
+		buildView();
 	}
 	
-	public ~this()
+	~this()
 	{
 		debug output(__FUNCTION__);
 		_scrollParent.removeAll();
@@ -79,70 +74,7 @@ public final class FlowViewControl : ViewControl
 		_bboxBreadCrumbs.removeAll();
 	}
 
-	public override void PreloadCategory()
-	{
-		debug output(__FUNCTION__);
-		if (_settings && _settings.KeepPosition && _settings.LastSelectedCategory != "")
-		{
-			//There's a variety of things that can go wrong while preloading - but none really matter
-			//So if something goes wrong abandon the preload
-			try
-			{
-				int childRowIndex;
-				string[] paths = split(_settings.LastSelectedCategory, ":");
-
-				_parentLibrary = _completeLibrary;
-
-				//Set the parent library(ies)
-				foreach(string path; paths[0 .. $ - 1])
-				{
-					childRowIndex = to!int(path);
-					_parentLibrary = _parentLibrary.Children[childRowIndex];
-
-					//Add the parent item breadcrumbs
-					BreadCrumb crumb = new BreadCrumb();
-
-					crumb.RowIndex = childRowIndex;
-					crumb.Title = _parentLibrary.Title;
-
-					_breadCrumbs ~= crumb;
-				}
-				
-				_tvParent.setModel(CreateModel(true));
-				
-				//Set child library to last breadcrumb item
-				childRowIndex = to!int(paths[$ - 1]);
-
-				//Set the child library
-				_childLibrary = _parentLibrary.Children[childRowIndex];
-
-				//Add the final item to the breadcrumbs
-				BreadCrumb crumb = new BreadCrumb();
-				
-				crumb.RowIndex = childRowIndex;
-				crumb.Title = _childLibrary.Title;
-				
-				_breadCrumbs ~= crumb;
-
-				//Load the child library model
-				_tvChild.setModel(CreateModel(false));
-				
-				//Pre-set the selected item in parent treeview
-				TreeSelection selection = _tvParent.getSelection();
-				selection.selectPath(new TreePath(childRowIndex));
-			}
-			//If anything goes wrong with the preloading just swallow the error and don't load breadcumbs (or preload)
-			catch
-			{
-				return;
-			}
-
-			//Refresh bread crumbs
-			LoadBreadCrumbs();
-		}
-	}
-
-	public override bool GetNextVideo(out Library returnVideo, out string returnPath)
+	override bool getNextVideo(out Library returnVideo, out string returnPath)
 	{
 		debug output(__FUNCTION__);
 		//Get current path and set path to next node
@@ -160,15 +92,15 @@ public final class FlowViewControl : ViewControl
 			//Generate equivalent of treepath.toString()
 			foreach(BreadCrumb breadCrumb; _breadCrumbs)
 			{
-				returnPath ~= to!(string)(breadCrumb.RowIndex);
+				returnPath ~= to!(string)(breadCrumb.rowIndex);
 				returnPath ~= ":";
 			}
-
+			
 			returnPath = returnPath[0 .. $ - 1];
-
+			
 			int rowIndex = _tvChild.getSelectedIter().getValueInt(0);
-			returnVideo = _childLibrary.Children[rowIndex];
-						
+			returnVideo = _childLibrary.children[rowIndex];
+			
 			//Both the new video library and path have been set by here, so return true to tell the video player to keep
 			//going with the next video
 			return true;
@@ -179,11 +111,118 @@ public final class FlowViewControl : ViewControl
 			return false;
 		}
 	}
-	
-	private void BuildView()
+
+	override void preloadCategory()
 	{
 		debug output(__FUNCTION__);
-		_tvParent = new TreeView(CreateModel(true));
+		if (_settings && _settings.keepPosition && _settings.lastSelectedCategory != "")
+		{
+			//There's a variety of things that can go wrong while preloading - but none really matter
+			//So if something goes wrong abandon the preload
+			try
+			{
+				int childRowIndex;
+				string[] paths = split(_settings.lastSelectedCategory, ":");
+
+				_parentLibrary = _completeLibrary;
+
+				//Set the parent library(ies)
+				foreach(string path; paths[0 .. $ - 1])
+				{
+					childRowIndex = to!int(path);
+					_parentLibrary = _parentLibrary.children[childRowIndex];
+
+					//Add the parent item breadcrumbs
+					BreadCrumb crumb = new BreadCrumb();
+
+					crumb.rowIndex = childRowIndex;
+					crumb.title = _parentLibrary.title;
+
+					_breadCrumbs ~= crumb;
+				}
+				
+				_tvParent.setModel(createModel(true));
+				
+				//Set child library to last breadcrumb item
+				childRowIndex = to!int(paths[$ - 1]);
+
+				//Set the child library
+				_childLibrary = _parentLibrary.children[childRowIndex];
+
+				//Add the final item to the breadcrumbs
+				BreadCrumb crumb = new BreadCrumb();
+				
+				crumb.rowIndex = childRowIndex;
+				crumb.title = _childLibrary.title;
+				
+				_breadCrumbs ~= crumb;
+
+				//Load the child library model
+				_tvChild.setModel(createModel(false));
+				
+				//Pre-set the selected item in parent treeview
+				TreeSelection selection = _tvParent.getSelection();
+				selection.selectPath(new TreePath(childRowIndex));
+			}
+			//If anything goes wrong with the preloading just swallow the error and don't load breadcumbs (or preload)
+			catch
+			{
+				return;
+			}
+
+			//Refresh bread crumbs
+			loadBreadCrumbs();
+		}
+	}
+  
+private:
+
+	ButtonBox		_bboxBreadCrumbs;
+	int				_breadCrumbAvailableWidth;
+	BreadCrumb[]	_breadCrumbs;
+	Library			_childLibrary;
+	Library			_parentLibrary;
+	TreeView		_tvChild;
+	TreeView		_tvParent;
+
+	void breadButton_Clicked(Button sender)
+	{
+		debug output(__FUNCTION__);
+		//Cut _breadCrumbs down to breadCrumbIndex length, then set the parent and child to the last two breadcrumb items
+		int breadCrumbNewLength = to!int(sender.getName());
+		_breadCrumbs.length = breadCrumbNewLength;
+		
+		//Set parent library to 2nd to last breadcrumb item
+		_parentLibrary = _completeLibrary;
+		
+		//foreach(size_t breadCrumbCounter; 0 .. _breadCrumbs.length - 1)
+		foreach(BreadCrumb crumb; _breadCrumbs[0 .. $ - 1])
+		{
+			//_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
+			_parentLibrary = _parentLibrary.children[crumb.rowIndex];
+		}
+		
+		_tvParent.setModel(createModel(true));
+		
+		//Set child library to last breadcrumb item
+		int childRowIndex = _breadCrumbs[$ - 1].rowIndex;
+		
+		_childLibrary = _parentLibrary.children[childRowIndex];
+		_tvChild.setModel(createModel(false));
+		
+		//Pre-set the selected item in parent treeview
+		TreePath path = new TreePath(childRowIndex);
+		TreeSelection selection = _tvParent.getSelection();
+		selection.selectPath(path);
+		
+		//Refresh bread crumbs
+		loadBreadCrumbs();
+	}
+
+	void buildView()
+	{
+		debug output(__FUNCTION__);
+		_tvParent = new TreeView(createModel(true));
 
 		_tvParent.setHeadersVisible(false);
 		_tvParent.setEnableSearch(false);
@@ -198,8 +237,8 @@ public final class FlowViewControl : ViewControl
 		_tvChild.addEvents(GdkEventMask.BUTTON_RELEASE_MASK);
 
 		//Setup flow mode
-		CreateColumns(_tvParent);
-		CreateColumns(_tvChild);
+		createColumns(_tvParent);
+		createColumns(_tvChild);
 
 		_tvParent.addOnButtonRelease(&tvParent_ButtonRelease);
 		_tvChild.addOnButtonRelease(&tvChild_ButtonRelease);
@@ -210,7 +249,20 @@ public final class FlowViewControl : ViewControl
 		_scrollChild.add(_tvChild);
 	}
 
-	private ListStore CreateModel(bool isParentTree)
+	void createColumns(TreeView treeView)
+	{
+		debug output(__FUNCTION__);
+		CellRendererText renderer = new CellRendererText();
+		TreeViewColumn indexColumn = new TreeViewColumn("Index", renderer, "text", 0);
+		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
+		
+		indexColumn.setVisible(false);
+		
+		treeView.appendColumn(indexColumn);
+		treeView.appendColumn(titleColumn);
+	}
+
+	ListStore createModel(bool isParentTree)
 	{
 		debug output(__FUNCTION__);
 		ListStore listStore = new ListStore([GType.INT, GType.STRING]);
@@ -231,30 +283,101 @@ public final class FlowViewControl : ViewControl
 			return null;
 		}
 
-		foreach(size_t index; 0 .. workingLibrary.Children.length)
+		foreach(size_t index; 0 .. workingLibrary.children.length)
 		{
 			listStore.append(tree);
 			listStore.setValue(tree, 0, cast(int)index);
-			listStore.setValue(tree, 1, workingLibrary.Children[index].Title);
+			listStore.setValue(tree, 1, workingLibrary.children[index].title);
 		}
 		
 		return listStore;
 	}
 
-	private void CreateColumns(TreeView treeView)
+	void loadBreadCrumbs()
 	{
 		debug output(__FUNCTION__);
-		CellRendererText renderer = new CellRendererText();
-		TreeViewColumn indexColumn = new TreeViewColumn("Index", renderer, "text", 0);
-		TreeViewColumn titleColumn = new TreeViewColumn("Topic", renderer, "text", 1);
+		//Clear existing breadcrumb buttons
+		_bboxBreadCrumbs.removeAll();
 		
-		indexColumn.setVisible(false);
-		
-		treeView.appendColumn(indexColumn);
-		treeView.appendColumn(titleColumn);
+		//Get the size available for each bread crumb button, and the maximum length allowed for the title
+		if (_breadCrumbs && _breadCrumbs.length != 0)
+		{
+			int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
+			int titleLength = breadCrumbWidth / 8;
+			
+			foreach(size_t breadCrumbIndex; 0 .. _breadCrumbs.length)
+			{
+				string title = _breadCrumbs[breadCrumbIndex].title;
+				
+				if (title.length > titleLength)
+				{
+					title = title[0 .. titleLength - 3] ~ "...";
+				}
+				
+				Button breadButton = new Button(title, false);
+				
+				breadButton.setName(to!string(breadCrumbIndex + 1));
+				breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].title);
+				breadButton.setAlignment(0.0, 0.5);
+				breadButton.setSizeRequest(breadCrumbWidth, -1);
+				breadButton.show();
+				breadButton.addOnClicked(&breadButton_Clicked);
+				
+				_bboxBreadCrumbs.add(breadButton);
+			}
+		}
 	}
 
-	private bool tvParent_ButtonRelease(Event, Widget)
+	bool tvChild_ButtonRelease(Event, Widget)
+	{
+		debug output(__FUNCTION__);
+		TreeIter selectedItem = _tvChild.getSelectedIter();
+		
+		if (selectedItem)
+		{
+			int rowIndex = selectedItem.getValueInt(0);
+			string title = selectedItem.getValueString(1);
+			
+			//If this child has children then make this a parent and it's child the new child
+			//Otherwise this is the end of the tree - play the video
+			if (_childLibrary.children[rowIndex].children)
+			{
+				BreadCrumb crumb = new BreadCrumb();
+				
+				crumb.rowIndex = rowIndex;
+				crumb.title = title;
+				_breadCrumbs ~= crumb;
+				
+				//Update parent and child libraries - this will move the current child library over to the parent position
+				//and set the new child to be the child's chlid library
+				_parentLibrary = _childLibrary;
+				_childLibrary = _parentLibrary.children[rowIndex];
+				
+				_tvParent.setModel(createModel(true));
+				_tvChild.setModel(createModel(false));
+				
+				loadBreadCrumbs();
+			}
+			else
+			{
+				//Generate equivalent of treepath.toString()
+				string path;
+				
+				foreach(BreadCrumb breadCrumb; _breadCrumbs)
+				{
+					path ~= to!(string)(breadCrumb.rowIndex);
+					path ~= ":";
+				}
+				
+				loadVideo(_childLibrary.children[rowIndex], path[0 .. $ - 1], false);
+			}
+		}
+		
+		//Stop any more signals being called
+		return true;
+	}
+
+	bool tvParent_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvParent.getSelectedIter();
@@ -269,8 +392,8 @@ public final class FlowViewControl : ViewControl
 			{
 				BreadCrumb crumb = new BreadCrumb();
 				
-				crumb.RowIndex = cast(int)rowIndex;
-				crumb.Title = title;
+				crumb.rowIndex = cast(int)rowIndex;
+				crumb.title = title;
 
 				_breadCrumbs ~= crumb;
 			}
@@ -278,136 +401,18 @@ public final class FlowViewControl : ViewControl
 			//entry for it, so overwrite that entry
 			else
 			{
-				_breadCrumbs[$ - 1].RowIndex = cast(int)rowIndex;
-				_breadCrumbs[$ - 1].Title = title;
+				_breadCrumbs[$ - 1].rowIndex = cast(int)rowIndex;
+				_breadCrumbs[$ - 1].title = title;
 			}
 			
 			//Parent library doesn't change, just set child library then reload child treeview
-			_childLibrary = _parentLibrary.Children[rowIndex];
-			_tvChild.setModel(CreateModel(false));
+			_childLibrary = _parentLibrary.children[rowIndex];
+			_tvChild.setModel(createModel(false));
 			
-			LoadBreadCrumbs();
+			loadBreadCrumbs();
 		}
 		
 		//Stop any more signals being called
 		return true;
-	}
-	
-	private bool tvChild_ButtonRelease(Event, Widget)
-	{
-		debug output(__FUNCTION__);
-		TreeIter selectedItem = _tvChild.getSelectedIter();
-		
-		if (selectedItem)
-		{
-			int rowIndex = selectedItem.getValueInt(0);
-			string title = selectedItem.getValueString(1);
-			
-			//If this child has children then make this a parent and it's child the new child
-			//Otherwise this is the end of the tree - play the video
-			if (_childLibrary.Children[rowIndex].Children)
-			{
-				BreadCrumb crumb = new BreadCrumb();
-				
-				crumb.RowIndex = rowIndex;
-				crumb.Title = title;
-				_breadCrumbs ~= crumb;
-				
-				//Update parent and child libraries - this will move the current child library over to the parent position
-				//and set the new child to be the child's chlid library
-				_parentLibrary = _childLibrary;
-				_childLibrary = _parentLibrary.Children[rowIndex];
-				
-				_tvParent.setModel(CreateModel(true));
-				_tvChild.setModel(CreateModel(false));
-				
-				LoadBreadCrumbs();
-			}
-			else
-			{
-				//Generate equivalent of treepath.toString()
-				string path;
-
-				foreach(BreadCrumb breadCrumb; _breadCrumbs)
-				{
-					path ~= to!(string)(breadCrumb.RowIndex);
-					path ~= ":";
-				}
-
-				LoadVideo(_childLibrary.Children[rowIndex], path[0 .. $ - 1], false);
-			}
-		}
-		
-		//Stop any more signals being called
-		return true;
-	}
-
-	private void LoadBreadCrumbs()
-	{
-		debug output(__FUNCTION__);
-		//Clear existing breadcrumb buttons
-		_bboxBreadCrumbs.removeAll();
-		
-		//Get the size available for each bread crumb button, and the maximum length allowed for the title
-		if (_breadCrumbs && _breadCrumbs.length != 0)
-		{
-			int breadCrumbWidth = _breadCrumbAvailableWidth / cast(int)_breadCrumbs.length - 8;
-			int titleLength = breadCrumbWidth / 8;
-			
-			foreach(size_t breadCrumbIndex; 0 .. _breadCrumbs.length)
-			{
-				string title = _breadCrumbs[breadCrumbIndex].Title;
-				
-				if (title.length > titleLength)
-				{
-					title = title[0 .. titleLength - 3] ~ "...";
-				}
-				
-				Button breadButton = new Button(title, false);
-				
-				breadButton.setName(to!string(breadCrumbIndex + 1));
-				breadButton.setTooltipText(_breadCrumbs[breadCrumbIndex].Title);
-				breadButton.setAlignment(0.0, 0.5);
-				breadButton.setSizeRequest(breadCrumbWidth, -1);
-				breadButton.show();
-				breadButton.addOnClicked(&breadButton_Clicked);
-				
-				_bboxBreadCrumbs.add(breadButton);
-			}
-		}
-	}
-
-	private void breadButton_Clicked(Button sender)
-	{
-		debug output(__FUNCTION__);
-		//Cut _breadCrumbs down to breadCrumbIndex length, then set the parent and child to the last two breadcrumb items
-		int breadCrumbNewLength = to!int(sender.getName());
-		_breadCrumbs.length = breadCrumbNewLength;
-		
-		//Set parent library to 2nd to last breadcrumb item
-		_parentLibrary = _completeLibrary;
-		
-		//foreach(size_t breadCrumbCounter; 0 .. _breadCrumbs.length - 1)
-		foreach(BreadCrumb crumb; _breadCrumbs[0 .. $ - 1])
-		{
-			//_parentLibrary = _parentLibrary.Children[_breadCrumbs[breadCrumbCounter].RowIndex];
-			_parentLibrary = _parentLibrary.Children[crumb.RowIndex];
-		}
-		
-		_tvParent.setModel(CreateModel(true));
-		
-		//Set child library to last breadcrumb item
-		int childRowIndex = _breadCrumbs[$ - 1].RowIndex;
-		
-		_childLibrary = _parentLibrary.Children[childRowIndex];
-		_tvChild.setModel(CreateModel(false));
-		
-		//Pre-set the selected item in parent treeview
-		TreePath path = new TreePath(childRowIndex);
-		TreeSelection selection = _tvParent.getSelection();
-		selection.selectPath(path);
-		
-		//Refresh bread crumbs
-		LoadBreadCrumbs();
 	}
 }

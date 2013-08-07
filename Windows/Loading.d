@@ -21,25 +21,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-module KhanAcademyViewer.Windows.Loading;
+module kav.Windows.Loading;
 
 debug alias std.stdio.writeln output;
 
-import std.string:format;
-
-import gtk.Window;
 import gtk.Fixed;
 import gtk.Label;
+import gtk.Window;
 
-import KhanAcademyViewer.Include.Functions;
+import kav.Include.Functions;
+
+import std.string:format;
 
 public final class Loading
 {
-	private Window _wdwLoading;
-	private Label _lblStatus;
-	private Label _lblDataDownloaded;
 
-	public this()
+public:
+	
+	this()
 	{
 		debug output(__FUNCTION__);
 		_wdwLoading = new Window("Loading...");
@@ -71,28 +70,34 @@ public final class Loading
 		_lblDataDownloaded.hide();
 	}
 
-	public ~this()
+	~this()
 	{
 		debug output(__FUNCTION__);
 		_wdwLoading.destroy();
 	}
 
-	public void UpdateStatus(string newStatus)
-	{
-		debug output(__FUNCTION__);
-		_lblStatus.setText(newStatus);
-		RefreshUI();
-	}
-	
-	public void SetDataDownloadedVisible(bool isVisible)
+	void setDataDownloadedVisible(bool isVisible)
 	{
 		_lblDataDownloaded.setVisible(isVisible);
-		RefreshUI();
+		Functions.refreshUI();
 	}
 
-	public void UpdateAmountDownloaded(long amountDownloaded)
+	void updateAmountDownloaded(long amountDownloaded)
 	{
 		debug output(__FUNCTION__);
 		_lblDataDownloaded.setText(format("%s KB", amountDownloaded / 1024));
 	}
+
+	void updateStatus(string newStatus)
+	{
+		debug output(__FUNCTION__);
+		_lblStatus.setText(newStatus);
+		Functions.refreshUI();
+	}
+
+private:
+	
+	Label	_lblDataDownloaded;
+	Label	_lblStatus;
+	Window	_wdwLoading;
 }

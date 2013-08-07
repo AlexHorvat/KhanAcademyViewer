@@ -21,44 +21,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-module KhanAcademyViewer.Controls.VideoScreen;
+module kav.Controls.VideoScreen;
 
 debug alias std.stdio.writeln output;
 
 import core.thread;
 
-import gtk.Widget;
-import gtk.Overlay;
-import gtk.DrawingArea;
-import gtk.Spinner;
-import gtk.Label;
-import gtk.Image;
-import gtk.EventBox;
-
+import gdk.Cursor;
 import gdk.Event;
 import gdk.X11;
-import gdk.Cursor;
 
-import KhanAcademyViewer.Controls.VideoControl;
-import KhanAcademyViewer.Include.Functions;
+import gtk.DrawingArea;
+import gtk.EventBox;
+import gtk.Image;
+import gtk.Label;
+import gtk.Overlay;
+import gtk.Spinner;
+import gtk.Widget;
+
+import kav.Controls.VideoControl;
+import kav.Include.Functions;
 
 public final class VideoScreen : Overlay
 {
-	private Label _lblTitle;
-	private Spinner _spinLoading;
-	private EventBox _ebLoading;
-	private EventBox _ebPlay;
-	private EventBox _ebPause;
-	private EventBox _ebTitle;
-	private DrawingArea _daVideoArea;
 
-	private Thread _pauseHider;
-	private Cursor _blankCursor;
+public:
 
-	public this(void delegate() playPauseMethod)
+	this(void delegate() playPauseMethod)
 	{
 		debug output(__FUNCTION__);
-		PlayPause = playPauseMethod;
+		this.playPause = playPauseMethod;
 
 		_blankCursor = new Cursor(GdkCursorType.BLANK_CURSOR);
 
@@ -70,7 +62,7 @@ public final class VideoScreen : Overlay
 	}
 
 	//Only add the overlays after all the other widgets have 'shown' otherwise they end up displayed
-	public void AddOverlays()
+	void addOverlays()
 	{
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.DIALOG);
 		imgPlay.show();
@@ -121,20 +113,44 @@ public final class VideoScreen : Overlay
 		super.addOverlay(_ebTitle);
 	}
 
+	ulong getDrawingWindowID()
+	{
+		debug output(__FUNCTION__);
+		return X11.windowGetXid(_daVideoArea.getWindow());
+	}
+
+	void hidePlayButton()
+	{
+		debug output(__FUNCTION__);
+		_ebPlay.hide();
+	}
+
+	void hideSpinner()
+	{
+		debug output(__FUNCTION__);
+		_spinLoading.stop();
+		_ebLoading.hide();
+	}
+
+	void hideTitle()
+	{
+		_ebTitle.hide();
+	}
+
 	//Simply setting setSensitive to false greys out everything, I want it to stay black, but the user to not be able to interact
 	//with the screen, so remove handlers
-	public void SetEnabled(bool isEnabled)
+	void setEnabled(bool isEnabled)
 	{
 		if (isEnabled)
 		{
-			_ebPlay.addOnButtonRelease(&DrawingAreaOrEventBox_ButtonRelease);
-			_ebPause.addOnButtonRelease(&DrawingAreaOrEventBox_ButtonRelease);
-			_daVideoArea.addOnButtonRelease(&DrawingAreaOrEventBox_ButtonRelease);
+			_ebPlay.addOnButtonRelease(&drawingAreaOrEventBox_ButtonRelease);
+			_ebPause.addOnButtonRelease(&drawingAreaOrEventBox_ButtonRelease);
+			_daVideoArea.addOnButtonRelease(&drawingAreaOrEventBox_ButtonRelease);
 			_daVideoArea.addOnMotionNotify(&daVideoArea_MotionNotify);
 		}
 		else
 		{
-			HideSpinner();
+			hideSpinner();
 
 			_ebTitle.hide();
 			_ebPlay.hide();
@@ -147,74 +163,94 @@ public final class VideoScreen : Overlay
 		}
 	}
 
-	public ulong GetDrawingWindowID()
+	void showPlayButton()
 	{
 		debug output(__FUNCTION__);
-		return X11.windowGetXid(_daVideoArea.getWindow());
+		_ebPlay.show();
 	}
 
-	public void ShowSpinner()
+	void showSpinner()
 	{
 		debug output(__FUNCTION__);
 		_ebLoading.show();
 		_spinLoading.start();
 	}
-
-	public void HideSpinner()
-	{
-		debug output(__FUNCTION__);
-		_spinLoading.stop();
-		_ebLoading.hide();
-	}
-
-	public void ShowTitle(string title)
+	
+	void showTitle(string title)
 	{
 		debug output(__FUNCTION__);
 		_lblTitle.setText(title);
 		_ebTitle.show();
 
 		//Spawn a new thread to hide the title
-		Thread TitleHider = new Thread(&DelayedHideTitle);
-		TitleHider.start();
-		TitleHider = null;
+		Thread titleHider = new Thread(&delayedHideTitle);
+		titleHider.start();
+		titleHider = null;
 	}
 	
-	public void HideTitle()
-	{
-		_ebTitle.hide();
-	}
+private:
 
-	public void ShowPlayButton()
+	Cursor		_blankCursor;
+	DrawingArea	_daVideoArea;
+	EventBox	_ebLoading;
+	EventBox	_ebPause;
+	EventBox	_ebPlay;
+	EventBox	_ebTitle;
+	Label		_lblTitle;
+	Thread		_pauseHider;
+	Spinner		_spinLoading;
+
+	bool daVideoArea_MotionNotify(Event, Widget)
 	{
 		debug output(__FUNCTION__);
-		_ebPlay.show();
+		//Spawn a thread, if already exists do nothing to stop from creating huge amount of timer threads and crashing
+		if (VideoControl.isPlaying && !_pauseHider)
+		{
+			_ebPause.show();
+			
+			_pauseHider = new Thread(&delayedHidePause);
+			_pauseHider.start();
+		}
+		else
+		{
+			_daVideoArea.resetCursor();
+		}
+		
+		return false;
 	}
 
-	public void HidePlayButton()
+	void delayedHidePause()
 	{
 		debug output(__FUNCTION__);
-		_ebPlay.hide();
+		Thread.sleep(dur!"seconds"(3));
+		_ebPause.hide();
+		
+		//Hide the cursor too
+		if (VideoControl.isFullscreen)
+		{
+			_daVideoArea.setCursor(_blankCursor);
+		}
+		
+		_pauseHider = null;
 	}
 
-	private void DelayedHideTitle()
+	void delayedHideTitle()
 	{
 		debug output(__FUNCTION__);
 		Thread.sleep(dur!"seconds"(3));
 		_ebTitle.hide();
 
 		//Hide the cursor too
-		if (VideoControl.IsFullscreen)
+		if (VideoControl.isFullscreen)
 		{
 			_daVideoArea.setCursor(_blankCursor);
 		}
 	}
 
-	private void delegate() PlayPause;
-
-	private bool DrawingAreaOrEventBox_ButtonRelease(Event, Widget)
+	bool drawingAreaOrEventBox_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
-		if (VideoControl.IsPlaying)
+		if (VideoControl.isPlaying)
 		{
 			_ebPause.hide();
 			_ebPlay.show();
@@ -223,42 +259,10 @@ public final class VideoScreen : Overlay
 		{
 			_ebPlay.hide();
 		}
-
-		PlayPause();
+		
+		playPause();
 		return false;
 	}
 
-	private void DelayedHidePause()
-	{
-		debug output(__FUNCTION__);
-		Thread.sleep(dur!"seconds"(3));
-		_ebPause.hide();
-
-		//Hide the cursor too
-		if (VideoControl.IsFullscreen)
-		{
-			_daVideoArea.setCursor(_blankCursor);
-		}
-
-		_pauseHider = null;
-	}
-
-	private bool daVideoArea_MotionNotify(Event, Widget)
-	{
-		debug output(__FUNCTION__);
-		//Spawn a thread, if already exists do nothing to stop from creating huge amount of timer threads and crashing
-		if (VideoControl.IsPlaying && !_pauseHider)
-		{
-			_ebPause.show();
-
-			_pauseHider = new Thread(&DelayedHidePause);
-			_pauseHider.start();
-		}
-		else
-		{
-			_daVideoArea.resetCursor();
-		}
-
-		return false;
-	}
+	void delegate() playPause;
 }

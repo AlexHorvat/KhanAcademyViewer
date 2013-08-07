@@ -19,16 +19,19 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module KhanAcademyViewer.DataStructures.Library;
+module kav.DataStructures.Library;
 
 import std.datetime;
 
 public final class Library
 {
-	public string[] AuthorNames;
-	public Library[] Children;
-	public DateTime DateAdded;
-	public string Description;
-	public string MP4;
-	public string Title;
+
+public:
+
+	string[]	authorNames;
+	Library[]	children;
+	DateTime	dateAdded;
+	string		description;
+	string		mp4;
+	string		title;
 }

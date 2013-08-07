@@ -20,47 +20,53 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-module KhanAcademyViewer.Controls.ViewControl;
+module kav.Controls.ViewControl;
 
 import gtk.ScrolledWindow;
 
-import KhanAcademyViewer.DataStructures.Library;
-import KhanAcademyViewer.Controls.VideoControl;
-import KhanAcademyViewer.DataStructures.Settings;
+import kav.DataStructures.Library;
+import kav.Controls.VideoControl;
+import kav.DataStructures.Settings;
 
-protected abstract class ViewControl
+public abstract class ViewControl
 {
-	public void PreloadCategory();
-	public bool GetNextVideo(out Library, out string);
-	protected ScrolledWindow _scrollParent;
-	protected ScrolledWindow _scrollChild;
-	protected Library _completeLibrary;
-	protected VideoControl _vcVideo;
-	protected Settings _settings;
 
-	protected void LoadVideo(Library currentVideo, string path, bool startPlaying)
+public:
+
+	bool getNextVideo(out Library, out string);
+	void preloadCategory();
+
+protected:
+
+	Library			_completeLibrary;
+	ScrolledWindow	_scrollChild;
+	ScrolledWindow	_scrollParent;
+	Settings		_settings;
+	VideoControl	_vcVideo;
+	
+	protected void loadVideo(Library currentVideo, string path, bool startPlaying)
 	{
 		debug output(__FUNCTION__);
 		//Continuous play?
-		if (_settings && _settings.ContinuousPlay)
+		if (_settings && _settings.continuousPlay)
 		{
-			_vcVideo.StartContinuousPlayMode(&PlayNextVideo);
+			_vcVideo.startContinuousPlayMode(&playNextVideo);
 		}
 		else
 		{
-			_vcVideo.StopContinuousPlayMode();
+			_vcVideo.stopContinuousPlayMode();
 		}
 
 		//Save current treepath to settings
-		if(_settings && _settings.KeepPosition)
+		if(_settings && _settings.keepPosition)
 		{
-			_settings.LastSelectedCategory = path;
+			_settings.lastSelectedCategory = path;
 		}
 
-		_vcVideo.LoadVideo(currentVideo, startPlaying);
+		_vcVideo.loadVideo(currentVideo, startPlaying);
 	}
 
-	protected void PlayNextVideo()
+	protected void playNextVideo()
 	{
 		debug output(__FUNCTION__);
 		string path;
@@ -68,9 +74,9 @@ protected abstract class ViewControl
 		
 		//If there is a next video start playing it
 		//Otherwise just do nothing to end the playlist
-		if (GetNextVideo(nextVideo, path))
+		if (getNextVideo(nextVideo, path))
 		{
-			LoadVideo(nextVideo, path, true);
+			loadVideo(nextVideo, path, true);
 		}
 	}
 }

@@ -21,13 +21,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-module KhanAcademyViewer.Include.Config;
+module kav.Include.Config;
 
 import core.time;
 
-protected immutable Duration CONNECTION_TIME_OUT = dur!"seconds"(15);
-protected immutable string DOWNLOAD_FILE_PATH = "~/.config/KhanAcademyViewer";
-protected immutable string ETAG_FILE_PATH = "~/.config/KhanAcademyViewer/ETag";
-protected immutable string LIBRARY_FILE_PATH = "~/.config/KhanAcademyViewer/Library";
-protected immutable string SETTINGS_FILE_PATH = "~/.config/KhanAcademyViewer/Settings";
-protected immutable string TOPIC_TREE_URL = "http://www.khanacademy.org/api/v1/topictree";
+protected:
+
+	immutable Duration	CONNECTION_TIME_OUT = dur!"seconds"(15);
+	immutable string	DOWNLOAD_FILE_PATH = "~/.config/KhanAcademyViewer";
+	immutable string	ETAG_FILE_PATH = "~/.config/KhanAcademyViewer/ETag";
+	immutable string	LIBRARY_FILE_PATH = "~/.config/KhanAcademyViewer/Library";
+	immutable string	SETTINGS_FILE_PATH = "~/.config/KhanAcademyViewer/Settings";
+	immutable string	TOPIC_TREE_URL = "http://www.khanacademy.org/api/v1/topictree";

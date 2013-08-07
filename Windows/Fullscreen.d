@@ -19,25 +19,26 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-module KhanAcademyViewer.Windows.Fullscreen;
+module kav.Windows.Fullscreen;
 
 debug alias std.stdio.writeln output;
-
-import gtk.Window;
-import gtk.Widget;
 
 import gdk.Event;
 import gdk.Keysyms;
 
-import KhanAcademyViewer.Controls.VideoScreen;
+import gtk.Widget;
+import gtk.Window;
+
+import kav.Controls.VideoScreen;
 
 public final class Fullscreen
 {
-	private Window _wdwFullscreen;
+	
+public:
 
-	public this(VideoScreen screen, void delegate() exitFullscreen)
+	this(VideoScreen screen, void delegate() exitFullscreen)
 	{
-		ExitFullscreen = exitFullscreen;
+		this.exitFullscreen = exitFullscreen;
 
 		_wdwFullscreen = new Window(GtkWindowType.TOPLEVEL);
 		_wdwFullscreen.addOnKeyPress(&wdwFullscreen_KeyPress);
@@ -47,15 +48,19 @@ public final class Fullscreen
 		screen.reparent(_wdwFullscreen);
 	}
 
-	public ~this()
+	~this()
 	{
-		ExitFullscreen();
+		exitFullscreen();
 		_wdwFullscreen.destroy();
 	}
 
-	private void delegate() ExitFullscreen;
+private:
+
+	Window _wdwFullscreen;
+
+	void delegate() exitFullscreen;
 	
-	private bool wdwFullscreen_KeyPress(Event e, Widget)
+	bool wdwFullscreen_KeyPress(Event e, Widget)
 	{
 		debug output(__FUNCTION__);
 		uint key;
