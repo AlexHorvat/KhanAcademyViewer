@@ -68,11 +68,29 @@ public:
 	this(Settings settings, void delegate() downloadManager_Closed)
 	{
 		debug output(__FUNCTION__);
+		bool onwards = false;
+
 		_isOffline = settings.isOffline;
 		this.downloadManager_Closed = downloadManager_Closed;
 
 		setupWindow();
-		_completeLibrary = _isOffline ? LibraryWorker.loadOfflineLibrary() : LibraryWorker.loadLibrary();
+
+		//Load the online or offline library as needed
+		_isOffline ? spawn(&LibraryWorker.loadOfflineLibraryAsync) : spawn(&LibraryWorker.loadLibraryAsync);
+		
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(250),
+				(shared Library library)
+				{
+				_completeLibrary = cast(Library)library;
+				onwards = true;
+			});
+			
+			Functions.refreshUI();
+		}
+
 		loadTree();
 		downloadedVideoSize();
 	}
@@ -360,7 +378,7 @@ private:
 			store.setValue(selectedItem, 3, "Downloading...");
 
 			_activeIters[url] = selectedItem;
-			spawn(&DownloadWorker.downloadVideo, url);
+			spawn(&DownloadWorker.downloadVideoAsync, url);
 
 			while (!onwards)
 			{

@@ -48,6 +48,23 @@ public:
 		return exists(libraryFileName);
 	}
 
+	static void loadLibraryAsync()
+	{
+		debug output(__FUNCTION__);
+		ownerTid.send(cast(shared)loadLibrary());
+	}
+
+	static void loadOfflineLibraryAsync()
+	{
+		debug output(__FUNCTION__);
+		_offlineLibrary = recurseOfflineLibrary(loadLibrary(), Functions.getDownloadedFiles());
+		ownerTid.send(cast(shared)_offlineLibrary);
+	}
+
+private:
+
+	static Library _offlineLibrary;
+
 	static Library loadLibrary()
 	{
 		debug output(__FUNCTION__);
@@ -60,23 +77,6 @@ public:
 
 		return completeLibrary;
 	}
-
-	static Library loadOfflineLibrary()
-	{
-		debug output(__FUNCTION__);
-		return recurseOfflineLibrary(loadLibrary(), Functions.getDownloadedFiles());
-	}
-	
-	static void loadOfflineLibraryAsync()
-	{
-		debug output(__FUNCTION__);
-		_offlineLibrary = recurseOfflineLibrary(loadLibrary(), Functions.getDownloadedFiles());
-		ownerTid.send(cast(shared)_offlineLibrary);
-	}
-
-private:
-
-	static Library _offlineLibrary;
 
 	static Library recurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)
 	{

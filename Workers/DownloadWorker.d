@@ -1,5 +1,4 @@
 /**
- * 
  * DownloadWorker.d
  * 
  * Author:
@@ -45,6 +44,12 @@ public static class DownloadWorker
 
 public:
 
+	/**
+	 * Delete a video from local storage.
+	 * 
+	 * Params:
+	 * url = the remote file name to delete (will be converted to local file name in this method)
+	 */
 	static void deleteVideo(string url)
 	{
 		debug output(__FUNCTION__);
@@ -57,23 +62,32 @@ public:
 		}
 	}
 
-	static void downloadLibrary()
+	/**
+	 * Download complete library from Khan Academy website, convert to a Library object and save to disk.
+	 */
+	static void downloadLibraryAsync()
 	{
 		debug output(__FUNCTION__);
 		string eTag, jsonValues;
 		
 		downloadJson(eTag, jsonValues);
 		saveETag(eTag);
-		
+
+		//Convert library from JSON to Library object(s) and save to disk
 		Library completeLibrary = convertJsonToLibrary(parseJSON(jsonValues).object);
 		saveLibrary(completeLibrary);
+
 		//Send the kill signal back to the parent of this thread
-		//Can't just send bool as this seems to get interpreted as a ulong
-		//so sending back parentThread just to have something to send
 		ownerTid.send(true);
 	}
-	
-	static void downloadVideo(string url)
+
+	/**
+	 * Download a specified video to local storage.
+	 * 
+	 * Params:
+	 * url = the video to download.
+	 */
+	static void downloadVideoAsync(string url)
 	{
 		debug output(__FUNCTION__);
 		bool keepGoing = true;
@@ -127,7 +141,10 @@ public:
 		}
 	}
 
-	static void hasInternetConnection()
+	/**
+	 * Check if computer currently has an internet connection by trying to retrieve the HEAD from the Khan Academy library url.
+	 */
+	static void hasInternetConnectionAsync()
 	{
 		debug output(__FUNCTION__);
 		HTTP connection = HTTP(TOPIC_TREE_URL);
@@ -140,7 +157,10 @@ public:
 		connection.perform();
 	}
 
-	static void needToDownloadLibrary()
+	/**
+	 * Compare locally stored etag to Khan Academy's current etag, if they match no need to download the library again. 
+	 */
+	static void needToDownloadLibraryAsync()
 	{
 		debug output(__FUNCTION__);
 		string eTag;
@@ -166,6 +186,12 @@ public:
 
 private:
 
+	/**
+	 * Take the downloaded library in JSON format and covert it to a nested Library object
+	 * 
+	 * Params:
+	 * json = the downloaded library in json format.
+	 */
 	static Library convertJsonToLibrary(JSONValue[string] json)
 	{
 		debug output(__FUNCTION__);

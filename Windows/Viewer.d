@@ -64,7 +64,7 @@ import std.c.process;
 //TODO
 //Why doesn't going offline message show in loading window (possibly just too fast?)
 //Why check for internet pins cpu?
-//Choose one of load library and load library async, no point having both...
+//Add notes to each function
 
 public final class Viewer
 {
@@ -158,7 +158,7 @@ private:
 		
 		//Async check if need to download library (async because sometimes it's really slow)
 		_loadingWindow.updateStatus("Checking for library updates");
-		spawn(&DownloadWorker.needToDownloadLibrary);
+		spawn(&DownloadWorker.needToDownloadLibraryAsync);
 		
 		while (!onwards)
 		{
@@ -181,7 +181,7 @@ private:
 			onwards = false;
 			_loadingWindow.updateStatus("Downloading library");
 			_loadingWindow.setDataDownloadedVisible(true);
-			spawn(&DownloadWorker.downloadLibrary);
+			spawn(&DownloadWorker.downloadLibraryAsync);
 			
 			while (!onwards)
 			{
@@ -222,10 +222,10 @@ private:
 			bool onwards = false;
 			
 			_loadingWindow = new Loading();
-			scope(exit) _loadingWindow.destroy();
+			scope(exit) killLoadingWindow();
 			
 			_loadingWindow.updateStatus("Refreshing library");
-			
+						
 			spawn(&LibraryWorker.loadOfflineLibraryAsync);
 			
 			while (!onwards)
@@ -253,7 +253,7 @@ private:
 		
 		_loadingWindow.updateStatus("Checking for internet connection");
 		_loadingWindow.setDataDownloadedVisible(false);
-		spawn(&DownloadWorker.hasInternetConnection);
+		spawn(&DownloadWorker.hasInternetConnectionAsync);
 		
 		while (!onwards)
 		{
@@ -303,6 +303,8 @@ private:
 	void loadLibraryFromStorage()
 	{
 		debug output(__FUNCTION__);
+		bool onwards = false;
+
 		_loadingWindow.updateStatus("Processing library");
 		_loadingWindow.setDataDownloadedVisible(false);
 		
@@ -316,7 +318,20 @@ private:
 		}
 		
 		//Load the online or offline library based on whether currently on or offline...
-		_completeLibrary = _settings.isOffline ? LibraryWorker.loadOfflineLibrary() : LibraryWorker.loadLibrary();
+		_settings.isOffline ? spawn(&LibraryWorker.loadOfflineLibraryAsync) : spawn(&LibraryWorker.loadLibraryAsync);
+
+		while (!onwards)
+		{
+			receiveTimeout(
+				dur!"msecs"(250),
+				(shared Library library)
+				{
+				_completeLibrary = cast(Library)library;
+				onwards = true;
+			});
+			
+			Functions.refreshUI();
+		}
 	}
 
 	void loadSettings()
@@ -443,7 +458,9 @@ private:
 	void setOnline()
 	{
 		debug output(__FUNCTION__);
+		debug output("Loading window: ", _loadingWindow);
 		_loadingWindow.updateStatus("Going online");
+		debug output("status set");
 		
 		//If there's no internet connection go back offline
 		if (!hasInternetConnection())
@@ -452,11 +469,15 @@ private:
 		}
 		else
 		{
+			debug output("has internet connection");
 			_settings.isOffline = false;
 			
 			downloadLibrary();
+			debug output("downloaded library");
 			loadLibraryFromStorage();
+			debug output("loaded library");
 			loadNavigation();
+			debug output ("loaded navigation");
 		}
 	}
 

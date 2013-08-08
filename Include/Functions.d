@@ -1,5 +1,4 @@
 /**
- * 
  * Functions.d
  * 
  * Author:
@@ -37,6 +36,10 @@ public static class Functions
 
 public:
 
+	/**
+	 * Get a hashtable of all currently downloaded files.
+	 * Returns: Hashtable containing all paths of downloaded files.
+	 */
 	static bool[string] getDownloadedFiles()
 	{
 		debug output(__FUNCTION__);
@@ -55,14 +58,26 @@ public:
 		return downloadedFiles;
 	}
 
+	/**
+	 * Find the local file name of a supplied url.
+	 * This is where a file would be stored if it has been downloaded.
+	 * 
+	 * Params:
+	 * url = the remote file name.
+	 * 
+	 * Returns: The local file name - regardless of whether the file exists or not.
+	 */
 	static string getLocalFileName(string url)
 	{
 		return expandTilde(DOWNLOAD_FILE_PATH) ~ url[url.lastIndexOf("/") .. $];
 	}
 
+	/**
+	 * Call the main gtk thread and process any pending UI updates.
+	 * This makes sure the UI doesn't freeze up while other stuff is going on.
+	 */
 	static void refreshUI()
 	{
-		//Run any gtk events pending to refresh the UI
 		while (Main.eventsPending)
 		{
 			Main.iteration();
