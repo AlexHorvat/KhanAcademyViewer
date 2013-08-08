@@ -282,10 +282,16 @@ private:
 		}
 	}
 
+	/**
+	 * Download whole library from Khan Academy in JSON format.
+	 * 
+	 * Params:
+	 * eTag = this is set to the Khan Academies version of the library's etag.
+	 * jsonValues = the library is loaded into this variable.
+	 */
 	static void downloadJson(out string eTag, out string jsonValues)
 	{
 		debug output(__FUNCTION__);
-		//Download whole library in json format
 		int progressCounter;
 		HTTP connection = HTTP();
 		scope(exit)connection.destroy();
@@ -312,6 +318,11 @@ private:
 		eTag = connection.responseHeaders["etag"];
 	}
 
+	/**
+	 * Check if the library exists on local storage.
+	 * 
+	 * Returns: Bool of whether or not the library exists.
+	 */
 	static bool libraryExists()
 	{
 		debug output(__FUNCTION__);
@@ -320,6 +331,14 @@ private:
 		return exists(libraryFileName);
 	}
 
+	/**
+	 * Check if the etag exists on local storage, and if it does, load it.
+	 * 
+	 * Params:
+	 * eTag = this is the variable to be set to the etag value.
+	 * 
+	 * Returns: Bool of whether or not the etag exists on local storage.
+	 */
 	static bool loadETagFromDisk(out string eTag)
 	{
 		debug output(__FUNCTION__);
@@ -335,7 +354,13 @@ private:
 			return false;
 		}
 	}
-	
+
+	/**
+	 * Save the etag value to local storage.
+	 * 
+	 * Params:
+	 * eTag = the new etag value to save.
+	 */
 	static void saveETag(string eTag)
 	{	
 		debug output(__FUNCTION__);
@@ -351,7 +376,13 @@ private:
 		//Write the file - overwrite if already exists
 		write(eTagFileName, eTag);
 	}
-		
+
+	/**
+	 * Run msgpack over the library to serialise it, then save it to local storage.
+	 * 
+	 * Params:
+	 * completeLibrary = the library to save.
+	 */
 	static void saveLibrary(Library completeLibrary)
 	{
 		debug output(__FUNCTION__);
