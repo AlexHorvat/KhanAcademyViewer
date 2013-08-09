@@ -84,9 +84,13 @@ public:
 				dur!"msecs"(250),
 				(shared Library library)
 				{
-				_completeLibrary = cast(Library)library;
-				onwards = true;
-			});
+					_completeLibrary = cast(Library)library;
+					onwards = true;
+				},
+				(bool failed)
+				{
+					throw new Exception("FATAL ERROR: Cannot load library");
+				});
 			
 			Functions.refreshUI();
 		}

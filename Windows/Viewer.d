@@ -166,9 +166,9 @@ private:
 				dur!"msecs"(250),
 				(bool refreshNeeded)
 				{
-				needToDownLoadLibrary = refreshNeeded;
-				onwards = true;
-			});
+					needToDownLoadLibrary = refreshNeeded;
+					onwards = true;
+				});
 			
 			Functions.refreshUI();
 		}
@@ -261,9 +261,9 @@ private:
 				dur!"msecs"(250),
 				(bool hasConnection)
 				{
-				hasInternetConnection = hasConnection;
-				onwards = true;
-			});
+					hasInternetConnection = hasConnection;
+					onwards = true;
+				});
 			
 			Functions.refreshUI();
 		}
@@ -326,9 +326,13 @@ private:
 				dur!"msecs"(250),
 				(shared Library library)
 				{
-				_completeLibrary = cast(Library)library;
-				onwards = true;
-			});
+					_completeLibrary = cast(Library)library;
+					onwards = true;
+				},
+				(bool failed)
+				{
+					throw new Exception("FATAL ERROR: Cannot load library");
+				});
 			
 			Functions.refreshUI();
 		}
@@ -458,9 +462,7 @@ private:
 	void setOnline()
 	{
 		debug output(__FUNCTION__);
-		debug output("Loading window: ", _loadingWindow);
 		_loadingWindow.updateStatus("Going online");
-		debug output("status set");
 		
 		//If there's no internet connection go back offline
 		if (!hasInternetConnection())
@@ -469,15 +471,11 @@ private:
 		}
 		else
 		{
-			debug output("has internet connection");
 			_settings.isOffline = false;
 			
 			downloadLibrary();
-			debug output("downloaded library");
 			loadLibraryFromStorage();
-			debug output("loaded library");
 			loadNavigation();
-			debug output ("loaded navigation");
 		}
 	}
 

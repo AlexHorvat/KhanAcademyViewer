@@ -347,6 +347,8 @@ private:
 	bool elSource_Watch(Message message)
 	{
 		debug output(__FUNCTION__);
+		scope(failure) return false; //Kill the watch if something goes horribly wrong.
+
 		switch (message.type)
 		{
 			case GstMessageType.EOS: //End of video, either stop or load the next video depending on isContinuousPlay

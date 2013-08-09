@@ -68,6 +68,8 @@ public:
 	static void downloadLibraryAsync()
 	{
 		debug output(__FUNCTION__);
+		scope(failure)ownerTid.send(false); //Handle error in this thread
+
 		string eTag, jsonValues;
 		
 		downloadJson(eTag, jsonValues);
@@ -90,13 +92,14 @@ public:
 	static void downloadVideoAsync(string url)
 	{
 		debug output(__FUNCTION__);
+		scope(success)ownerTid.send(true, url);
+		scope(failure)ownerTid.send(false, url);
+		scope(exit)connection.destroy();
+
 		bool keepGoing = true;
 		string localFileName = Functions.getLocalFileName(url);
 		int progressCounter;
 		HTTP connection = HTTP();
-		scope(success)ownerTid.send(true, url);
-		scope(failure)ownerTid.send(false, url);
-		scope(exit)connection.destroy();
 		
 		connection.onProgress = delegate int(ulong dltotal, ulong dlnow, ulong ultotal, ulong ulnow)
 		{
@@ -147,10 +150,11 @@ public:
 	static void hasInternetConnectionAsync()
 	{
 		debug output(__FUNCTION__);
-		HTTP connection = HTTP(TOPIC_TREE_URL);
 		scope(success)ownerTid.send(true);
 		scope(failure)ownerTid.send(false);
 		scope(exit)connection.destroy();
+
+		HTTP connection = HTTP(TOPIC_TREE_URL);
 
 		connection.method = HTTP.Method.head;
 		connection.connectTimeout(CONNECTION_TIME_OUT);
@@ -163,8 +167,9 @@ public:
 	static void needToDownloadLibraryAsync()
 	{
 		debug output(__FUNCTION__);
+		scope(failure)ownerTid.send(true); //Force library download on error
+
 		string eTag;
-		scope(failure)ownerTid.send(true);
 		
 		if (loadETagFromDisk(eTag) && libraryExists())
 		{

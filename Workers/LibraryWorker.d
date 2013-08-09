@@ -40,6 +40,11 @@ public static class LibraryWorker
 
 public:
 
+	/**
+	 * Check if the library is on local storage.
+	 * 
+	 * Returns: Bool of whether or not the file is on local storage.
+	 */
 	static bool libraryFileExists()
 	{
 		debug output(__FUNCTION__);
@@ -48,23 +53,44 @@ public:
 		return exists(libraryFileName);
 	}
 
+	/**
+	 * Retrieve the library from local storage.
+	 * Sends a true bool on failure.
+	 * Sends the library on success.
+	 */
 	static void loadLibraryAsync()
 	{
 		debug output(__FUNCTION__);
-		ownerTid.send(cast(shared)loadLibrary());
+		shared Library onlineLibrary;
+
+		scope(success)ownerTid.send(onlineLibrary);
+		scope(failure)ownerTid.send(true); //Handle error in this thread
+
+		onlineLibrary = cast(shared)loadLibrary();
 	}
 
+	/**
+	 * Load the library from local storage, but then parse it to only show downloaded videos.
+	 * Sends a true bool on failure.
+	 * Sends the library on success.
+	 */
 	static void loadOfflineLibraryAsync()
 	{
 		debug output(__FUNCTION__);
-		_offlineLibrary = recurseOfflineLibrary(loadLibrary(), Functions.getDownloadedFiles());
-		ownerTid.send(cast(shared)_offlineLibrary);
+		shared Library offlineLibrary;
+
+		scope(success)ownerTid.send(offlineLibrary);
+		scope(failure)ownerTid.send(true); //Handle error in this thread
+
+		offlineLibrary = cast(shared)recurseOfflineLibrary(loadLibrary(), Functions.getDownloadedFiles());
 	}
 
 private:
-
-	static Library _offlineLibrary;
-
+	/**
+	 * Load the library file from local storage and de-serialise it.
+	 * 
+	 * Returns: The Library object.
+	 */
 	static Library loadLibrary()
 	{
 		debug output(__FUNCTION__);
@@ -78,6 +104,16 @@ private:
 		return completeLibrary;
 	}
 
+	/**
+	 * Create a new empty Library then loop over each item in a supplied Library object and check if the Library object's video is downloaded.
+	 * If it is add that Library object to the new Library, if not ignore it.
+	 * 
+	 * Params:
+	 * currentLibrary = the complete library to loop over.
+	 * downloadedFiles = a hashtable containing all downloaded files.
+	 * 
+	 * Returns: A Library containing only Library objects with downloaded videos (or the parents them).
+	 */
 	static Library recurseOfflineLibrary(Library currentLibrary, bool[string] downloadedFiles)
 	{
 		debug output(__FUNCTION__);
