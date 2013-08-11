@@ -43,8 +43,17 @@ protected:
 	ScrolledWindow	_scrollParent;
 	Settings		_settings;
 	VideoControl	_vcVideo;
-	
-	protected void loadVideo(Library currentVideo, string path, bool startPlaying)
+
+	/**
+	 * Tell VideoControl to load a video, and set (or unset) continuous play mode.
+	 * Also store the currently selected path if keeping position.
+	 * 
+	 * Params:
+	 * video = the video to load.
+	 * path = the currently selected path.
+	 * startPlaying = start playing the video straight away, or just buffer it.
+	 */
+	void loadVideo(Library video, string path, bool startPlaying)
 	{
 		debug output(__FUNCTION__);
 		//Continuous play?
@@ -63,10 +72,13 @@ protected:
 			_settings.lastSelectedCategory = path;
 		}
 
-		_vcVideo.loadVideo(currentVideo, startPlaying);
+		_vcVideo.loadVideo(video, startPlaying, _settings);
 	}
 
-	protected void playNextVideo()
+	/**
+	 * If not at the end of the current branch of the library, load the next video on the branch and start playing it.
+	 */
+	void playNextVideo()
 	{
 		debug output(__FUNCTION__);
 		string path;

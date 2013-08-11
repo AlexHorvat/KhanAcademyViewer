@@ -33,5 +33,6 @@ public:
 	bool		isOffline = false;
 	bool		keepPosition = false;
 	string		lastSelectedCategory;
+	bool		useGPU = true;
 	ViewMode	viewModeSetting = ViewMode.flow;
 }

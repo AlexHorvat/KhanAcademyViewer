@@ -38,6 +38,11 @@ public static class SettingsWorker
 
 public:
 
+	/**
+	 * Check if there are settings saved to local storage, if so return those, otherwise return a new Settings object.
+	 * 
+	 * Returns: a Settings object.
+	 */
 	static Settings loadSettings()
 	{
 		debug output(__FUNCTION__);
@@ -51,6 +56,12 @@ public:
 		}
 	}
 
+	/**
+	 * Serialise and save to local storage the supplied Settings object.
+	 * 
+	 * Params:
+	 * settings = the Settings object to save.
+	 */
 	static void saveSettings(Settings settings)
 	{
 		debug output(__FUNCTION__);
@@ -62,6 +73,11 @@ public:
 
 private:
 
+	/**
+	 * Deserialise and return the settings from local storage.
+	 * 
+	 * Returns: the retrieved Settings object.
+	 */
 	static Settings getSavedSettings()
 	{
 		debug output(__FUNCTION__);
@@ -75,6 +91,11 @@ private:
 		return settings;
 	}
 
+	/**
+	 * Check if there are settings saved to local storage.
+	 * 
+	 * Returns: a bool of whether or not the settings exist on local storage.
+	 */
 	static bool settingsFileExists()
 	{
 		debug output(__FUNCTION__);

@@ -62,9 +62,10 @@ import std.concurrency;
 import std.c.process;
 
 //TODO
-//Why doesn't going offline message show in loading window (possibly just too fast?)
 //Why check for internet pins cpu?
 //Add notes to each function
+//Show loading spinner when seeking
+//Make sure settings are stored in correct places
 
 public final class Viewer
 {
@@ -88,6 +89,7 @@ private:
 	CheckMenuItem	_cmiOffline;
 	CheckMenuItem	_cmiKeepPosition;
 	CheckMenuItem	_cmiContinuousPlay;
+	CheckMenuItem	_cmiUseGpu;
 	Library			_completeLibrary;
 	Loading			_loadingWindow;
 	MenuItem		_miDownloadManager;
@@ -139,6 +141,12 @@ private:
 		killLoadingWindow();
 	}
 
+	void cmiUseGpu_Activate(MenuItem)
+	{
+		debug output(__FUNCTION__);
+		_settings.useGPU = cast(bool)_cmiUseGpu.getActive();
+	}
+
 	void createLoadingWindow()
 	{
 		debug output(__FUNCTION__);
@@ -166,9 +174,9 @@ private:
 				dur!"msecs"(250),
 				(bool refreshNeeded)
 				{
-					needToDownLoadLibrary = refreshNeeded;
-					onwards = true;
-				});
+				needToDownLoadLibrary = refreshNeeded;
+				onwards = true;
+			});
 			
 			Functions.refreshUI();
 		}
@@ -225,7 +233,7 @@ private:
 			scope(exit) killLoadingWindow();
 			
 			_loadingWindow.updateStatus("Refreshing library");
-						
+			
 			spawn(&LibraryWorker.loadOfflineLibraryAsync);
 			
 			while (!onwards)
@@ -261,9 +269,9 @@ private:
 				dur!"msecs"(250),
 				(bool hasConnection)
 				{
-					hasInternetConnection = hasConnection;
-					onwards = true;
-				});
+				hasInternetConnection = hasConnection;
+				onwards = true;
+			});
 			
 			Functions.refreshUI();
 		}
@@ -291,6 +299,7 @@ private:
 		_cmiOffline.addOnActivate(&cmiOffline_Activate);
 		_cmiKeepPosition.addOnActivate(&cmiKeepPosition_Activate);
 		_cmiContinuousPlay.addOnActivate(&cmiContinuousPlay_Activate);
+		_cmiUseGpu.addOnActivate(&cmiUseGpu_Activate);
 	}
 
 	void killLoadingWindow()
@@ -326,13 +335,13 @@ private:
 				dur!"msecs"(250),
 				(shared Library library)
 				{
-					_completeLibrary = cast(Library)library;
-					onwards = true;
-				},
-				(bool failed)
-				{
-					throw new Exception("FATAL ERROR: Cannot load library");
-				});
+				_completeLibrary = cast(Library)library;
+				onwards = true;
+			},
+			(bool failed)
+			{
+				throw new Exception("FATAL ERROR: Cannot load library, try deleting the library file from user data.");
+			});
 			
 			Functions.refreshUI();
 		}
@@ -358,6 +367,7 @@ private:
 		_cmiOffline.setActive(_settings.isOffline);
 		_cmiKeepPosition.setActive(_settings.keepPosition);
 		_cmiContinuousPlay.setActive(_settings.continuousPlay);
+		_cmiUseGpu.setActive(_settings.useGPU);
 	}
 
 	void loadNavigation()
@@ -507,7 +517,7 @@ private:
 		ListSG lsgViewMode;
 		_rmiFlow = new RadioMenuItem(lsgViewMode, "Flow View", false);
 		mSubOptions.add(_rmiFlow);
-				
+		
 		_rmiTree = new RadioMenuItem(_rmiFlow, "Tree View", false);
 		mSubOptions.add(_rmiTree);
 
@@ -528,12 +538,19 @@ private:
 		_cmiContinuousPlay = new CheckMenuItem("Continuous Play", false);
 		_cmiContinuousPlay.setTooltipText("Play all videos in a category automatically.");
 		mSubOptions.add(_cmiContinuousPlay);
-				
+
+		SeparatorMenuItem smi3 = new SeparatorMenuItem();
+		mSubOptions.add(smi3);
+
+		_cmiUseGpu = new CheckMenuItem("Use GPU", false);
+		_cmiUseGpu.setTooltipText("Use GPU for video offload, this will take a load off the cpu, but might not always work correctly.");
+		mSubOptions.add(_cmiUseGpu);
+		
 		_miDownloadManager = new MenuItem("_Download Manager", true);
 		_miDownloadManager.addOnButtonPress(&miDownloadManager_ButtonPress);
 		_miDownloadManager.addOnButtonRelease(&miDownloadManager_ButtonRelease);
 		mbMain.add(_miDownloadManager);
-				
+		
 		MenuItem miAbout = new MenuItem("_About", true);
 		miAbout.addOnButtonPress(&miAbout_ButtonPress);
 		miAbout.addOnButtonRelease(&miAbout_ButtonRelease);
@@ -581,7 +598,7 @@ private:
 		//Widgets shown, now add the video overlays
 		_vcVideo.addOverlays();
 	}
-		
+	
 	void wdwViewer_Destroy(Widget)
 	{
 		debug output(__FUNCTION__);

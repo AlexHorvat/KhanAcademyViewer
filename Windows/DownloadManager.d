@@ -84,13 +84,13 @@ public:
 				dur!"msecs"(250),
 				(shared Library library)
 				{
-					_completeLibrary = cast(Library)library;
-					onwards = true;
-				},
-				(bool failed)
-				{
-					throw new Exception("FATAL ERROR: Cannot load library");
-				});
+				_completeLibrary = cast(Library)library;
+				onwards = true;
+			},
+			(bool failed)
+			{
+				throw new Exception("FATAL ERROR: Cannot load library, try deleting the library file from user data.");
+			});
 			
 			Functions.refreshUI();
 		}
@@ -390,37 +390,37 @@ private:
 					dur!"msecs"(250),
 					(ulong amountDownloaded, string childUrl, Tid childTid)
 					{
-						if (childUrl in _activeIters)
+					if (childUrl in _activeIters)
+					{
+						store.setValue(_activeIters[childUrl], 3, format("%s KB", amountDownloaded / 1024));
+					}
+					else
+					{
+						childTid.send(true);
+					}
+				},
+				(bool success, string childUrl)
+				{
+					//Only reason filename wouldn't be in iters is if it was removed by stopImage in which case image and text have been updated already
+					if (childUrl in _activeIters)
+					{
+						if (success)
 						{
-							store.setValue(_activeIters[childUrl], 3, format("%s KB", amountDownloaded / 1024));
+							store.setValue(_activeIters[childUrl], 2, _deleteImage);
 						}
 						else
 						{
-							childTid.send(true);
-						}
-					},
-					(bool success, string childUrl)
-					{
-						//Only reason filename wouldn't be in iters is if it was removed by stopImage in which case image and text have been updated already
-						if (childUrl in _activeIters)
-						{
-							if (success)
-							{
-								store.setValue(_activeIters[childUrl], 2, _deleteImage);
-							}
-							else
-							{
-								store.setValue(_activeIters[childUrl], 2, _downloadImage);
-							}
-							
-							store.setValue(_activeIters[childUrl], 3, "");
-							
-							_activeIters[childUrl].destroy();
-							_activeIters.remove(childUrl);
+							store.setValue(_activeIters[childUrl], 2, _downloadImage);
 						}
 						
-						onwards = true;
-					});
+						store.setValue(_activeIters[childUrl], 3, "");
+						
+						_activeIters[childUrl].destroy();
+						_activeIters.remove(childUrl);
+					}
+					
+					onwards = true;
+				});
 
 				Functions.refreshUI();
 			}

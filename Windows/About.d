@@ -52,6 +52,9 @@ public:
 
 private:
 
+	/**
+	 * Just close the dialog.
+	 */
 	void wdwAbout_Response(int response, Dialog dialog)
 	{
 		debug output(__FUNCTION__);

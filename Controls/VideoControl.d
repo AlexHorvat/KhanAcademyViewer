@@ -50,6 +50,7 @@ import gtk.Viewport;
 
 import kav.Controls.VideoScreen;
 import kav.DataStructures.Library;
+import kav.DataStructures.Settings;
 import kav.Include.Functions;
 import kav.Windows.Fullscreen;
 
@@ -130,6 +131,7 @@ public:
 		super.attach(_lblTotalTime, 2, 3, 1, 1);
 		
 		_lblDescription = new Label("", false);
+		_lblDescription.setLineWrap(true);
 		
 		Viewport vpDescription = new Viewport(null, null);
 		vpDescription.add(_lblDescription);
@@ -165,7 +167,7 @@ public:
 		_vsScreen.addOverlays();
 	}
 
-	void loadVideo(Library currentVideo, bool startPlaying)
+	void loadVideo(Library currentVideo, bool startPlaying, Settings settings)
 	{
 		debug output(__FUNCTION__);
 		//Always stop current video before playing another as otherwise can end up with two videos playing at once
@@ -184,11 +186,9 @@ public:
 			GStreamer.init(args);
 		}
 		
-		//Not really sure which overlay is better
-		//xvimagesink used to be better but now (with different video driver) gives green lines top and bottom of video
-		//ximagesink seems to be working ok now with fullscreen, so using that for now.
-		//TODO create a setting to switch image sink
-		Element elVideoSink = ElementFactory.make("ximagesink", "videosink");
+		//Allow switching between CPU and GPU imagesink as sometimes one will work better than the other
+		string imageSink = settings.useGPU ? "xvimagesink" : "ximagesink";
+		Element elVideoSink = ElementFactory.make(imageSink, "videosink");
 		
 		//Setup the video overlay
 		_voOverlay = new VideoOverlay(elVideoSink);
