@@ -237,7 +237,7 @@ private:
 	void delayedHideTitle()
 	{
 		debug output(__FUNCTION__);
-		Thread.sleep(dur!"seconds"(3));
+		Thread.sleep(dur!"seconds"(5));
 		_ebTitle.hide();
 
 		//Hide the cursor too

@@ -28,7 +28,7 @@ import core.time;
 protected:
 
 	immutable Duration	CONNECTION_TIME_OUT = dur!"seconds"(15);
-	immutable string	DOWNLOAD_FILE_PATH = "~/.config/KhanAcademyViewer";
+	immutable string	DOWNLOAD_FILE_PATH = "~/.local/share/KhanAcademyViewer";
 	immutable string	ETAG_FILE_PATH = "~/.config/KhanAcademyViewer/ETag";
 	immutable string	LIBRARY_FILE_PATH = "~/.config/KhanAcademyViewer/Library";
 	immutable string	SETTINGS_FILE_PATH = "~/.config/KhanAcademyViewer/Settings";

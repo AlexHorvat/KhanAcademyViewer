@@ -72,7 +72,7 @@ protected:
 			_settings.lastSelectedCategory = path;
 		}
 
-		_vcVideo.loadVideo(video, startPlaying, _settings);
+		_vcVideo.loadVideo(video, startPlaying, _settings.useGPU);
 	}
 
 	/**

@@ -36,7 +36,6 @@ import std.datetime;
 import std.file;
 import std.json;
 import std.net.curl;
-import std.path;
 import std.string;
 
 public static class DownloadWorker
@@ -370,14 +369,7 @@ private:
 	{	
 		debug output(__FUNCTION__);
 		string eTagFileName = expandTilde(ETAG_FILE_PATH);
-		string filePath = dirName(eTagFileName);
-		
-		//Create directory if it doesn't exist
-		if (!exists(filePath))
-		{
-			mkdirRecurse(filePath);
-		}
-		
+				
 		//Write the file - overwrite if already exists
 		write(eTagFileName, eTag);
 	}

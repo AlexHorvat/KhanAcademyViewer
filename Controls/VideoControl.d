@@ -167,7 +167,7 @@ public:
 		_vsScreen.addOverlays();
 	}
 
-	void loadVideo(Library currentVideo, bool startPlaying, Settings settings)
+	void loadVideo(Library currentVideo, bool startPlaying, bool useGPU)
 	{
 		debug output(__FUNCTION__);
 		//Always stop current video before playing another as otherwise can end up with two videos playing at once
@@ -187,8 +187,7 @@ public:
 		}
 		
 		//Allow switching between CPU and GPU imagesink as sometimes one will work better than the other
-		string imageSink = settings.useGPU ? "xvimagesink" : "ximagesink";
-		Element elVideoSink = ElementFactory.make(imageSink, "videosink");
+		Element elVideoSink = ElementFactory.make(useGPU ? "xvimagesink" : "ximagesink", "videosink");
 		
 		//Setup the video overlay
 		_voOverlay = new VideoOverlay(elVideoSink);

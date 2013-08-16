@@ -35,7 +35,7 @@ public static class Functions
 {
 
 public:
-
+	
 	/**
 	 * Get a hashtable of all currently downloaded files.
 	 * Returns: Hashtable containing all paths of downloaded files.
@@ -47,14 +47,14 @@ public:
 		//this is faster than accessing the disc everytime to check if a file exists
 		bool[string] downloadedFiles;
 		string downloadDirectory = expandTilde(DOWNLOAD_FILE_PATH);
-		
+
 		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
 		{
 			downloadedFiles[file[file.lastIndexOf("/") .. $]] = true;
 		}
 
 		downloadedFiles.rehash();
-		
+				
 		return downloadedFiles;
 	}
 

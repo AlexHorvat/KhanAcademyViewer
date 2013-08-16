@@ -195,7 +195,7 @@ private:
 		{
 			_statusDownloads.removeAll(_statusBarContextID);
 		}
-		
+
 		foreach(DirEntry file; dirEntries(downloadDirectory, "*.mp4", SpanMode.shallow, false))
 		{
 			totalFileSize += getSize(file);

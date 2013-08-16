@@ -49,6 +49,7 @@ import kav.Controls.ViewControl;
 import kav.Controls.VideoControl;
 import kav.DataStructures.Library;
 import kav.DataStructures.Settings;
+import kav.Include.Config;
 import kav.Include.Enums;
 import kav.Include.Functions;
 import kav.Windows.About;
@@ -60,12 +61,15 @@ import kav.Workers.SettingsWorker;
 
 import std.concurrency;
 import std.c.process;
+import std.file;
+import std.path;
 
 //TODO
 //Why check for internet pins cpu?
 //Add notes to each function
 //Show loading spinner when seeking
-//Make sure settings are stored in correct places
+//Why does the elapsed time and play icon get mucked up occasionally
+//What happens if the internet connection dies half way thru a video?
 
 public final class Viewer
 {
@@ -76,6 +80,7 @@ public:
 	{
 		debug output(__FUNCTION__);
 		setupWindow();
+		createDirectories();
 		loadSettings();
 		createLoadingWindow();
 		hookUpOptionHandlers();
@@ -145,6 +150,24 @@ private:
 	{
 		debug output(__FUNCTION__);
 		_settings.useGPU = cast(bool)_cmiUseGpu.getActive();
+	}
+
+	void createDirectories()
+	{
+		string libraryFilePath = expandTilde(LIBRARY_FILE_PATH);
+		string libraryDirectory = dirName(libraryFilePath);
+		string downloadDirectory = expandTilde(DOWNLOAD_FILE_PATH);
+		
+		//Create directories if they don't exist
+		if (!exists(libraryDirectory))
+		{
+			mkdirRecurse(libraryDirectory);
+		}
+
+		if (!exists(downloadDirectory))
+		{
+			mkdirRecurse(downloadDirectory);
+		}
 	}
 
 	void createLoadingWindow()

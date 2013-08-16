@@ -21,7 +21,7 @@
 
 module kav.Main;
 
-alias std.stdio.writeln output;
+debug alias std.stdio.writeln output;
 
 import gtk.Main;
 import gtk.Version;
@@ -47,8 +47,7 @@ public void main(string args[]) {
 	}
 	catch
 	{
-		output("Cannot load GTK, ending...");
-		return;
+		 throw new Exception("Cannot load GTK, ending...");
 	}
 
 	try
@@ -59,8 +58,7 @@ public void main(string args[]) {
 	}
 	catch
 	{
-		output("Cannot load GStreamer, ending...");
-		return;
+		throw new Exception("Cannot load GStreamer, ending...");
 	}
 
 	//Has gtk and gstreamer, should be able to run
