@@ -1,9 +1,7 @@
 /**
- * 
  * Loading.d
  * 
- * Author:
- * Alex Horvat <alex.horvat9@gmail.com>
+ * Author: Alex Horvat <alex.horvat9@gmail.com>
  * 
  * Copyright (c) 2013 Alex Horvat
  * 

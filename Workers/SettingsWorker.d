@@ -1,9 +1,7 @@
 /**
- * 
  * SettingsWorker.d
  * 
- * Author:
- * Alex Horvat <alex.horvat9@gmail.com>
+ * Author: Alex Horvat <alex.horvat9@gmail.com>
  * 
  * Copyright (c) 2013 Alex Horvat
  * 
@@ -20,6 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 module kav.Workers.SettingsWorker;
 
 debug alias std.stdio.writeln output;

@@ -1,9 +1,7 @@
 /**
+ * VideoScreen.d
  * 
- * VideoWindow.d
- * 
- * Author:
- * 		Alex Horvat <alex.horvat9@gmail.com>
+ * Author: Alex Horvat <alex.horvat9@gmail.com>
  * 
  * Copyright (c) 2013 Alex Horvat
  * 
@@ -60,8 +58,12 @@ public:
 
 		super.add(_daVideoArea);
 	}
-
-	//Only add the overlays after all the other widgets have 'shown' otherwise they end up displayed
+	
+	/**
+	 * Add the overlays (i.e. the play/pause/title etc controls) to the video window.
+	 * This needs to be done after all the other widgets have been displayed by the parent .showAll as otherwise the
+	 * overlays are displayed too. 
+	 */
 	void addOverlays()
 	{
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.DIALOG);
@@ -113,18 +115,29 @@ public:
 		super.addOverlay(_ebTitle);
 	}
 
+	/**
+	 * Get the video window ID, this is needed by some of the gstreamer objects to give them somewhere to output video.
+	 * 
+	 * Returns: The ID value of the video window widget.
+	 */
 	ulong getDrawingWindowID()
 	{
 		debug output(__FUNCTION__);
 		return X11.windowGetXid(_daVideoArea.getWindow());
 	}
 
+	/**
+	 * Hide the play button/image overlay.
+	 */
 	void hidePlayButton()
 	{
 		debug output(__FUNCTION__);
 		_ebPlay.hide();
 	}
 
+	/**
+	 * Stop and hide the spinner overlay.
+	 */
 	void hideSpinner()
 	{
 		debug output(__FUNCTION__);
@@ -132,13 +145,21 @@ public:
 		_ebLoading.hide();
 	}
 
+	/**
+	 * Hide the title overlay.
+	 */
 	void hideTitle()
 	{
 		_ebTitle.hide();
 	}
 
-	//Simply setting setSensitive to false greys out everything, I want it to stay black, but the user to not be able to interact
-	//with the screen, so remove handlers
+	/**
+	 * Simply setting setSensitive to false greys out everything, I want the video window's background to stay black,
+	 * but stop the user interacting with the screen with the screen, so remove the event handlers.
+	 * 
+	 * Params:
+	 * isEnabled = whether to add or remove the event handlers.
+	 */
 	void setEnabled(bool isEnabled)
 	{
 		if (isEnabled)
@@ -163,19 +184,31 @@ public:
 		}
 	}
 
+	/**
+	 * Show the play button/image overlay.
+	 */
 	void showPlayButton()
 	{
 		debug output(__FUNCTION__);
 		_ebPlay.show();
 	}
 
+	/**
+	 * Show and start the spinner overlay.
+	 */
 	void showSpinner()
 	{
 		debug output(__FUNCTION__);
 		_ebLoading.show();
 		_spinLoading.start();
 	}
-	
+
+	/**
+	 * Show the title overlay and set the text.
+	 * 
+	 * Params:
+	 * title = the text to show.
+	 */
 	void showTitle(string title)
 	{
 		debug output(__FUNCTION__);
@@ -200,6 +233,10 @@ private:
 	Thread		_pauseHider;
 	Spinner		_spinLoading;
 
+	/*
+	 * If the user moves the mouse over the video widget, and the video is playing, then show the pause overlay.
+	 * Then this spawns a thread to hide the overlay after a few seconds.
+	 */
 	bool daVideoArea_MotionNotify(Event, Widget)
 	{
 		debug output(__FUNCTION__);
@@ -219,6 +256,10 @@ private:
 		return false;
 	}
 
+	/*
+	 * Hide the pause overlay after a few seconds.
+	 * This should be called on it's own thread as it locks the thread while waiting to hide the overlay.
+	 */
 	void delayedHidePause()
 	{
 		debug output(__FUNCTION__);
@@ -234,6 +275,10 @@ private:
 		_pauseHider = null;
 	}
 
+	/*
+	 * Hide the title overlay after a few seconds.
+	 * This should be called on it's own thread as it locks the thread while waiting to hide the overlay.
+	 */
 	void delayedHideTitle()
 	{
 		debug output(__FUNCTION__);
@@ -247,6 +292,10 @@ private:
 		}
 	}
 
+	/*
+	 * If the user clicks anywhere on the video widget then depending on whether the video is playing or paused, either pause the video
+	 * or start it playing again. If pausing show the play image overlay.
+	 */
 	bool drawingAreaOrEventBox_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
@@ -264,5 +313,8 @@ private:
 		return false;
 	}
 
+	/*
+	 * Delegate for the playPause method in videoControl.d this handles the actual playing/pausing of the video.
+	 */
 	void delegate() playPause;
 }
