@@ -1,4 +1,4 @@
-/**
+/*
  * Loading.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -74,18 +74,36 @@ public:
 		_wdwLoading.destroy();
 	}
 
+	/**
+	 * Show or hide the downloaded data label.
+	 * 
+	 * Params:
+	 * isVisible = whether the downloaded data label visible.
+	 */
 	void setDataDownloadedVisible(bool isVisible)
 	{
 		_lblDataDownloaded.setVisible(isVisible);
 		Functions.refreshUI();
 	}
 
+	/**
+	 * Change the text of the downloaded data label to the amount now downloaded.
+	 * 
+	 * Params:
+	 * amountDownloaded = how much data has been downloaded (in bytes).
+	 */
 	void updateAmountDownloaded(long amountDownloaded)
 	{
 		debug output(__FUNCTION__);
 		_lblDataDownloaded.setText(format("%s KB", amountDownloaded / 1024));
 	}
 
+	/*
+	 * Change the status label.
+	 * 
+	 * Params:
+	 * newStatus = string to change the status label too.
+	 */
 	void updateStatus(string newStatus)
 	{
 		debug output(__FUNCTION__);

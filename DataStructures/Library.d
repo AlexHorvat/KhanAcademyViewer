@@ -1,4 +1,4 @@
-/**
+/*
  * Library.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>

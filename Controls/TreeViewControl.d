@@ -1,4 +1,4 @@
-/**
+/*
  * TreeViewControl.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -69,6 +69,15 @@ public:
 		_scrollChild.show();
 	}
 
+	/*
+	 * Check if there is another item on the current library branch, if so, return the path to the next video.
+	 * 
+	 * Params:
+	 * returnVideo = a Library object for the next video to load.
+	 * returnPath = a string containing a treepath value for the next video.
+	 * 
+	 * Returns: bool of whether or not there is another video to load.
+	 */
 	override bool getNextVideo(out Library returnVideo, out string returnPath)
 	{
 		debug output(__FUNCTION__);
@@ -115,6 +124,9 @@ public:
 		}
 	}
 
+	/*
+	 * Automatically select the last video category the user was watching a video from.
+	 */
 	override void preloadCategory()
 	{
 		debug output(__FUNCTION__);
@@ -128,7 +140,10 @@ private:
 
 	string		_currentTreePath;
 	TreeView	_tvTree;
-	
+
+	/*
+	 * Create and show all the controls needed to show the tree view.
+	 */
 	void buildView()
 	{
 		debug output(__FUNCTION__);
@@ -148,6 +163,12 @@ private:
 		_scrollParent.add(_tvTree);
 	}
 
+	/*
+	 * Create columns for a TreeView object that will allow loading the Library objects.
+	 * 
+	 * Params:
+	 * treeView = the TreeView object to create columns for.
+	 */
 	void createColumns(TreeView treeView)
 	{
 		debug output(__FUNCTION__);
@@ -160,7 +181,12 @@ private:
 		treeView.appendColumn(indexColumn);
 		treeView.appendColumn(titleColumn);
 	}
-	
+
+	/*
+	 * Create and load the model for the TreeView object displaying the Library objects.
+	 * 
+	 * Returns: A TreeStore object for the TreeView to display.
+	 */
 	TreeStore createModel()
 	{
 		debug output(__FUNCTION__);
@@ -175,7 +201,15 @@ private:
 		
 		return treeStore;
 	}
-	
+
+	/*
+	 * Recurse the library to load up the TreeStore with nodes, one per library object.
+	 * 
+	 * Params:
+	 * treeStore = the TreeStore object to fill.
+	 * library = the Library object to recurse over.
+	 * parentIter = the parent node to the current node, if this is null it's assumed we're looking at the top node.
+	 */
 	void recurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter)
 	{
 		debug output(__FUNCTION__);
@@ -199,6 +233,9 @@ private:
 		}
 	}
 
+	/*
+	 * When the user clicks on an item in the TreeView, and it's a video item (i.e. it has no children) then load the associated video.
+	 */
 	bool tvTree_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);

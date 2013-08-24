@@ -1,4 +1,4 @@
-/**
+/*
  * Viewer.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -66,7 +66,6 @@ import std.path;
 
 //TODO
 //Why check for internet pins cpu?
-//Add notes to each function
 //Show loading spinner when seeking
 //Why does the elapsed time and play icon get mucked up occasionally
 //What happens if the internet connection dies half way thru a video?
@@ -107,6 +106,9 @@ private:
 	VideoControl	_vcVideo;
 	Window			_wdwViewer;
 
+	/*
+	 * Handle the user selecting the continuous play menu item by either enabling or disabling continuous play.
+	 */
 	void cmiContinuousPlay_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
@@ -122,6 +124,9 @@ private:
 		}
 	}
 
+	/*
+	 * Handle the user selecting the keep position menu item by either enabling or disabling keep position.
+	 */
 	void cmiKeepPosition_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
@@ -133,7 +138,10 @@ private:
 			_settings.lastSelectedCategory = "";
 		}
 	}
-	
+
+	/*
+	 * Handle the user selecting the offline menu item by either going offline or online.
+	 */
 	void cmiOffline_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
@@ -146,12 +154,18 @@ private:
 		killLoadingWindow();
 	}
 
+	/*
+	 * Handle the user selecting the use gpu menu item by either enabling or disabling gpu use.
+	 */
 	void cmiUseGpu_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
 		_settings.useGPU = cast(bool)_cmiUseGpu.getActive();
 	}
 
+	/*
+	 * Check if the directories for the settings and downloads exist, if not create them.
+	 */
 	void createDirectories()
 	{
 		string libraryFilePath = expandTilde(LIBRARY_FILE_PATH);
@@ -170,6 +184,9 @@ private:
 		}
 	}
 
+	/*
+	 * Create and show the loading window widget.
+	 */
 	void createLoadingWindow()
 	{
 		debug output(__FUNCTION__);
@@ -182,6 +199,9 @@ private:
 		}
 	}
 
+	/*
+	 * Check if the local copy of the library is up to date (or even exists), if needed download the library.
+	 */
 	void downloadLibrary()
 	{
 		debug output(__FUNCTION__);
@@ -243,7 +263,11 @@ private:
 			}
 		}
 	}
-	
+
+	/*
+	 * When the download manager window closes, and if in offline mode, refresh the displayed library items.
+	 * This is so that if the user deletes a video from local storage in the download manager, that video does not remain in the available video list.
+	 */
 	void downloadManager_Closed()
 	{
 		debug output(__FUNCTION__);
@@ -276,6 +300,9 @@ private:
 		}
 	}
 
+	/*
+	 * Check if an internet connection exists.
+	 */
 	bool hasInternetConnection()
 	{
 		debug output(__FUNCTION__);
@@ -311,6 +338,11 @@ private:
 		return hasInternetConnection;
 	}
 
+	/*
+	 * Add the event handlers for the menu items.
+	 * This is added later than all other handlers as the menu items need to be set to match the loaded settings first, as otherwise the events will be
+	 * fired when the menu items are set.
+	 */
 	void hookUpOptionHandlers()
 	{
 		debug output(__FUNCTION__);
@@ -325,6 +357,9 @@ private:
 		_cmiUseGpu.addOnActivate(&cmiUseGpu_Activate);
 	}
 
+	/*
+	 * Close the loading widget.
+	 */
 	void killLoadingWindow()
 	{
 		debug output(__FUNCTION__);
@@ -332,6 +367,9 @@ private:
 		_loadingWindow = null;
 	}
 
+	/*
+	 * Load the library from local storage.
+	 */
 	void loadLibraryFromStorage()
 	{
 		debug output(__FUNCTION__);
@@ -370,6 +408,9 @@ private:
 		}
 	}
 
+	/*
+	 * Load the settings from local storage.
+	 */
 	void loadSettings()
 	{
 		debug output(__FUNCTION__);
@@ -393,6 +434,9 @@ private:
 		_cmiUseGpu.setActive(_settings.useGPU);
 	}
 
+	/*
+	 * Load up the library items into the selected navigation mode and display them.
+	 */
 	void loadNavigation()
 	{
 		debug output(__FUNCTION__);
@@ -418,6 +462,9 @@ private:
 		_vcView.preloadCategory();
 	}
 
+	/*
+	 * Bit of a hack to get around the about window not recieving focus when loaded.
+	 */
 	bool miAbout_ButtonPress(Event, Widget)
 	{
 		debug output(__FUNCTION__);
@@ -425,7 +472,10 @@ private:
 		//Just so long as this handler is here and just returns true, then the about window is focused when created.
 		return true;
 	}
-	
+
+	/*
+	 * Create and show the about window.
+	 */
 	bool miAbout_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
@@ -433,14 +483,20 @@ private:
 		
 		return false;
 	}
-	
+
+	/*
+	 * Bit of a hack to get around the download manager window not recieving focus when loaded.
+	 */
 	bool miDownloadManager_ButtonPress(Event, Widget)
 	{
 		debug output(__FUNCTION__);
 		//Again don't know why this works but it does put download manager into focus just so long as this handler exists and returns true
 		return true;
 	}
-	
+
+	/*
+	 * Create and show the download manager window.
+	 */
 	bool miDownloadManager_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
@@ -450,7 +506,10 @@ private:
 		DownloadManager downloadManager = new DownloadManager(_settings, &downloadManager_Closed);
 		return true;
 	}
-	
+
+	/*
+	 * Save settings and exit.
+	 */
 	bool miExit_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
@@ -459,6 +518,9 @@ private:
 		return true;
 	}
 
+	/*
+	 * Handle the user selecting flow view menu item by loading the flow view control.
+	 */
 	void rmiFlow_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
@@ -469,7 +531,10 @@ private:
 			loadNavigation();
 		}
 	}
-	
+
+	/*
+	 * Handle the user selecting flow view menu item by loading the tree view control.
+	 */
 	void rmiTree_Activate(MenuItem)
 	{
 		debug output(__FUNCTION__);
@@ -481,6 +546,10 @@ private:
 		}
 	}
 
+	/*
+	 * Go into offline mode, this involves checking which videos are available in local storage then refreshing the view controls to only
+	 * display the available items.
+	 */
 	void setOffline()
 	{
 		debug output(__FUNCTION__);
@@ -492,6 +561,9 @@ private:
 		loadNavigation();
 	}
 
+	/*
+	 * Go into online mode, show all library items in the view controls.
+	 */
 	void setOnline()
 	{
 		debug output(__FUNCTION__);
@@ -512,6 +584,9 @@ private:
 		}
 	}
 
+	/*
+	 * Create and show all window widgets.
+	 */
 	void setupWindow()
 	{
 		debug output(__FUNCTION__);
@@ -621,7 +696,10 @@ private:
 		//Widgets shown, now add the video overlays
 		_vcVideo.addOverlays();
 	}
-	
+
+	/*
+	 * Save settings and exit.
+	 */
 	void wdwViewer_Destroy(Widget)
 	{
 		debug output(__FUNCTION__);

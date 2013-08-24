@@ -1,4 +1,4 @@
-/**
+/*
  * VideoControl.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -160,12 +160,23 @@ public:
 		_elSource = null;
 	}
 
+	/*
+	 * Passing the addOverlays call through to VideoScreen.d
+	 */
 	void addOverlays()
 	{
 		debug output(__FUNCTION__);
 		_vsScreen.addOverlays();
 	}
 
+	/*
+	 * Get gstreamer to load a video (either from local storage or a url), buffer it and basically be ready to play.
+	 * 
+	 * Params:
+	 * currentVideo = the library with the url to play. The url is converted to a local file name to check if that exists, if it doesn't the url is played.
+	 * startPlaying = whether to start playing straight away, or just get the video ready to play.
+	 * useGPU = whether to use xvimagesink (gpu accelerated) or ximagesink (cpu based) playback, xvimagesink sometimes has compatibility issues, and ximagesink uses a lot of cpu.
+	 */
 	void loadVideo(Library currentVideo, bool startPlaying, bool useGPU)
 	{
 		debug output(__FUNCTION__);
@@ -250,7 +261,13 @@ public:
 			play();
 		}
 	}
-	
+
+	/*
+	 * Set boolean for continuous play to true, thus enabling continuous play.
+	 * 
+	 * Params:
+	 * playNextVideoMethod = the method to be called which will find and load the next video.
+	 */
 	void startContinuousPlayMode(void delegate() playNextVideoMethod)
 	{
 		debug output(__FUNCTION__);
@@ -258,6 +275,9 @@ public:
 		playNextVideo = playNextVideoMethod;
 	}
 
+	/*
+	 * Stop continuous play by setting the boolean to false.
+	 */
 	void stopContinuousPlayMode()
 	{
 		debug output(__FUNCTION__);
@@ -265,6 +285,9 @@ public:
 		playNextVideo = null;
 	}
 
+	/*
+	 * Unload all the video related objects, this is important for stopping crashes and more than one video playing at a time.
+	 */
 	void unloadVideo()
 	{
 		debug output(__FUNCTION__);
@@ -322,6 +345,9 @@ private:
 	VideoScreen		_vsScreen;
 	Thread			_updateElapsedTimeThread;
 
+	/*
+	 * Create a fullscreen object and pass the video off to it.
+	 */
 	void btnFullscreen_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
@@ -329,19 +355,34 @@ private:
 		isFullscreen = true;
 	}
 
+	/*
+	 * Start playing the video.
+	 */
 	void btnPlay_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
 		playPause();
 	}
 
+	/*
+	 * When in continuous play mode this is called to call the find and load next video method.
+	 * The reason this is seperate is so that it can be called on a new thread, the reason it's called on a new thread is so that the original
+	 * video can close itself properly, otherwise two videos (or more) end up playing at once.
+	 */
 	void callNextVideo()
 	{
 		debug output(__FUNCTION__);
-		//Need to call PlayNextVideo from a new thread, so that the Play thread can join back to main thread when unloading video.
 		playNextVideo();
 	}
 
+	/*
+	 * Handle messages coming from the gstreamer video bus.
+	 * 
+	 * Params:
+	 * message = a message from the bus.
+	 * 
+	 * Returns: a boolean which if set to false kills the bus messaging system.
+	 */
 	bool elSource_Watch(Message message)
 	{
 		debug output(__FUNCTION__);
@@ -378,6 +419,9 @@ private:
 		return true;
 	}
 
+	/*
+	 * Destroy the fullscreen object and move the video screen back into the main program window.
+	 */
 	void exitFullscreen()
 	{
 		debug output(__FUNCTION__);
@@ -386,6 +430,12 @@ private:
 		isFullscreen = false;
 	}
 
+	/*
+	 * Fill out all the text fields in the main window with video details like the title and author.
+	 * 
+	 * Params:
+	 * currentVideo = the details to display are taken from this library object.
+	 */
 	void loadVideoDetails(Library currentVideo)
 	{
 		debug output(__FUNCTION__);
@@ -415,6 +465,10 @@ private:
 		}
 	}
 
+	/*
+	 * Pause the video.
+	 * Make sure the elapsed time thread joins so that there are no wierd side effects.
+	 */
 	void pause()
 	{
 		debug output(__FUNCTION__);
@@ -427,6 +481,10 @@ private:
 		_updateElapsedTimeThread = null;
 	}
 
+	/*
+	 * Play the video.
+	 * Create a new elapsed time thread which keeps track of the video's current time, this needs to be on it's own thread.
+	 */
 	void play()
 	{
 		debug output(__FUNCTION__);
@@ -440,14 +498,23 @@ private:
 		_updateElapsedTimeThread.start();
 	}
 
+	/*
+	 * Placeholder for the method to find and play the next video when in continuous play mode.
+	 */
 	void delegate() playNextVideo;
-	
+
+	/*
+	 * Play or pause the video depending on whether currently playing.
+	 */
 	void playPause()
 	{
 		debug output(__FUNCTION__);
 		isPlaying ? pause() : play();
 	}
 
+	/*
+	 * When the user drags the scale position pointer, call the function to set the video to this position.
+	 */
 	bool sclPosition_ChangeValue(GtkScrollType scrollType, double position, Range)
 	{
 		debug output(__FUNCTION__);
@@ -465,15 +532,24 @@ private:
 		return false;
 	}
 
+	/*
+	 * Set the video to the selected position.
+	 * 
+	 * Params:
+	 * seconds = the position to set the video to in seconds.
+	 */
 	void seekTo(double seconds)
 	{
 		debug output(__FUNCTION__);
 		long nanoSeconds = cast(long)seconds * _oneSecond;
-		//Pause();
+
 		_elSource.seek(nanoSeconds);
-		
 	}
 
+	/*
+	 * Update the current video time every half second. This is output to the current time label.
+	 * Must be run on it's own thread as otherwise it'll lock the main thread.
+	 */
 	void updateElapsedTime()
 	{
 		debug output(__FUNCTION__);

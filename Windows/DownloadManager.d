@@ -1,4 +1,4 @@
-/**
+/*
  * DownloadManager.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -121,6 +121,9 @@ private:
 	TreeView			_tvVideos;
 	Window				_wdwDownloadManager;
 
+	/*
+	 * Close the download window, and if any videos are downloading, cancel them.
+	 */
 	private void btnDone_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
@@ -149,6 +152,12 @@ private:
 		this.destroy();
 	}
 
+	/*
+	 * Create the columns for the treeview.
+	 * 
+	 * Params:
+	 * treeview = the treeview to create the columns for.
+	 */
 	private void createColumns(TreeView treeView)
 	{
 		debug output(__FUNCTION__);
@@ -168,6 +177,9 @@ private:
 		treeView.appendColumn(progressColumn);
 	}
 
+	/*
+	 * Define and load the model to be displayed in the treeview.
+	 */
 	private TreeStore createModel()
 	{
 		debug output(__FUNCTION__);
@@ -183,6 +195,9 @@ private:
 		return treeStore;
 	}
 
+	/*
+	 * Calculate and display the total size of all videos currently downloaded.
+	 */
 	private void downloadedVideoSize()
 	{
 		debug output(__FUNCTION__);
@@ -204,8 +219,15 @@ private:
 		_statusDownloads.push(_statusBarContextID, format("Total size of downloaded videos: %sKB", totalFileSize / 1024));
 	}
 
+	/*
+	 * Delegate method to call on closing the download window, this method needs to dispose of the download widget
+	 * correctly and, if offline, refresh the available video list.
+	 */
 	private void delegate() downloadManager_Closed;
 
+	/*
+	 * Get the treeview displaying all videos and options to download or delete them loaded up.
+	 */
 	private void loadTree()
 	{
 		createColumns(_tvVideos);
@@ -213,6 +235,16 @@ private:
 		_tvVideos.addOnButtonRelease(&tvVideos_ButtonRelease);
 	}
 
+	/*
+	 * Recurse through each item in the Khan Academy library adding the item to the treeview's model, along with setting
+	 * whether the item can be downloaded, deleted or neither if it's just a library node, not a video node.
+	 * 
+	 * Params:
+	 * treeStore = the container to add library nodes into.
+	 * library = the library to recurse over to extract nodes.
+	 * parentIter = the parent node to add child nodes to, if this is null it's assumed that a root node needs to be created.
+	 * downloadedFiles = a hashtable of already downloaded videos, these have their icon set to a delete icon.
+	 */
 	private void recurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter, bool[string] downloadedFiles)
 	{
 		debug output(__FUNCTION__);
@@ -252,6 +284,9 @@ private:
 		}
 	}
 
+	/*
+	 * Load all the widgets for the download window.
+	 */
 	private void setupWindow()
 	{
 		debug output(__FUNCTION__);
@@ -301,7 +336,12 @@ private:
 		
 		_wdwDownloadManager.showAll();
 	}
-	
+
+	/*
+	 * When the user clicks on any of the nodes in the treeview, find which node was clicked, and which column.
+	 * If it was a video containing node, and the column was the one with the download/delete images, then either download or delete
+	 * the video.
+	 */
 	private bool tvVideos_ButtonRelease(Event e, Widget)
 	{
 		debug output(__FUNCTION__);

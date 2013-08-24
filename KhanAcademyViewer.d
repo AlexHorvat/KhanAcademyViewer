@@ -1,4 +1,4 @@
-/**
+/*
  * KhanAcademyViewer.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -30,6 +30,13 @@ import gstreamer.gstreamer:GStreamer;
 
 import kav.Windows.Viewer;
 
+/*
+ * Start the program running.
+ * Check that GTK and GStreamer are present, the program ends if they are not.
+ * 
+ * Params:
+ * args = User supplied command line args, not used for anything yet, but expected by GTK.
+ */
 public void main(string args[]) {
 	debug output(__FUNCTION__);
 	//Test for gtk and gstreamer

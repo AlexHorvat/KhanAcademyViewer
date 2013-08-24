@@ -1,4 +1,4 @@
-/**
+/*
  * FlowViewControl.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -73,6 +73,15 @@ public:
 		_bboxBreadCrumbs.removeAll();
 	}
 
+	/*
+	 * Check if there is another item on the current library branch, if so, return the path to the next video.
+	 * 
+	 * Params:
+	 * returnVideo = a Library object for the next video to load.
+	 * returnPath = a string containing a treepath value for the next video.
+	 * 
+	 * Returns: bool of whether or not there is another video to load.
+	 */
 	override bool getNextVideo(out Library returnVideo, out string returnPath)
 	{
 		debug output(__FUNCTION__);
@@ -111,6 +120,9 @@ public:
 		}
 	}
 
+	/*
+	 * Automatically select the last video category the user was watching a video from.
+	 */
 	override void preloadCategory()
 	{
 		debug output(__FUNCTION__);
@@ -184,6 +196,12 @@ private:
 	TreeView		_tvChild;
 	TreeView		_tvParent;
 
+	/*
+	 * One of the breadcrumb buttons have been clicked by the user, load the selected library category.
+	 * 
+	 * Params:
+	 * sender = the breadcrumb button clicked.
+	 */
 	void breadButton_Clicked(Button sender)
 	{
 		debug output(__FUNCTION__);
@@ -218,6 +236,9 @@ private:
 		loadBreadCrumbs();
 	}
 
+	/*
+	 * Create and show all the controls needed to show the flow view.
+	 */
 	void buildView()
 	{
 		debug output(__FUNCTION__);
@@ -248,6 +269,12 @@ private:
 		_scrollChild.add(_tvChild);
 	}
 
+	/*
+	 * Create columns for a TreeView object that will allow loading the Library objects.
+	 * 
+	 * Params:
+	 * treeView = the TreeView object to create columns for.
+	 */
 	void createColumns(TreeView treeView)
 	{
 		debug output(__FUNCTION__);
@@ -261,6 +288,14 @@ private:
 		treeView.appendColumn(titleColumn);
 	}
 
+	/*
+	 * Create and load the model for the TreeView object displaying the Library objects.
+	 * 
+	 * Params:
+	 * isParentTree = Whether this is the parent treeview (the left hand one) or the child (the right), they load different libraries.
+	 * 
+	 * Returns: A ListStore object for the TreeView to display.
+	 */
 	ListStore createModel(bool isParentTree)
 	{
 		debug output(__FUNCTION__);
@@ -292,6 +327,9 @@ private:
 		return listStore;
 	}
 
+	/*
+	 * Load the breadcrumb buttons by iterating over the _breadCrumbs object.
+	 */
 	void loadBreadCrumbs()
 	{
 		debug output(__FUNCTION__);
@@ -327,6 +365,11 @@ private:
 		}
 	}
 
+	/*
+	 * When the user clicks on an item in the child treeview, either move the current items in the child treeview into the parent treeview and load
+	 * this item's child libraries, or, if this library has no children, load the item's associated video.
+	 * 
+	 */
 	bool tvChild_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);
@@ -376,6 +419,9 @@ private:
 		return true;
 	}
 
+	/*
+	 * When the user clicks on an item in the parent treeview load up the item's child libraries into the child treeview.
+	 */
 	bool tvParent_ButtonRelease(Event, Widget)
 	{
 		debug output(__FUNCTION__);

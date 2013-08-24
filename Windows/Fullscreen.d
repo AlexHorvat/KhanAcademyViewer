@@ -1,4 +1,4 @@
-/**
+/*
  * Fullscreen.d
  * 
  * Author: Alex Horvat <alex.horvat9@gmail.com>
@@ -58,8 +58,15 @@ private:
 
 	Window _wdwFullscreen;
 
+	/**
+	 * Function to call when closing fullscreen, it's main job is to dispose of this fullscreen object properly and
+	 * switch video playback back to the small screen.
+	 */
 	void delegate() exitFullscreen;
-	
+
+	/*
+	 * When the user presses a key, check if it's esc. If so, exit fullscreen mode.
+	 */
 	bool wdwFullscreen_KeyPress(Event e, Widget)
 	{
 		debug output(__FUNCTION__);
