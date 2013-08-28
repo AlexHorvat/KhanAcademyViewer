@@ -64,12 +64,6 @@ import std.c.process;
 import std.file;
 import std.path;
 
-//TODO
-//Why check for internet pins cpu?
-//Show loading spinner when seeking
-//Why does the elapsed time and play icon get mucked up occasionally
-//What happens if the internet connection dies half way thru a video?
-
 public final class Viewer
 {
 

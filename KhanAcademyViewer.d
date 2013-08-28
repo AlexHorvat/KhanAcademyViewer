@@ -39,16 +39,17 @@ import kav.Windows.Viewer;
  */
 public void main(string args[]) {
 	debug output(__FUNCTION__);
+	uint majorVersion;
+	uint minorVersion;
+	uint microVersion;
+	uint nanoVersion;
+
 	//Test for gtk and gstreamer
-
-	//TODO Check for mp4 support and maybe playbin support
-	//Is this possible using gstreamer, or should check for .so file directly?
-
 	try
 	{
-		uint majorVersion = Version.getMajorVersion;
-		uint minorVersion = Version.getMinorVersion;
-		uint microVersion = Version.getMicroVersion;
+		majorVersion = Version.getMajorVersion;
+		minorVersion = Version.getMinorVersion;
+		microVersion = Version.getMicroVersion;
 
 		debug output("GTK version ", majorVersion, ".", minorVersion, ".", microVersion);
 	}
@@ -57,15 +58,25 @@ public void main(string args[]) {
 		 throw new Exception("Cannot load GTK, ending...");
 	}
 
+	if (!(majorVersion >= 3 && minorVersion >= 6))
+	{
+		throw new Exception("Gnome version too old, you need 3.6 or higher.");
+	}
+
 	try
 	{
-		string gstreamerVersion = GStreamer.versionString;
+		GStreamer.versio(majorVersion, minorVersion, microVersion, nanoVersion);
 
-		debug output("GStreamer version ", gstreamerVersion);
+		debug output("GStreamer version ", majorVersion, ".", minorVersion, ".", microVersion, ".", nanoVersion);
 	}
 	catch
 	{
 		throw new Exception("Cannot load GStreamer, ending...");
+	}
+
+	if (majorVersion < 1)
+	{
+		throw new Exception("GStreamer version to old, you need 1.0 or higher.");
 	}
 
 	//Has gtk and gstreamer, should be able to run
