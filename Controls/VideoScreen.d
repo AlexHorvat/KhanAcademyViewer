@@ -67,6 +67,7 @@ public:
 	void addOverlays()
 	{
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.DIALOG);
+		imgPlay.setOpacity(0.5);
 		imgPlay.show();
 		
 		_ebPlay = new EventBox();
@@ -75,6 +76,7 @@ public:
 		_ebPlay.setValign(GtkAlign.CENTER);
 		_ebPlay.hide();
 		_ebPlay.add(imgPlay);
+		_ebPlay.setOpacity(0.5);
 		
 		Image imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.DIALOG);
 		imgPause.show();
@@ -100,8 +102,7 @@ public:
 		
 		_spinLoading = new Spinner();
 		_spinLoading.show();
-		_spinLoading.setSizeRequest(200, 200);
-		
+				
 		_ebLoading = new EventBox();
 		_ebLoading.setSizeRequest(200, 200);
 		_ebLoading.setHalign(GtkAlign.CENTER);
