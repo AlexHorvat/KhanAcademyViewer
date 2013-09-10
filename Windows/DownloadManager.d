@@ -98,13 +98,6 @@ public:
 		downloadedVideoSize();
 	}
 
-	~this()
-	{
-		debug output(__FUNCTION__);
-		downloadManager_Closed();
-		_wdwDownloadManager.destroy();
-	}
-
 private:
 
 	immutable string	_imageColumnName = "ImageColumn";
@@ -124,7 +117,7 @@ private:
 	/*
 	 * Close the download window, and if any videos are downloading, cancel them.
 	 */
-	private void btnDone_Clicked(Button)
+	void btnDone_Clicked(Button)
 	{
 		debug output(__FUNCTION__);
 		//Check if there are still videos downloading
@@ -148,8 +141,8 @@ private:
 				_activeIters.remove(url);
 			}
 		}
-		
-		this.destroy();
+
+		_wdwDownloadManager.destroy();
 	}
 
 	/*
@@ -158,7 +151,7 @@ private:
 	 * Params:
 	 * treeview = the treeview to create the columns for.
 	 */
-	private void createColumns(TreeView treeView)
+	void createColumns(TreeView treeView)
 	{
 		debug output(__FUNCTION__);
 		CellRendererText renderer = new CellRendererText();
@@ -180,7 +173,7 @@ private:
 	/*
 	 * Define and load the model to be displayed in the treeview.
 	 */
-	private TreeStore createModel()
+	TreeStore createModel()
 	{
 		debug output(__FUNCTION__);
 		if (!_completeLibrary)
@@ -198,7 +191,7 @@ private:
 	/*
 	 * Calculate and display the total size of all videos currently downloaded.
 	 */
-	private void downloadedVideoSize()
+	void downloadedVideoSize()
 	{
 		debug output(__FUNCTION__);
 		//Set item on status bar with total size of videos in download directory
@@ -223,12 +216,12 @@ private:
 	 * Delegate method to call on closing the download window, this method needs to dispose of the download widget
 	 * correctly and, if offline, refresh the available video list.
 	 */
-	private void delegate() downloadManager_Closed;
+	void delegate() downloadManager_Closed;
 
 	/*
 	 * Get the treeview displaying all videos and options to download or delete them loaded up.
 	 */
-	private void loadTree()
+	void loadTree()
 	{
 		createColumns(_tvVideos);
 		_tvVideos.setModel(createModel());
@@ -245,7 +238,7 @@ private:
 	 * parentIter = the parent node to add child nodes to, if this is null it's assumed that a root node needs to be created.
 	 * downloadedFiles = a hashtable of already downloaded videos, these have their icon set to a delete icon.
 	 */
-	private void recurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter, bool[string] downloadedFiles)
+	void recurseTreeChildren(TreeStore treeStore, Library library, TreeIter parentIter, bool[string] downloadedFiles)
 	{
 		debug output(__FUNCTION__);
 		foreach(Library childLibrary; library.children)
@@ -287,7 +280,7 @@ private:
 	/*
 	 * Load all the widgets for the download window.
 	 */
-	private void setupWindow()
+	void setupWindow()
 	{
 		debug output(__FUNCTION__);
 		Image imageSetter = new Image();
@@ -303,6 +296,7 @@ private:
 		_wdwDownloadManager.setDestroyWithParent(true);
 		_wdwDownloadManager.setTypeHint(GdkWindowTypeHint.DIALOG);
 		_wdwDownloadManager.setSizeRequest(800, 600);
+		_wdwDownloadManager.addOnDestroy(&wdwDownloadManager_Destroyed);
 
 		Grid grdDownloadManager = new Grid();
 		grdDownloadManager.insertColumn(0);
@@ -342,7 +336,7 @@ private:
 	 * If it was a video containing node, and the column was the one with the download/delete images, then either download or delete
 	 * the video.
 	 */
-	private bool tvVideos_ButtonRelease(Event e, Widget)
+	bool tvVideos_ButtonRelease(Event e, Widget)
 	{
 		debug output(__FUNCTION__);
 		TreeIter selectedItem = _tvVideos.getSelectedIter();
@@ -513,5 +507,17 @@ private:
 		}
 
 		return false;
+	}
+
+	/*
+	 * When user closes the download manager window by either the 'Done' button or forcing the window closed call the downloadManager_Closed method.
+	 */
+	void wdwDownloadManager_Destroyed(Widget)
+	{
+		debug output(__FUNCTION__);
+		if (downloadManager_Closed)
+		{
+			downloadManager_Closed();
+		}
 	}
 }
