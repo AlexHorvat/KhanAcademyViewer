@@ -141,8 +141,11 @@ public:
 	void hideSpinner()
 	{
 		debug output(__FUNCTION__);
-		_spinLoading.stop();
-		_ebLoading.hide();
+		if (_ebLoading.isVisible)
+		{
+			_spinLoading.stop();
+			_ebLoading.hide();
+		}
 	}
 
 	/**
@@ -199,8 +202,11 @@ public:
 	void showSpinner()
 	{
 		debug output(__FUNCTION__);
-		_ebLoading.show();
-		_spinLoading.start();
+		if (!_ebLoading.isVisible())
+		{
+			_ebLoading.show();
+			_spinLoading.start();
+		}
 	}
 
 	/**

@@ -183,7 +183,8 @@ public:
 		//Always stop current video before playing another as otherwise can end up with two videos playing at once
 		unloadVideo();
 
-		//Get the spinner going
+		//Get the spinner going before buffering starts when first loading video - otherwise there is a time where it
+		//looks like nothing is happening
 		_vsScreen.showSpinner();
 
 		//Load the text for the video
@@ -253,7 +254,7 @@ public:
 		_sclPosition.setSensitive(true);
 		_vsScreen.setEnabled(true);
 
-		//And get rid of the spinner
+		//Normally the spinner is hidden when buffering is complete - but when offline there is no buffering so the spinner is not hidden
 		_vsScreen.hideSpinner();
 
 		if (startPlaying)
@@ -303,7 +304,7 @@ public:
 				_updateElapsedTimeThread.join(false);
 				_updateElapsedTimeThread = null;
 			}
-			
+
 			//Reset the UI
 			_btnPlay.setImage(_imgPlay);
 			_sclPosition.setValue(0);
@@ -390,6 +391,21 @@ private:
 
 		switch (message.type)
 		{
+			case GstMessageType.BUFFERING:
+				//When buffering starts show the spinner, then once buffering hits 100% hide the spinner.
+				int bufferPercent;
+
+				_vsScreen.showSpinner();
+
+				message.parseBuffering(bufferPercent);
+
+				if (bufferPercent == 100)
+				{
+					_vsScreen.hideSpinner();
+				}
+
+				break;
+
 			case GstMessageType.EOS: //End of video, either stop or load the next video depending on isContinuousPlay
 				pause();
 				
