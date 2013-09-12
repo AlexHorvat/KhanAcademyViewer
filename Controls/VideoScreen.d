@@ -69,7 +69,6 @@ public:
 	void addOverlays()
 	{
 		Image imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.DIALOG);
-		imgPlay.setOpacity(0.5);
 		imgPlay.show();
 		
 		_ebPlay = new EventBox();
@@ -78,7 +77,6 @@ public:
 		_ebPlay.setValign(GtkAlign.CENTER);
 		_ebPlay.hide();
 		_ebPlay.add(imgPlay);
-		_ebPlay.setOpacity(0.5);
 		
 		Image imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.DIALOG);
 		imgPause.show();
@@ -185,7 +183,7 @@ public:
 			_ebPause.hide();
 
 			_ebPlay.onButtonReleaseListeners.destroy();
-			_ebPause.onButtonPressListeners.destroy();
+			_ebPause.onButtonReleaseListeners.destroy();
 			_daVideoArea.onButtonReleaseListeners.destroy();
 			_daVideoArea.onMotionNotifyListeners.destroy();
 		}
