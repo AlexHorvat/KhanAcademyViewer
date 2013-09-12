@@ -40,6 +40,8 @@ import gtk.Widget;
 import kav.Controls.VideoControl;
 import kav.Include.Functions;
 
+import pango.PgFontDescription;
+
 public final class VideoScreen : Overlay
 {
 
@@ -89,7 +91,8 @@ public:
 		_ebPause.add(imgPause);
 		
 		_lblTitle = new Label("", false);
-		_lblTitle.modifyFont("", 24);
+		_lblTitle.overrideFont(new PgFontDescription("", 24));
+		_lblTitle.setLineWrap(true);
 		_lblTitle.setMarginBottom(50);
 		_lblTitle.show();
 		

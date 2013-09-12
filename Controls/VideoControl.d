@@ -53,6 +53,8 @@ import kav.DataStructures.Settings;
 import kav.Include.Functions;
 import kav.Windows.Fullscreen;
 
+import pango.PgFontDescription;
+
 import std.file:exists;
 import std.string:format;
 
@@ -86,6 +88,8 @@ public:
 		_lblTitle = new Label("", false);
 		_lblTitle.setMaxWidthChars(50);
 		_lblTitle.setSizeRequest(-1, 60);
+		_lblTitle.overrideFont(new PgFontDescription("", 14));
+		_lblTitle.setLineWrap(true);
 		super.attach(_lblTitle, 0, 0, 4, 1);
 		
 		_ebVideo = new EventBox();
