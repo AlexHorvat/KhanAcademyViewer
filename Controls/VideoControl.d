@@ -186,7 +186,7 @@ public:
 	{
 		debug output(__FUNCTION__);
 		//Always stop current video before playing another as otherwise can end up with two videos playing at once
-		unloadVideo(); //Try moving this???
+		unloadVideo();
 
 		//Get the spinner going before buffering starts when first loading video - otherwise there is a time where it
 		//looks like nothing is happening
@@ -390,7 +390,7 @@ private:
 	 */
 	bool elSource_Watch(Message message)
 	{
-		//debug output(__FUNCTION__);
+		debug output(__FUNCTION__);
 		scope(failure) return false; //Kill the watch if something goes horribly wrong.
 
 		switch (message.type)
@@ -430,8 +430,7 @@ private:
 
 					return true;
 				}
-				
-				//return false;
+
 				break;
 				
 			case GstMessageType.ERROR:
@@ -580,11 +579,6 @@ private:
 	 */
 	void updateElapsedTime()
 	{
-		//NOTE:
-		//Might be worth using LLVM/LDC to compile this, then can use LLDB to debug - might be a better debugger.
-		//Or maybe install a windows VM with VS2010, GTK+ for windows and VisualD and try and use it's debugger.
-
-
 		debug output(__FUNCTION__);
 		//This thread will self destruct when IsPlaying is set to false
 		long position;
