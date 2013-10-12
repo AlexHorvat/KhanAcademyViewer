@@ -69,6 +69,12 @@ public:
 	this()
 	{
 		debug output(__FUNCTION__);
+
+		//For some reason if the images are created new everytime, or held in an non-immutable variable the program eventually
+		//crashes, I suspect some GC evilness and the only way I can find to fix this is to make the images immutable.
+		_playImage = cast(immutable) new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
+		_pauseImage = cast(immutable) new Image(StockID.MEDIA_PAUSE, GtkIconSize.BUTTON);
+
 		//Add 4 columns to the grid
 		super.insertColumn(0);
 		super.insertColumn(0);
@@ -81,9 +87,6 @@ public:
 		super.insertRow(0);
 		super.insertRow(0);
 		super.insertRow(0);
-		
-		_imgPlay = new Image(StockID.MEDIA_PLAY, GtkIconSize.BUTTON);
-		_imgPause = new Image(StockID.MEDIA_PAUSE, GtkIconSize.BUTTON);
 		
 		_lblTitle = new Label("", false);
 		_lblTitle.setMaxWidthChars(50);
@@ -102,11 +105,9 @@ public:
 		_vsScreen = new VideoScreen(&playPause);
 		_ebVideo.add(_vsScreen);
 		
-		_btnPlay = new Button();
+		_btnPlay = new Button(StockID.MEDIA_PLAY, &btnPlay_Clicked, true);
 		_btnPlay.setHalign(GtkAlign.START);
-		_btnPlay.setImage(_imgPlay);
 		_btnPlay.setSensitive(false);
-		_btnPlay.addOnClicked(&btnPlay_Clicked);
 		super.attach(_btnPlay, 0, 2, 1, 2);
 		
 		_sclPosition = new Scale(GtkOrientation.HORIZONTAL, null);
@@ -185,7 +186,7 @@ public:
 	{
 		debug output(__FUNCTION__);
 		//Always stop current video before playing another as otherwise can end up with two videos playing at once
-		unloadVideo();
+		unloadVideo(); //Try moving this???
 
 		//Get the spinner going before buffering starts when first loading video - otherwise there is a time where it
 		//looks like nothing is happening
@@ -301,7 +302,7 @@ public:
 			//Stop the video
 			_elSource.setState(GstState.NULL);
 			isPlaying = false;
-			
+
 			//Make sure the update elapsed time thread is dead
 			if (_updateElapsedTimeThread)
 			{
@@ -309,19 +310,18 @@ public:
 				_updateElapsedTimeThread = null;
 			}
 
-			//Reset the UI
-			_btnPlay.setImage(_imgPlay);
-			_sclPosition.setValue(0);
+			//Reset UI to base state
+			_btnPlay.setImage(cast(Image)_playImage);
 			_btnPlay.setSensitive(false);
+			_sclPosition.setValue(0);
 			_sclPosition.setSensitive(false);
 			_btnFullscreen.setSensitive(false);
 			_vsScreen.setEnabled(false);
-			
 			_lblTitle.setText("");
 			_lblDescription.setText("");
 			_lblTotalTime.setText("");
 			_lblCurrentTime.setText("");
-			
+
 			//Finally kill elSource
 			_elSource.destroy();
 			_elSource = null;
@@ -332,13 +332,13 @@ private:
 
 	immutable uint	_oneSecond = 1000000000;
 	immutable uint	_pointOneSecond = 100000000;
+	immutable Image _playImage;
+	immutable Image _pauseImage;
 
 	Button			_btnFullscreen;
 	Button			_btnPlay;
 	EventBox		_ebVideo;
 	Element			_elSource;
-	Image			_imgPause;
-	Image			_imgPlay;
 	bool			_isContinuousPlay = false;
 	Label			_lblCurrentTime;
 	Label			_lblDescription;
@@ -390,7 +390,7 @@ private:
 	 */
 	bool elSource_Watch(Message message)
 	{
-		debug output(__FUNCTION__);
+		//debug output(__FUNCTION__);
 		scope(failure) return false; //Kill the watch if something goes horribly wrong.
 
 		switch (message.type)
@@ -413,18 +413,25 @@ private:
 			case GstMessageType.EOS: //End of video, either stop or load the next video depending on isContinuousPlay
 				pause();
 				
-				//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
-				seekTo(0);
-				
 				if (_isContinuousPlay)
 				{
 					//Call next video from another thread, make sure this watch doesn't get kept going forever
 					Thread callNextVideoThread = new Thread(&callNextVideo);
 					callNextVideoThread.start();
 					callNextVideoThread = null;
+
+					return false;
+				}
+				else
+				{
+					//Seek but don't change sclPosition, so if user clicks play the video will start again, but still looks like it's finished
+					//Keep the watch alive if video has just ended - otherwise if it's played again the watch is not active
+					seekTo(0);
+
+					return true;
 				}
 				
-				return false;
+				//return false;
 				break;
 				
 			case GstMessageType.ERROR:
@@ -493,10 +500,10 @@ private:
 	{
 		debug output(__FUNCTION__);
 		_elSource.setState(GstState.PAUSED);
-		_btnPlay.setImage(_imgPlay);
-		
 		isPlaying = false;
-		
+
+		_btnPlay.setImage(cast(Image)_playImage);
+				
 		_updateElapsedTimeThread.join();
 		_updateElapsedTimeThread = null;
 	}
@@ -510,9 +517,10 @@ private:
 		debug output(__FUNCTION__);
 		//Get the video playing
 		_elSource.setState(GstState.PLAYING);
-		_btnPlay.setImage(_imgPause);
 		isPlaying = true;
-		
+
+		_btnPlay.setImage(cast(Image)_pauseImage);
+				
 		//Add the loop to update the elapsed time on it's own thread
 		_updateElapsedTimeThread = new Thread(&updateElapsedTime);
 		_updateElapsedTimeThread.start();
@@ -572,6 +580,11 @@ private:
 	 */
 	void updateElapsedTime()
 	{
+		//NOTE:
+		//Might be worth using LLVM/LDC to compile this, then can use LLDB to debug - might be a better debugger.
+		//Or maybe install a windows VM with VS2010, GTK+ for windows and VisualD and try and use it's debugger.
+
+
 		debug output(__FUNCTION__);
 		//This thread will self destruct when IsPlaying is set to false
 		long position;

@@ -155,6 +155,7 @@ public:
 	 */
 	void hideTitle()
 	{
+		debug output(__FUNCTION__);
 		_ebTitle.hide();
 	}
 
@@ -167,6 +168,7 @@ public:
 	 */
 	void setEnabled(bool isEnabled)
 	{
+		debug output(__FUNCTION__);
 		if (isEnabled)
 		{
 			_ebPlay.addOnButtonRelease(&drawingAreaOrEventBox_ButtonRelease);
