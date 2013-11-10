@@ -1,3 +1,5 @@
+// Written in the D programming language.
+
 /**
  * MessagePack serializer and deserializer implementation.
  *
@@ -172,7 +174,7 @@ public:
 	
 	
 	/**
-     * Writes the argument to buffer and stores the reference of writed content 
+     * Writes the argument to buffer and stores the reference of writed content
      * if the argument size is smaller than threshold,
      * otherwise stores the reference of argument directly.
      *
@@ -287,7 +289,7 @@ unittest
  */
 class MessagePackException : Exception
 {
-	this(string message)
+	pure this(string message)
 	{
 		super(message);
 	}
@@ -312,7 +314,7 @@ struct nonPacked {}
 
 template isPackedField(alias field)
 {
-	enum isPackedField = staticIndexOf!(nonPacked, __traits(getAttributes, field)) == -1;
+	enum isPackedField = (staticIndexOf!(nonPacked, __traits(getAttributes, field)) == -1) && (!isSomeFunction!(typeof(field)));
 }
 
 
@@ -822,14 +824,14 @@ public:
 				Class obj = cast(Class)object;
 				if (withFieldName_) {
 					foreach (i, f ; obj.tupleof) {
-						if (isPackedField!(Class.tupleof[i])) {
+						static if (isPackedField!(Class.tupleof[i])) {
 							pack(getFieldName!(Class, i));
 							pack(f);
 						}
 					}
 				} else {
 					foreach (i, f ; obj.tupleof) {
-						if (isPackedField!(Class.tupleof[i]))
+						static if (isPackedField!(Class.tupleof[i]))
 							pack(f);
 					}
 				}
@@ -865,14 +867,15 @@ public:
 			
 			if (withFieldName_) {
 				foreach (i, f; object.tupleof) {
-					if (isPackedField!(T.tupleof[i])) {
+					static if (isPackedField!(T.tupleof[i]))
+					{
 						pack(getFieldName!(T, i));
 						pack(f);
 					}
 				}
 			} else {
 				foreach (i, f; object.tupleof) {
-					if (isPackedField!(T.tupleof[i]))
+					static if (isPackedField!(T.tupleof[i]))
 						pack(f);
 				}
 			}
@@ -931,7 +934,7 @@ public:
      * packer.beginArray(3).pack(true, 1);  // -> [true, 1,
      *
      * // other operation
-     * 
+     *
      * packer.pack("Hi!");                  // -> [true, 1, "Hi!"]
      * -----
      *
@@ -1015,7 +1018,7 @@ Packer!(Stream) packer(Stream)(Stream stream, bool withFieldName = false)
 }
 
 
-version (unittest) 
+version (unittest)
 {
 	alias Appender!(ubyte[]) SimpleBuffer;
 	alias packer packerBuilder;  // Avoid issue: http://d.puremagic.com/issues/show_bug.cgi?id=9169
@@ -1048,7 +1051,7 @@ unittest
 	enum : ulong { A = ubyte.max, B = ushort.max, C = uint.max, D = ulong.max }
 		
 		static UTest[][] tests = [
-			[{Format.UINT8, A}], 
+			[{Format.UINT8, A}],
 			[{Format.UINT8, A}, {Format.UINT16, B}],
 			[{Format.UINT8, A}, {Format.UINT16, B}, {Format.UINT32, C}],
 			[{Format.UINT8, A}, {Format.UINT16, B}, {Format.UINT32, C}, {Format.UINT64, D}],
@@ -1087,7 +1090,7 @@ unittest
 	enum : long { A = byte.min, B = short.min, C = int.min, D = long.min }
 		
 		static STest[][] tests = [
-			[{Format.INT8, A}], 
+			[{Format.INT8, A}],
 			[{Format.INT8, A}, {Format.INT16, B}],
 			[{Format.INT8, A}, {Format.INT16, B}, {Format.INT32, C}],
 			[{Format.INT8, A}, {Format.INT16, B}, {Format.INT32, C}, {Format.INT64, D}],
@@ -1178,8 +1181,8 @@ unittest
 	}
 	{ // pointer
 		static struct PTest
-		{ 
-			ubyte format; 
+		{
+			ubyte format;
 			
 			union
 			{
@@ -1243,7 +1246,7 @@ unittest
 			auto test = tests[I];
 			
 			foreach (i, T; TypeTuple!(ubyte, ushort, uint)) {
-				mixin DefinePacker; 
+				mixin DefinePacker;
 				mixin("packer.begin" ~ Name ~ "(i ? test[i].value : A);");
 				
 				assert(buffer.data[0] == test[i].format);
@@ -1330,7 +1333,14 @@ unittest
 				uint num = uint.max;
 			}
 			
-			foreach (Type; TypeTuple!(Simple, SimpleWithNonPacked1, SimpleWithNonPacked2)) {
+			static struct SimpleWithSkippedTypes
+			{
+				int function(int) fn;
+				int delegate(int) dg;
+				uint num = uint.max;
+			}
+			
+			foreach (Type; TypeTuple!(Simple, SimpleWithNonPacked1, SimpleWithNonPacked2, SimpleWithSkippedTypes)) {
 				mixin DefinePacker;
 				
 				Type test;
@@ -1369,8 +1379,15 @@ unittest
 			uint num = uint.max;
 		}
 		
+		static class SimpleCWithSkippedTypes : SimpleB
+		{
+			uint num = uint.max;
+			int function(int) fn;
+			int delegate(int) dg;
+		}
+		
 		{  // from derived class
-			foreach (Type; TypeTuple!(SimpleC, SimpleCWithNonPacked1, SimpleCWithNonPacked2)) {
+			foreach (Type; TypeTuple!(SimpleC, SimpleCWithNonPacked1, SimpleCWithNonPacked2, SimpleCWithSkippedTypes)) {
 				mixin DefinePacker;
 				
 				Type test = new Type();
@@ -1404,7 +1421,7 @@ unittest
 class UnpackException : MessagePackException
 {
 	this(string message)
-	{ 
+	{
 		super(message);
 	}
 }
@@ -1508,7 +1525,7 @@ version (D_Ddoc)
 	}
 }
 else
-{ 
+{
 	private mixin template InternalBuffer()
 	{
 	private:
@@ -1629,7 +1646,7 @@ else
 		{
 			const size = target.length;
 			
-			buffer_ = new ubyte[](size > bufferSize ? size : bufferSize); 
+			buffer_ = new ubyte[](size > bufferSize ? size : bufferSize);
 			used_   = size;
 			buffer_[0..size] = target[];
 		}
@@ -1706,7 +1723,7 @@ public:
      * unpacker.unpack(b)  // b is deserialized value or
      *                     // assigns null if deserialized value is nil
      * -----
-     * 
+     *
      * Params:
      *  value = the reference of value to assign.
      *
@@ -1991,7 +2008,7 @@ public:
      *  UnpackException when doesn't read from buffer or precision loss occurs and
      *  MessagePackException when $(D_PARAM T) type doesn't match serialized type.
      */
-	ref Unpacker unpack(T)(ref T array) if (isArray!T)
+	ref Unpacker unpack(T)(ref T array) if (isArray!T && !is(Unqual!T == enum))
 	{
 		alias typeof(T.init[0]) U;
 		
@@ -2009,11 +2026,15 @@ public:
 				length = header & 0x1f;
 			} else {
 				switch (header) {
-					case Format.RAW16:
+					case Format.BIN8, Format.STR8:
+						canRead(ubyte.sizeof);
+						length = read();
+						break;
+					case Format.BIN16, Format.RAW16:
 						canRead(ushort.sizeof);
 						length = load16To!size_t(read(ushort.sizeof));
 						break;
-					case Format.RAW32:
+					case Format.BIN32, Format.RAW32:
 						canRead(uint.sizeof);
 						length = load32To!size_t(read(uint.sizeof));
 						break;
@@ -2151,7 +2172,7 @@ public:
 			foreach (Class; Classes) {
 				Class obj = cast(Class)object;
 				foreach (i, member; obj.tupleof) {
-					if (isPackedField!(Class.tupleof[i]))
+					static if (isPackedField!(Class.tupleof[i]))
 						unpack(obj.tupleof[i]);
 				}
 			}
@@ -2188,7 +2209,7 @@ public:
 					rollback(calculateSize(length));
 				
 				foreach (i, member; object.tupleof) {
-					if (isPackedField!(T.tupleof[i]))
+					static if (isPackedField!(T.tupleof[i]))
 						unpack(object.tupleof[i]);
 				}
 			}
@@ -2598,7 +2619,7 @@ unittest
 				
 				void toMsgpack(P)(ref P p) const { p.packArray(num); }
 				void fromMsgpack(ref Unpacker u)
-				{ 
+				{
 					assert(u.beginArray() == 1);
 					u.unpack(num);
 				}
@@ -2813,7 +2834,7 @@ struct Value
 	}
 	
 	
-	Type type;  /// represents value type 
+	Type type;  /// represents value type
 	Via  via;   /// represents real value
 	
 	
@@ -2965,7 +2986,7 @@ struct Value
 	
 	/// ditto
 	@property @trusted
-	T as(T)() if (isArray!T)
+	T as(T)() if (isArray!T && !is(Unqual!T == enum))
 	{
 		alias typeof(T.init[0]) V;
 		
@@ -3053,7 +3074,7 @@ struct Value
 			foreach (Class; Classes) {
 				Class obj = cast(Class)object;
 				foreach (i, member; obj.tupleof) {
-					if (isPackedField!(Class.tupleof[i]))
+					static if (isPackedField!(Class.tupleof[i]))
 						obj.tupleof[i] = via.array[offset++].as!(typeof(member));
 				}
 			}
@@ -3089,7 +3110,7 @@ struct Value
 				
 				size_t offset;
 				foreach (i, member; obj.tupleof) {
-					if (isPackedField!(T.tupleof[i]))
+					static if (isPackedField!(T.tupleof[i]))
 						obj.tupleof[i] = via.array[offset++].as!(typeof(member));
 				}
 			}
@@ -3238,7 +3259,7 @@ struct Value
 	
 	/// ditto
 	@trusted
-	bool opEquals(T : ubyte[])(in T other) const
+	bool opEquals(T : const(ubyte)[])(in T other) const
 	{
 		if (type != Type.raw)
 			return false;
@@ -3332,6 +3353,11 @@ unittest
 	assert(value.type        == Value.Type.raw);
 	assert(value.as!(string) == "hello");
 	
+	// enum : string
+	enum EStr : string { elem = "hello" }
+	
+	assert(value.as!(EStr) == EStr.elem);
+	
 	// array
 	auto t = Value(cast(ubyte[])[72, 105, 33]);
 	value = Value([t]);
@@ -3424,7 +3450,7 @@ unittest
 	assert(tuple.field[1] == 1u);
 	assert(tuple.field[2] == "Hi!");
 	
-	/* 
+	/*
      * non-MessagePackable object is stopped by static assert
      * static struct NonMessagePackable {}
      * auto nonMessagePackable = value.as!(NonMessagePackable);
@@ -3571,7 +3597,7 @@ unittest
  *         // do stuff (obj is a Value)
  *     }
  * }
- * 
+ *
  * if (unpacker.size)
  *     throw new Exception("Message is too large");
  * -----
@@ -3586,6 +3612,10 @@ private:
 	{
 		HEADER = 0x00,
 		
+		BIN8 = 0x04,
+		BIN16,
+		BIN32,
+		
 		// Floating point, Unsigned, Signed interger (== header & 0x03)
 		FLOAT = 0x0a,
 		DOUBLE,
@@ -3599,6 +3629,7 @@ private:
 		INT64,
 		
 		// Container (== header & 0x01)
+		STR8 = 0x19,
 		RAW16 = 0x1a,
 		RAW32,
 		ARRAY16,
@@ -3794,30 +3825,30 @@ public:
 					goto Lagain;
 				} else {
 					switch (header) {
-						case Format.UINT8:
-						case Format.UINT16:
-						case Format.UINT32:
-						case Format.UINT64:
-						case Format.INT8:
-						case Format.INT16:
-						case Format.INT32:
-						case Format.INT64:
-						case Format.FLOAT:
-						case Format.DOUBLE:
+						case Format.UINT8, Format.UINT16, Format.UINT32, Format.UINT64,
+							Format.INT8, Format.INT16, Format.INT32, Format.INT64,
+							Format.FLOAT, Format.DOUBLE:
 							trail = 1 << (header & 0x03); // computes object size
-							state = cast(State)(header & 0x1f);
-							break;
+						state = cast(State)(header & 0x1f);
+						break;
 						case Format.REAL:
 							trail = RealSize;
 							state = State.REAL;
 							break;
-						case Format.ARRAY16:
-						case Format.ARRAY32:
-						case Format.MAP16:
-						case Format.MAP32:
-						case Format.RAW16:
-						case Format.RAW32:
-							trail = 2 << (header & 0x01);  // computes container size
+							case Format.ARRAY16, Format.ARRAY32,
+								Format.MAP16, Format.MAP32:
+								trail = 2 << (header & 0x01);  // computes container size
+							state = cast(State)(header & 0x1f);
+							break;
+							// raw will become str format in new spec
+						case Format.STR8:
+						case Format.RAW16: // will be STR16
+						case Format.RAW32: // will be STR32
+							trail = 1 << ((header & 0x03) - 1);  // computes container size
+							state = cast(State)(header & 0x1f);
+							break;
+						case Format.BIN8, Format.BIN16, Format.BIN32:
+							trail = 1 << (header & 0x03);  // computes container size
 							state = cast(State)(header & 0x1f);
 							break;
 						case Format.NIL:
@@ -3847,7 +3878,7 @@ public:
 					case State.FLOAT:
 						_f temp;
 						
-						temp.i = load32To!uint(buffer_[base..base + trail]);                    
+						temp.i = load32To!uint(buffer_[base..base + trail]);
 						callbackFloat(obj, temp.f);
 						goto Lpush;
 					case State.DOUBLE:
@@ -3912,14 +3943,21 @@ public:
 						hasRaw_ = true;
 						callbackRaw(obj, buffer_[base..base + trail]);
 						goto Lpush;
-					case State.RAW16:
+					case State.STR8, State.BIN8:
+						trail = buffer_[base];
+						if (trail == 0)
+							goto Lraw;
+						state = State.RAW;
+						cur++;
+						goto Lstart;
+					case State.RAW16, State.BIN16:
 						trail = load16To!size_t(buffer_[base..base + trail]);
 						if (trail == 0)
 							goto Lraw;
 						state = State.RAW;
 						cur++;
 						goto Lstart;
-					case State.RAW32:
+					case State.RAW32, State.BIN32:
 						trail = load32To!size_t(buffer_[base..base + trail]);
 						if (trail == 0)
 							goto Lraw;
@@ -4597,6 +4635,16 @@ enum Format : ubyte
 	RAW16 = 0xda,
 	RAW32 = 0xdb,
 	
+	// bin type
+	BIN8  = 0xc4,
+	BIN16 = 0xc5,
+	BIN32 = 0xc6,
+	
+	// str type
+	STR8  = 0xd9,
+	//STR16 = 0xda,
+	//STR32 = 0xdb,
+	
 	// array
 	ARRAY   = 0x90,
 	ARRAY16 = 0xdc,
@@ -4723,8 +4771,7 @@ template getFieldName(Type, size_t i)
 	static assert((is(Unqual!Type == class) || is(Unqual!Type == struct)), "Type must be class or struct: type = " ~ Type.stringof);
 	static assert(i < Type.tupleof.length, text(Type.stringof, " has ", Type.tupleof.length, " attributes: given index = ", i));
 	
-	// 3 means () + .
-	enum getFieldName = Type.tupleof[i].stringof[3 + Type.stringof.length..$];
+	enum getFieldName = __traits(identifier, Type.tupleof[i]);
 }
 
 
